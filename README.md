@@ -24,6 +24,30 @@ Eine Android-App zur Verwaltung von Schichtplänen mit Wecker-Funktion.
 
 Android API 36+
 
+## Projektstruktur
+
+```
+MyApplication2/
+├── app/
+│   ├── src/
+│   │   └── main/
+│   │       ├── assets/
+│   │       │   └── index.html          # Gesamte App-Logik (HTML/CSS/JS)
+│   │       ├── java/com/mein/schichtplan/
+│   │       │   ├── MainActivity.kt     # WebView-Host + JavaScript-Bridge
+│   │       │   ├── AlarmReceiver.kt    # BroadcastReceiver für Wecker
+│   │       │   └── AlarmActivity.kt    # Vollbild-Alarm-Anzeige
+│   │       ├── res/
+│   │       │   ├── drawable/           # App-Icon (Vektorgrafiken)
+│   │       │   └── mipmap-*/           # App-Icon in verschiedenen Auflösungen
+│   │       └── AndroidManifest.xml
+│   └── build.gradle.kts
+├── gradle/
+│   └── libs.versions.toml              # Abhängigkeiten & Versionen
+├── build.gradle.kts
+└── settings.gradle.kts
+```
+
 ## Installation
 
 1. APK aus `app/build/outputs/apk/debug/app-debug.apk` auf das Gerät übertragen

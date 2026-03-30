@@ -1,0 +1,1189 @@
+<!doctype html>
+<html lang="de" data-theme="system">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Mein Schichtplan</title>
+  <style>
+    :root {
+      --bg:#ffffff; --fg:#111418; --muted:#6b7280;
+      --primary:#2563eb; --primary-fg:#ffffff;
+      --card:#f8fafc; --border:#e5e7eb; --chip:#e5e7eb;
+      --accent:#10b981; --danger:#ef4444;
+      --frueh:#ca8a04;  --frueh-bg:#fef9c3;
+      --spaet:#ea580c;  --spaet-bg:#ffedd5;
+      --nacht:#64748b;  --nacht-bg:#f1f5f9;
+      --free-bg:#f0fdf4;
+      --hol:#fef3c7;    --hol-b:#f59e0b;
+    }
+    html[data-theme="dark"] {
+      --bg:#0f172a; --fg:#e2e8f0; --muted:#94a3b8;
+      --primary:#3b82f6;
+      --card:#1e293b; --border:#334155; --chip:#1e293b;
+      --accent:#22c55e; --danger:#f87171;
+      --frueh:#ca8a04; --frueh-bg:#422006;
+      --spaet:#ea580c; --spaet-bg:#431407;
+      --nacht:#94a3b8; --nacht-bg:#1e293b;
+      --free-bg:#052e16; --hol:#451a03; --hol-b:#d97706;
+    }
+    @media (prefers-color-scheme:dark) {
+      html[data-theme="system"] {
+        --bg:#0f172a; --fg:#e2e8f0; --muted:#94a3b8;
+        --primary:#3b82f6;
+        --card:#1e293b; --border:#334155; --chip:#1e293b;
+        --accent:#22c55e; --danger:#f87171;
+        --frueh:#ca8a04; --frueh-bg:#422006;
+        --spaet:#ea580c; --spaet-bg:#431407;
+        --nacht:#94a3b8; --nacht-bg:#1e293b;
+        --free-bg:#052e16; --hol:#451a03; --hol-b:#d97706;
+      }
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height:100%; margin:0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg); color: var(--fg);
+      font-size: 15px; line-height: 1.5; padding-bottom: 2rem;
+    }
+    header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:.7rem 1rem; border-bottom:1px solid var(--border);
+      background:var(--bg); position:sticky; top:0; z-index:20;
+      box-shadow:0 1px 3px rgba(0,0,0,.06);
+    }
+    .hdr-title { font-weight:800; font-size:1.05rem; }
+    .hdr-btns  { display:flex; gap:.4rem; }
+    button {
+      font:inherit; cursor:pointer; border-radius:8px;
+      border:1px solid var(--border); background:var(--chip);
+      color:var(--fg); padding:.5rem .8rem; font-weight:600;
+      transition:filter .15s, transform .1s;
+    }
+    button:active { filter:brightness(.85); }
+    button.primary { background:var(--primary); color:#fff; border-color:transparent; }
+    button.danger  { background:var(--danger);  color:#fff; border-color:transparent; }
+    button.sm   { padding:.3rem .6rem; font-size:.82rem; }
+    button.icon { padding:.45rem .65rem; font-size:1.05rem; line-height:1; }
+    input, select {
+      font:inherit; padding:.5rem .7rem; border-radius:8px;
+      border:1px solid var(--border); background:var(--bg); color:var(--fg); width:100%;
+    }
+    label { font-weight:600; font-size:.83rem; color:var(--muted); display:block; margin-bottom:.2rem; }
+    .wrap   { max-width:680px; margin:0 auto; padding:.9rem; }
+    .card   { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:.9rem; margin-bottom:.9rem; }
+    .ctitle { font-weight:700; font-size:.95rem; margin:0 0 .7rem; }
+    .stack  { display:grid; gap:.7rem; }
+    .row    { display:flex; gap:.6rem; flex-wrap:wrap; align-items:flex-end; }
+    .f1     { flex:1; min-width:110px; }
+    .hidden { display:none !important; }
+    .muted  { color:var(--muted); }
+    .small  { font-size:.82rem; }
+    /* toggle */
+    .sw { position:relative; width:44px; height:26px; display:inline-block; flex-shrink:0; }
+    .sw input { opacity:0; width:0; height:0; }
+    .sl { position:absolute; inset:0; background:var(--chip); border:1px solid var(--border); border-radius:999px; transition:.2s; }
+    .sl::before { content:""; position:absolute; width:18px; height:18px; left:3px; top:3px; background:var(--bg); border-radius:50%; transition:.2s; box-shadow:0 1px 2px rgba(0,0,0,.2); }
+    .sw input:checked + .sl { background:var(--primary); border-color:var(--primary); }
+    .sw input:checked + .sl::before { transform:translateX(18px); }
+    /* alarm rows */
+    .arow {
+      display:flex; align-items:center; gap:.6rem;
+      padding:.55rem .7rem; border-radius:8px; border-left:4px solid var(--border);
+    }
+    .arow.free  { border-left-color:var(--accent); background:var(--free-bg); }
+    .arow.frueh { border-left-color:var(--frueh);  background:var(--frueh-bg); }
+    .arow.spaet { border-left-color:var(--spaet);  background:var(--spaet-bg); }
+    .arow.nacht { border-left-color:var(--nacht);  background:var(--nacht-bg); }
+    .arow .slbl { font-weight:700; min-width:44px; font-size:.9rem; }
+    /* time picker +/- */
+    .tpick { display:flex; align-items:center; gap:0; flex:1; justify-content:center; }
+    .tunit { display:flex; flex-direction:column; align-items:center; gap:2px; }
+    .tunit .tbtn { width:38px; height:30px; display:flex; align-items:center; justify-content:center;
+      font-size:1rem; font-weight:800; border-radius:6px; border:1px solid var(--border);
+      background:var(--chip); color:var(--fg); cursor:pointer; user-select:none; padding:0;
+      -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+    .tunit .tbtn:active { background:var(--primary); color:#fff; }
+    .tunit .tval { font-size:1.4rem; font-weight:800; min-width:32px; text-align:center;
+      font-variant-numeric:tabular-nums; line-height:1.2; }
+    .tcolon { font-weight:800; font-size:1.5rem; margin:0 3px; padding-top:2px; }
+    .tuhr { font-size:.85rem; color:var(--muted); margin-left:6px; padding-top:2px; }
+    /* pattern */
+    .wrow { display:flex; gap:.25rem; align-items:center; margin-bottom:.35rem; }
+    .wlbl { font-size:.78rem; color:var(--muted); font-weight:600; min-width:56px; }
+    .pdays { display:flex; gap:.25rem; flex:1; }
+    .pday {
+      flex:1; padding:.4rem .05rem; text-align:center; border-radius:6px;
+      border:1px solid var(--border); background:var(--bg);
+      font-size:.72rem; font-weight:700; cursor:pointer; user-select:none;
+      overflow:hidden; white-space:nowrap;
+    }
+    .pday.free  { background:var(--free-bg); border-color:var(--accent); }
+    .pday.frueh { background:var(--frueh-bg); border-color:var(--frueh); }
+    .pday.spaet { background:var(--spaet-bg); border-color:var(--spaet); }
+    .pday.nacht { background:var(--nacht-bg); border-color:var(--nacht); }
+    /* legend */
+    .legend { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; padding-top:.6rem; border-top:1px solid var(--border); }
+    .li { display:flex; align-items:center; gap:.3rem; font-size:.8rem; }
+    .ld { width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+    /* calendar */
+    .mnav  { display:flex; align-items:center; justify-content:space-between; gap:.5rem; margin-bottom:.7rem; }
+    .mtitle { font-weight:700; font-size:1rem; text-align:center; flex:1; }
+    .cgrid {
+      display:grid; grid-template-columns:2rem repeat(7,1fr);
+      gap:2px; border:1px solid var(--border); border-radius:10px;
+      overflow:hidden; background:var(--border);
+    }
+    .dow { background:var(--chip); padding:.45rem .1rem; text-align:center; font-size:.73rem; font-weight:700; color:var(--muted); }
+    .kw  { background:var(--chip); padding:.25rem .05rem; text-align:center; font-size:.58rem; font-weight:700; color:var(--muted); display:flex; align-items:center; justify-content:center; line-height:1.2; }
+    .cday {
+      min-height:68px; padding:.25rem; background:var(--bg);
+      border-left:3px solid transparent;
+      display:flex; flex-direction:column; position:relative;
+    }
+    .cday.click { cursor:pointer; }
+    .cday.click:active { filter:brightness(.9); }
+    .cday.free  { background:var(--free-bg);  border-left-color:var(--accent); }
+    .cday.frueh { background:var(--frueh-bg); border-left-color:var(--frueh); }
+    .cday.spaet { background:var(--spaet-bg); border-left-color:var(--spaet); }
+    .cday.nacht { background:var(--nacht-bg); border-left-color:var(--nacht); }
+    .cday.excep { box-shadow:inset 0 0 0 2px #a855f7; }
+    .cday.holid { background:var(--hol) !important; border-left-color:var(--hol-b) !important; }
+    .cday.dim   { opacity:.22; pointer-events:none; }
+    .cday.today { outline:2px solid var(--primary); outline-offset:-2px; }
+    .dnum { font-size:.78rem; font-weight:700; color:var(--muted); line-height:1.1; }
+    .dnum.tc { color:var(--primary); }
+    .dtbadge { font-size:.58rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:.04em; line-height:1; margin-bottom:1px; }
+    .dpill { font-size:.62rem; padding:.12rem .35rem; border-radius:3px; font-weight:700; margin-top:auto; }
+    .hp { background:var(--hol-b); color:#fff; }
+    .ep { background:#a855f7; color:#fff; }
+    .aind { position:absolute; top:2px; right:3px; font-size:.82rem; line-height:1; }
+    /* exceptions */
+    .exitem {
+      display:flex; align-items:center; justify-content:space-between;
+      gap:.4rem; padding:.35rem .6rem;
+      background:var(--bg); border:1px solid var(--border); border-radius:8px; font-size:.85rem;
+    }
+    /* sheet */
+    .overlay {
+      position:fixed; top:0; left:0; right:0; bottom:0;
+      background:rgba(0,0,0,.48);
+      z-index:100; display:none;
+    }
+    .sheet {
+      position:fixed; left:0; right:0; bottom:0;
+      background:var(--bg); max-width:500px; margin:0 auto;
+      border-radius:20px 20px 0 0; padding:1.1rem;
+      max-height:88vh; overflow-y:auto; z-index:101;
+    }
+    .shandle { width:36px; height:4px; background:var(--border); border-radius:2px; margin:0 auto .9rem; }
+    .sdate { font-weight:800; font-size:1rem; margin-bottom:.5rem; }
+    .sbar { padding:.65rem .8rem; border-radius:10px; font-weight:700; border-left:5px solid var(--border); margin-bottom:.8rem; }
+    .sbar.free  { background:var(--free-bg); border-left-color:var(--accent); }
+    .sbar.frueh { background:var(--frueh-bg); border-left-color:var(--frueh); }
+    .sbar.spaet { background:var(--spaet-bg); border-left-color:var(--spaet); }
+    .sbar.nacht { background:var(--nacht-bg); border-left-color:var(--nacht); }
+    .sinfo {
+      display:flex; align-items:center; gap:.7rem; padding:.65rem;
+      border:1px solid var(--border); border-radius:10px; background:var(--card); margin-bottom:.8rem;
+    }
+    .sinfo-ico { font-size:1.5rem; }
+    .sinfo-txt { flex:1; }
+    .sbtns { display:flex; gap:.5rem; }
+    .sbtns button { flex:1; }
+    /* toast */
+    #toast {
+      visibility:hidden; position:fixed; left:50%; bottom:20px;
+      transform:translateX(-50%); background:#1e293b; color:#fff;
+      padding:.65rem 1.1rem; border-radius:10px; font-weight:600;
+      z-index:200; min-width:200px; text-align:center; white-space:nowrap;
+    }
+    #toast.show { visibility:visible; animation:tin .3s, tout .3s 2.5s forwards; }
+    #toast.err  { background:var(--danger); }
+    @keyframes tin  { from{opacity:0;bottom:6px} to{opacity:1;bottom:20px} }
+    @keyframes tout { from{opacity:1} to{opacity:0} }
+    @media (max-width:420px) {
+      .cday { min-height:56px; padding:.18rem; }
+      .dnum { font-size:.7rem; }
+      .dpill { font-size:.56rem; padding:.1rem .25rem; }
+    }
+    /* confirm modal */
+    .cdlg-bg {
+      position:fixed;inset:0;background:rgba(0,0,0,.52);z-index:300;display:flex;
+      align-items:center;justify-content:center;padding:1rem;
+    }
+    .cdlg {
+      background:var(--bg);border:1px solid var(--border);border-radius:16px;
+      padding:1.3rem 1.2rem;max-width:340px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.22);
+    }
+    .cdlg-msg { font-size:.93rem;line-height:1.55;white-space:pre-line;margin-bottom:1rem; }
+    .cdlg-btns { display:flex;gap:.5rem;justify-content:flex-end; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="hdr-title"><span id="hdrCalIcon" style="display:inline-flex;align-items:center;justify-content:center;position:relative;width:1.6em;height:1.6em;vertical-align:middle;margin-right:.3em"><svg viewBox="0 0 32 32" width="1.6em" height="1.6em" style="position:absolute;top:0;left:0"><rect x="1" y="4" width="30" height="27" rx="3" fill="var(--card)" stroke="var(--border)" stroke-width="1"/><rect x="1" y="4" width="30" height="8" rx="3" fill="#EF4444"/><rect x="8" y="2" width="2.5" height="5" rx="1" fill="var(--muted)"/><rect x="21.5" y="2" width="2.5" height="5" rx="1" fill="var(--muted)"/><text id="hdrCalDay" x="16" y="25" text-anchor="middle" font-size="13" font-weight="800" fill="var(--fg)"></text><text id="hdrCalMon" x="16" y="10.5" text-anchor="middle" font-size="5.5" font-weight="700" fill="white"></text></svg></span>Mein Schichtplan</div>
+  <div class="hdr-btns">
+    <button class="icon" id="themeBtn" title="Farbschema wechseln">&#x1F5A5;&#xFE0F;</button>
+    <button class="icon" id="settingsBtn" title="Einstellungen">&#x2699;&#xFE0F;</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ======= EINSTELLUNGEN ======= -->
+  <div id="settingsPanel">
+
+    <div class="card">
+      <div class="ctitle">&#x1F5C2;&#xFE0F; Grundeinstellungen</div>
+      <div class="stack">
+        <div style="margin-bottom:.6rem;">
+          <label>Startdatum (Woche&nbsp;1)</label>
+          <div style="display:flex;gap:.4rem;align-items:center;margin-top:.25rem;">
+            <select id="sdDay" style="width:4.2rem;padding:.5rem .3rem;font-size:1rem;"></select>
+            <select id="sdMon" style="flex:1;padding:.5rem .3rem;font-size:1rem;"></select>
+            <select id="sdYear" style="width:5.6rem;padding:.5rem .3rem;font-size:1rem;"></select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="f1">
+            <label>Wochen im Rhythmus</label>
+            <div style="display:flex;gap:.4rem;align-items:center;">
+              <button class="icon" id="decWeeks" aria-label="Weniger Wochen">&#x2212;</button>
+              <span id="weeksVal" style="font-weight:800;font-size:1.1rem;min-width:1.8ch;text-align:center;">6</span>
+              <button class="icon" id="incWeeks" aria-label="Mehr Wochen">+</button>
+            </div>
+          </div>
+          <div class="f1">
+            <label for="bundesland">Bundesland (Feiertage)</label>
+            <select id="bundesland">
+              <option value="NW">Nordrhein-Westfalen</option>
+              <option value="BW">Baden-W&uuml;rttemberg</option>
+              <option value="BY">Bayern</option>
+              <option value="BE">Berlin</option>
+              <option value="BB">Brandenburg</option>
+              <option value="HB">Bremen</option>
+              <option value="HH">Hamburg</option>
+              <option value="HE">Hessen</option>
+              <option value="MV">Mecklenburg-Vorpommern</option>
+              <option value="NI">Niedersachsen</option>
+              <option value="RP">Rheinland-Pfalz</option>
+              <option value="SL">Saarland</option>
+              <option value="SN">Sachsen</option>
+              <option value="ST">Sachsen-Anhalt</option>
+              <option value="SH">Schleswig-Holstein</option>
+              <option value="TH">Th&uuml;ringen</option>
+            </select>
+          </div>
+        </div>
+        <div class="row" style="justify-content:flex-start;">
+          <button class="primary sm" id="doneSettings">Kalender anzeigen</button>
+          <button class="danger sm" id="resetAll">&#x26A0;&#xFE0F;&nbsp;Alles zur&uuml;cksetzen</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">&#x23F0;&nbsp;Weckerzeit pro Schicht</div>
+      <div class="stack" id="alarmBox"></div>
+      <p class="small muted" style="margin:.55rem 0 0;">
+        Diese vier Zeiten sind Standardzeiten f&uuml;r Frei, Fr&uuml;h, Sp&auml;t und Nacht.
+        Auf einen Kalendertag tippen &rarr; Wecker f&uuml;r genau dieses Datum stellen.
+      </p>
+      <div style="margin-top:.7rem;display:flex;gap:.5rem;align-items:center;">
+        <button class="sm" id="testAlarmBtn" style="background:#f59e0b;color:#fff;border-color:transparent;">&#x1F514; Test-Alarm (15 Sek.)</button>
+        <span class="small muted">Testet ob der Wecker funktioniert</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">&#x1F4C5;&nbsp;Wecker f&uuml;r unbelegte Tage</div>
+      <div class="small muted" style="margin-bottom:.6rem;">Setzt einen Wecker an Tagen ohne Schichteintrag – w&auml;hle Uhrzeit und Wochentage.</div>
+      <div id="freeAlarmBox"></div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">&#x1F4CC;&nbsp;Ausnahmen / Urlaub</div>
+      <div class="row" style="margin-bottom:.5rem;">
+        <div class="f1"><label for="exS">Von</label><input type="date" id="exS"></div>
+        <div class="f1"><label for="exE">Bis (opt.)</label><input type="date" id="exE"></div>
+        <div style="min-width:100px;">
+          <label for="exT">Typ</label>
+          <select id="exT">
+            <option>Urlaub</option><option>Krank</option><option>Schulung</option>
+          </select>
+        </div>
+        <div style="padding-top:1.1rem;">
+          <button class="primary" id="addEx">Eintragen</button>
+        </div>
+      </div>
+      <div class="stack" id="exList" style="gap:.35rem;"></div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;gap:.6rem;flex-wrap:wrap;">
+        <div>
+          <div class="ctitle" style="margin:0;">&#x1F4CB;&nbsp;Wochenrhythmus</div>
+          <div class="small muted">Lege deinen Schichtrhythmus fest (1–6&nbsp;Wochen). Er wiederholt sich ab dem Startdatum automatisch.</div>
+        </div>
+        <button class="sm" id="clearPat">Leeren</button>
+      </div>
+      <div id="patGrid"></div>
+      <div class="legend">
+        <div class="li"><div class="ld" style="background:var(--accent)"></div><span>Frei</span></div>
+        <div class="li"><div class="ld" style="background:var(--frueh)"></div><span>Fr&uuml;h</span></div>
+        <div class="li"><div class="ld" style="background:var(--spaet)"></div><span>Sp&auml;t</span></div>
+        <div class="li"><div class="ld" style="background:var(--nacht)"></div><span>Nacht</span></div>
+        <div class="li"><div class="ld" style="background:#a855f7"></div><span>Ausnahme</span></div>
+        <div class="li"><div class="ld" style="background:var(--hol-b)"></div><span>Feiertag</span></div>
+      </div>
+    </div>
+
+  </div><!-- /settingsPanel -->
+
+  <!-- ======= KALENDER ======= -->
+  <div class="card">
+    <div class="mnav">
+      <button id="prevM" aria-label="Vorheriger Monat">&#x25C4;</button>
+      <div id="mTitle" class="mtitle">Monat Jahr</div>
+      <button id="todayM" class="sm">Heute</button>
+      <button id="nextM" aria-label="N&auml;chster Monat">&#x25BA;</button>
+    </div>
+    <div id="calGrid"></div>
+  </div>
+
+  <!-- gesetzte Wecker -->
+  <div class="card" id="aCard" style="display:none;">
+    <div class="ctitle">&#x1F514;&nbsp;Gesetzte Wecker</div>
+    <div class="stack" id="aList" style="gap:.35rem;"></div>
+  </div>
+
+</div><!-- /wrap -->
+
+<!-- ======= BOTTOM SHEET ======= -->
+<div class="overlay" id="overlay" style="display:none;"></div>
+<div class="sheet" id="sheet" style="display:none;">
+    <div class="shandle"></div>
+    <div class="sdate"  id="sDate"></div>
+    <div class="sbar"   id="sBar"></div>
+    <div class="sinfo">
+      <div class="sinfo-ico">&#x23F0;</div>
+      <div class="sinfo-txt" id="sTxt"></div>
+    </div>
+    <div class="sbtns" id="sBtns"></div>
+</div>
+
+<div id="toast"></div>
+<div id="cdlgBg" class="cdlg-bg" style="display:none;">
+  <div class="cdlg">
+    <div class="cdlg-msg" id="cdlgMsg"></div>
+    <div class="cdlg-btns">
+      <button class="sm" id="cdlgCancel">Abbrechen</button>
+      <button class="primary sm" id="cdlgOk">OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+window.onerror=function(msg,src,line,col,err){
+  var t=document.getElementById('toast');
+  if(t){t.textContent='JS-FEHLER: '+msg+' (Zeile '+line+')';t.className='show err';}
+  return false;
+};
+(function(){
+  /* ── Header-Kalender-Icon: aktuellen Tag/Monat setzen ── */
+  var _now = new Date();
+  var _monNames = ['JAN','FEB','MÄR','APR','MAI','JUN','JUL','AUG','SEP','OKT','NOV','DEZ'];
+  var _dayEl = document.getElementById('hdrCalDay');
+  var _monEl = document.getElementById('hdrCalMon');
+  if (_dayEl) _dayEl.textContent = _now.getDate();
+  if (_monEl) _monEl.textContent = _monNames[_now.getMonth()];
+
+  /* ── KONSTANTEN ─────────────────────────── */
+  var DAYS   = ['Mo','Di','Mi','Do','Fr','Sa','So'];
+  var SNAMES = {0:'',1:'Frei',2:'Fr\u00FCh',3:'Sp\u00E4t',4:'Nacht'};
+  var SCLS   = {0:'',1:'free',2:'frueh',3:'spaet',4:'nacht'};
+  var SMETA  = [
+    {t:1,n:'Frei', c:'free' },
+    {t:2,n:'Fr\u00FCh',c:'frueh'},
+    {t:3,n:'Sp\u00E4t',c:'spaet'},
+    {t:4,n:'Nacht',c:'nacht'}
+  ];
+  var LS  = 'schichtplan-native-v1';
+  var THK = 'schichtplan-theme-v1';
+
+  /* ── STATE ──────────────────────────────── */
+  function createDefaultState(){
+    return {
+      startDate:'', weeksCount:6, bundesland:'NW',
+      pattern:[], exceptions:[],
+      alarmTimes:{1:'07:00',2:'05:30',3:'13:00',4:'21:00'},
+      alarmEnabled:{1:false,2:false,3:false,4:false},
+      activeAlarms:{},
+      freeAlarm:{enabled:false,time:'07:00',days:[0,1,2,3,4]}
+    };
+  }
+  var S = createDefaultState();
+  var hasSavedState = false;
+  var viewDate = new Date();
+  viewDate.setDate(1); viewDate.setHours(12,0,0,0);
+
+  /* ── HELPERS ────────────────────────────── */
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function toYmd(d){ var dd=new Date(d); return dd.getFullYear()+'-'+pad(dd.getMonth()+1)+'-'+pad(dd.getDate()); }
+  function todayYmd(){ return toYmd(new Date()); }
+  function getISOWeek(d){
+    var dt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+    var day=dt.getUTCDay()||7;
+    dt.setUTCDate(dt.getUTCDate()+4-day);
+    var y=new Date(Date.UTC(dt.getUTCFullYear(),0,1));
+    return Math.ceil((((dt-y)/86400000)+1)/7);
+  }
+  function initDateSelects(){
+    var sy=$('sdYear'),sm=$('sdMon'),sd=$('sdDay'); if(!sy||!sm||!sd)return;
+    sy.innerHTML=''; sm.innerHTML=''; sd.innerHTML='';
+    var curY=new Date().getFullYear();
+    for(var y=curY-5;y<=curY+10;y++){var o=document.createElement('option');o.value=y;o.textContent=y;sy.appendChild(o);}
+    ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'].forEach(function(mn,i){var o=document.createElement('option');o.value=i+1;o.textContent=mn;sm.appendChild(o);});
+    for(var d=1;d<=31;d++){var o=document.createElement('option');o.value=d;o.textContent=d+'.';sd.appendChild(o);}
+  }
+  function setDateSelects(ymd){
+    if(!ymd||!/^\d{4}-\d{2}-\d{2}$/.test(ymd))return;
+    var p=ymd.split('-').map(Number);
+    $('sdYear').value=p[0]; $('sdMon').value=p[1]; $('sdDay').value=p[2];
+  }
+  function getDateFromSelects(){
+    var y=Number($('sdYear').value),m=Number($('sdMon').value),d=Number($('sdDay').value);
+    if(!y||!m||!d)return '';
+    return y+'-'+pad(m)+'-'+pad(d);
+  }
+  function parseYmd(s){
+    if(!s||!/^\d{4}-\d{2}-\d{2}$/.test(s)) return new Date(NaN);
+    var p=s.split('-').map(Number); return new Date(p[0],p[1]-1,p[2],12,0,0);
+  }
+  function fmtDe(s){ if(!s)return''; var p=s.split('-'); return p[2]+'.'+p[1]+'.'+p[0]; }
+  function esc(s){
+    return String(s||'').replace(/[&<>'"]/g,function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c];
+    });
+  }
+  function uid(){
+    return typeof crypto!=='undefined'&&crypto.randomUUID
+      ? crypto.randomUUID()
+      : Date.now().toString(36)+Math.random().toString(36).slice(2);
+  }
+  function toast(msg,err){
+    var t=document.getElementById('toast');
+    t.textContent=msg; t.className='show'+(err?' err':'');
+    clearTimeout(t._tid); t._tid=setTimeout(function(){t.className='';},3100);
+  }
+  function customConfirm(msg, onOk){
+    var bg=$('cdlgBg');
+    $('cdlgMsg').textContent=msg;
+    bg.style.display='flex';
+    $('cdlgOk').onclick=function(){ bg.style.display='none'; onOk(); };
+    $('cdlgCancel').onclick=function(){ bg.style.display='none'; };
+  }
+
+  function $(id){ return document.getElementById(id); }
+
+  /* ── THEME ──────────────────────────────── */
+  var THEMES=['system','light','dark'];
+  var TICOS={system:'\uD83D\uDDA5\uFE0F',light:'\u2600\uFE0F',dark:'\uD83C\uDF19'};
+  function applyTheme(t){
+    var th=THEMES.includes(t)?t:'system';
+    document.documentElement.setAttribute('data-theme',th);
+    $('themeBtn').textContent=TICOS[th];
+    try{localStorage.setItem(THK,th);}catch(e){}
+  }
+  function cycleTheme(){
+    var cur=document.documentElement.getAttribute('data-theme')||'system';
+    applyTheme(THEMES[(THEMES.indexOf(cur)+1)%3]);
+  }
+  (function(){var t='system';try{t=localStorage.getItem(THK)||t;}catch(e){}applyTheme(t);})();
+
+  /* ── FEIERTAGE ──────────────────────────── */
+  function holidays(year,bl){
+    var h={};
+    function a(m,d,n){h[year+'-'+pad(m)+'-'+pad(d)]=n;}
+    a(1,1,'Neujahr');a(5,1,'Tag d.Arbeit');a(10,3,'Tag d.Einheit');
+    a(12,25,'1.Weihnacht');a(12,26,'2.Weihnacht');
+    var ay=year%19,b=year%4,c=year%7,k=Math.floor(year/100);
+    var M=(15-Math.floor((13+8*k)/25)+k-Math.floor(k/4))%30;
+    var N=(4+k-Math.floor(k/4))%7;
+    var dd=(19*ay+M)%30,e=(2*b+4*c+6*dd+N)%7,ot=22+dd+e,om=3;
+    if(ot>31){ot-=31;om=4;}
+    if(dd===29&&e===6){ot=19;om=4;}
+    if(dd===28&&e===6&&ay>10){ot=18;om=4;}
+    var os=new Date(year,om-1,ot,12,0,0);
+    function rel(off,n){var x=new Date(os.getTime()+off*864e5);a(x.getMonth()+1,x.getDate(),n);}
+    rel(-2,'Karfreitag');rel(1,'Ostermontag');rel(39,'Himmelfahrt');rel(50,'Pfingstmontag');
+    if(['BW','BY','ST'].includes(bl)) a(1,6,'Hl.Drei K\u00F6nige');
+    if(['BE','MV'].includes(bl)) a(3,8,'Frauentag');
+    if(['BW','BY','HE','NW','RP','SL'].includes(bl)) rel(60,'Fronleichnam');
+    if(['BW','BY','NW','RP','SL'].includes(bl)) a(11,1,'Allerheiligen');
+    if(bl==='TH') a(9,20,'Weltkindertag');
+    if(['BB','MV','SN','ST','TH'].includes(bl)) a(10,31,'Reformationstag');
+    if(bl==='SN'){
+      var x=new Date(year,10,23,12,0,0);
+      while(x.getDay()!==3) x.setDate(x.getDate()-1);
+      a(x.getMonth()+1,x.getDate(),'Bu\u00DF-u.Bettag');
+    }
+    return h;
+  }
+
+  /* ── SCHICHT ────────────────────────────── */
+  function mondayOf(d){
+    var dt=new Date(d),day=dt.getDay();
+    dt.setDate(dt.getDate()+(day===0?-6:1-day));
+    dt.setHours(0,0,0,0); return dt;
+  }
+  function getShift(ds){
+    var ex=S.exceptions.find(function(e){return ds>=e.start&&ds<=e.end;});
+    if(ex) return {type:-1,name:ex.type,cls:'excep'};
+    if(!S.startDate) return {type:0,name:'',cls:''};
+    var sm=mondayOf(parseYmd(S.startDate));
+    var tgt=parseYmd(ds); tgt.setHours(0,0,0,0);
+    var diff=Math.round((tgt-sm)/864e5);
+    if(diff<0) return {type:0,name:'',cls:''};
+    var idx=diff%(S.weeksCount*7);
+    var t=S.pattern[idx]!=null?S.pattern[idx]:0;
+    return {type:t,name:SNAMES[t]||'',cls:SCLS[t]||''};
+  }
+  function findAllShiftDates(shiftType){
+    var time=S.alarmTimes[shiftType]||'';
+    var now=new Date();
+    var start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),12,0,0,0);
+    var results=[];
+    for(var i=0;i<370;i++){
+      var d=new Date(start.getTime()+i*864e5);
+      var ds=toYmd(d);
+      var sh=getShift(ds);
+      if(sh.type!==shiftType) continue;
+      if(time){
+        var pts=time.split(':').map(Number);
+        var alarmMs=new Date(d.getFullYear(),d.getMonth(),d.getDate(),pts[0]||0,pts[1]||0,0,0).getTime();
+        if(alarmMs<=Date.now()) continue;
+      }
+      results.push({date:ds,shift:sh});
+    }
+    return results;
+  }
+  function scheduleAllShiftAlarms(shiftType){
+    if(!S.startDate){
+      toast('Bitte zuerst das Startdatum festlegen.',true);
+      return;
+    }
+    if(!S.alarmEnabled[shiftType]){
+      toast(SNAMES[shiftType]+'-Wecker ist deaktiviert.',true);
+      return;
+    }
+    if(!S.alarmTimes[shiftType]){
+      toast('Keine Weckerzeit für '+SNAMES[shiftType]+' gesetzt.',true);
+      return;
+    }
+    if(!window.Android||typeof window.Android.setAlarmForDate!=='function'){
+      toast('Android-Bridge nicht verfügbar.',true);
+      return;
+    }
+    var all=findAllShiftDates(shiftType);
+    if(!all.length){
+      var todSh=getShift(todayYmd());
+      var reason='';
+      if(todSh.type===shiftType){
+        reason='\n\nHeute ist '+SNAMES[shiftType]+', aber die Weckzeit ('+S.alarmTimes[shiftType]+') ist schon vorbei.\nStelle die Zeit auf die Zukunft und versuche es nochmal.';
+      }
+      toast('Keine kommenden '+SNAMES[shiftType]+'-Tage gefunden.'+reason,true);
+      return;
+    }
+    // Bestätigungsdialog – Hinweis wenn heute übersprungen wird
+    var todSh2=getShift(todayYmd());
+    var todayNote='';
+    if(todSh2.type===shiftType&&all[0].date!==todayYmd()){
+      todayNote='\n\n⚠️ Heute ('+fmtDe(todayYmd())+') übersprungen – Weckzeit '+S.alarmTimes[shiftType]+' ist schon vorbei.';
+    }
+    var confirmMsg=all.length+' '+SNAMES[shiftType]+'-Wecker setzen?\n\nErster: '+fmtDe(all[0].date)+'\nLetzter: '+fmtDe(all[all.length-1].date)+todayNote;
+    customConfirm(confirmMsg,function(){
+      var count=0, errors=0;
+      var hasSilent=typeof window.Android.setAlarmForDateSilent==='function';
+      for(var i=0;i<all.length;i++){
+        var ds=all[i].date, sh=all[i].shift;
+        var time=S.alarmTimes[sh.type]||'';
+        if(!time) continue;
+        var pts=time.split(':').map(Number),h=pts[0],m=pts[1];
+        var p=ds.split('-').map(Number);
+        var key='shift-'+ds+'-t'+sh.type;
+        try{
+          if(hasSilent) window.Android.setAlarmForDateSilent(p[0],p[1],p[2],h,m,key,sh.name+' ('+fmtDe(ds)+')');
+          else window.Android.setAlarmForDate(p[0],p[1],p[2],h,m,key,sh.name+' ('+fmtDe(ds)+')');
+          S.activeAlarms[ds]={alarmKey:key,time:time,shiftName:sh.name};
+          count++;
+        }catch(e){ errors++; }
+      }
+      save(); renderCal();
+      var r='\u2705 '+count+' '+SNAMES[shiftType]+'-Wecker gesetzt';
+      if(errors>0) r+=' ('+errors+' fehlgeschlagen)';
+      toast(r,errors>0);
+    });
+  }
+
+  /* ── ALARM SETTINGS UI ──────────────────── */
+  function stepTime(spanId, step, max){
+    var el=document.getElementById(spanId);
+    if(!el) return;
+    var v=(Number(el.textContent)+step+max)%max;
+    el.textContent=pad(v);
+    // Schichttyp aus ID ermitteln und speichern
+    var m=spanId.match(/(\d)$/);
+    if(m){
+      var t=Number(m[1]);
+      var hEl=document.getElementById('tph'+t);
+      var mEl=document.getElementById('tpm'+t);
+      if(hEl&&mEl){
+        S.alarmTimes[t]=pad(Number(hEl.textContent))+':'+pad(Number(mEl.textContent));
+        save(); renderCal();
+      }
+    }
+  }
+  function renderAlarmSettings(){
+    var c=document.getElementById('alarmBox'); c.innerHTML='';
+    SMETA.forEach(function(sm){
+      var r=document.createElement('div');
+      r.className='arow '+sm.c;
+      var time=S.alarmTimes[sm.t]||'';
+      var hh=0, mm=0;
+      if(time){ var pts=time.split(':'); hh=Number(pts[0])||0; mm=Number(pts[1])||0; }
+      // Label
+      var lbl=document.createElement('span');
+      lbl.className='slbl'; lbl.textContent=sm.n;
+      r.appendChild(lbl);
+      // Time picker container
+      var pick=document.createElement('div');
+      pick.className='tpick';
+      // Hour unit
+      var hu=document.createElement('div'); hu.className='tunit';
+      var hUp=document.createElement('button'); hUp.type='button'; hUp.className='tbtn'; hUp.textContent='\u25B2';
+      var hVal=document.createElement('span'); hVal.className='tval'; hVal.id='tph'+sm.t; hVal.textContent=pad(hh);
+      var hDn=document.createElement('button'); hDn.type='button'; hDn.className='tbtn'; hDn.textContent='\u25BC';
+      (function(id){hUp.onclick=function(){stepTime(id,1,24);};hDn.onclick=function(){stepTime(id,-1,24);}})('tph'+sm.t);
+      hu.appendChild(hUp); hu.appendChild(hVal); hu.appendChild(hDn);
+      // Colon
+      var col=document.createElement('span'); col.className='tcolon'; col.textContent=':';
+      // Minute unit
+      var mu=document.createElement('div'); mu.className='tunit';
+      var mUp=document.createElement('button'); mUp.type='button'; mUp.className='tbtn'; mUp.textContent='\u25B2';
+      var mVal=document.createElement('span'); mVal.className='tval'; mVal.id='tpm'+sm.t; mVal.textContent=pad(mm);
+      var mDn=document.createElement('button'); mDn.type='button'; mDn.className='tbtn'; mDn.textContent='\u25BC';
+      (function(id){mUp.onclick=function(){stepTime(id,1,60);};mDn.onclick=function(){stepTime(id,-1,60);}})('tpm'+sm.t);
+      mu.appendChild(mUp); mu.appendChild(mVal); mu.appendChild(mDn);
+      // Uhr label
+      var uhr=document.createElement('span'); uhr.className='tuhr'; uhr.textContent='Uhr';
+      pick.appendChild(hu); pick.appendChild(col); pick.appendChild(mu); pick.appendChild(uhr);
+      r.appendChild(pick);
+      // Toggle switch
+      var sw=document.createElement('label'); sw.className='sw';
+      sw.title=sm.n+' Wecker aktivieren';
+      var cb=document.createElement('input'); cb.type='checkbox'; cb.id='ae'+sm.t;
+      if(S.alarmEnabled[sm.t]) cb.checked=true;
+      var sl=document.createElement('span'); sl.className='sl';
+      sw.appendChild(cb); sw.appendChild(sl);
+      r.appendChild(sw);
+      var nextBtn=document.createElement('button');
+      nextBtn.type='button';
+      nextBtn.className='sm';
+      nextBtn.textContent='Alle stellen';
+      nextBtn.title='Setzt Wecker für alle kommenden '+sm.n+'-Tage (12 Monate)';
+      (function(shiftType){nextBtn.onclick=function(){scheduleAllShiftAlarms(shiftType);};})(sm.t);
+      r.appendChild(nextBtn);
+      c.appendChild(r);
+      if(!time){ S.alarmTimes[sm.t]=pad(hh)+':'+pad(mm); }
+    });
+  }
+
+  /* ── FREIE TAGE WECKER ─────────────────── */
+  function renderFreeAlarmSettings(){
+    var c=$('freeAlarmBox'); if(!c)return;
+    c.innerHTML='';
+    // Toggle + Zeit
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin-bottom:.6rem;';
+    var lbl=document.createElement('label'); lbl.className='sw'; lbl.title='Wecker für unbelegte Tage aktivieren';
+    var cb=document.createElement('input'); cb.type='checkbox'; cb.id='freeAlarmEnabled';
+    if(S.freeAlarm.enabled) cb.checked=true;
+    var sl=document.createElement('span'); sl.className='sl';
+    lbl.appendChild(cb); lbl.appendChild(sl);
+    var txt=document.createElement('span'); txt.style.fontWeight='600'; txt.textContent='Aktivieren';
+    row.appendChild(lbl); row.appendChild(txt);
+    // Zeit
+    var pts=(S.freeAlarm.time||'07:00').split(':').map(Number);
+    var hh=pts[0]||0, mm=pts[1]||0;
+    var pick=document.createElement('div'); pick.className='tpick';
+    var hu=document.createElement('div'); hu.className='tunit';
+    var hUp=document.createElement('button'); hUp.type='button'; hUp.className='tbtn'; hUp.textContent='\u25B2';
+    var hVal=document.createElement('span'); hVal.className='tval'; hVal.id='fatph'; hVal.textContent=pad(hh);
+    var hDn=document.createElement('button'); hDn.type='button'; hDn.className='tbtn'; hDn.textContent='\u25BC';
+    hUp.onclick=function(){var e=$('fatph');e.textContent=pad((Number(e.textContent)+1)%24);saveFreeAlarmTime();};
+    hDn.onclick=function(){var e=$('fatph');e.textContent=pad((Number(e.textContent)+23)%24);saveFreeAlarmTime();};
+    hu.appendChild(hUp);hu.appendChild(hVal);hu.appendChild(hDn);
+    var col=document.createElement('span'); col.className='tcolon'; col.textContent=':';
+    var mu=document.createElement('div'); mu.className='tunit';
+    var mUp=document.createElement('button'); mUp.type='button'; mUp.className='tbtn'; mUp.textContent='\u25B2';
+    var mVal=document.createElement('span'); mVal.className='tval'; mVal.id='fatpm'; mVal.textContent=pad(mm);
+    var mDn=document.createElement('button'); mDn.type='button'; mDn.className='tbtn'; mDn.textContent='\u25BC';
+    mUp.onclick=function(){var e=$('fatpm');e.textContent=pad((Number(e.textContent)+1)%60);saveFreeAlarmTime();};
+    mDn.onclick=function(){var e=$('fatpm');e.textContent=pad((Number(e.textContent)+59)%60);saveFreeAlarmTime();};
+    mu.appendChild(mUp);mu.appendChild(mVal);mu.appendChild(mDn);
+    var uhr=document.createElement('span'); uhr.className='tuhr'; uhr.textContent='Uhr';
+    pick.appendChild(hu);pick.appendChild(col);pick.appendChild(mu);pick.appendChild(uhr);
+    row.appendChild(pick);
+    c.appendChild(row);
+    // Wochentag-Chips
+    var dayRow=document.createElement('div');
+    dayRow.style.cssText='display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:.6rem;';
+    var dayNames=['Mo','Di','Mi','Do','Fr','Sa','So'];
+    dayNames.forEach(function(dn,i){
+      var btn=document.createElement('button');
+      btn.type='button'; btn.className='sm';
+      btn.textContent=dn;
+      btn.dataset.di=i;
+      var active=S.freeAlarm.days.indexOf(i)!==-1;
+      btn.style.cssText=active?'background:var(--primary);color:#fff;border-color:transparent;':''; 
+      btn.onclick=function(){
+        var idx=S.freeAlarm.days.indexOf(i);
+        if(idx===-1) S.freeAlarm.days.push(i);
+        else S.freeAlarm.days.splice(idx,1);
+        S.freeAlarm.days.sort();
+        save(); renderFreeAlarmSettings(); renderCal();
+      };
+      dayRow.appendChild(btn);
+    });
+    c.appendChild(dayRow);
+    // Alle stellen
+    var allBtn=document.createElement('button');
+    allBtn.type='button'; allBtn.className='sm primary'; allBtn.textContent='\uD83D\uDD14 Alle stellen';
+    allBtn.onclick=scheduleAllFreeAlarms;
+    c.appendChild(allBtn);
+    // Toggle-Event
+    cb.onchange=function(){ S.freeAlarm.enabled=cb.checked; save(); renderCal(); toast('Freie-Tage-Wecker '+(cb.checked?'aktiviert':'deaktiviert')+'.');  };
+  }
+  function saveFreeAlarmTime(){
+    var h=$('fatph'),m=$('fatpm');
+    if(h&&m){ S.freeAlarm.time=pad(Number(h.textContent))+':'+pad(Number(m.textContent)); save(); renderCal(); }
+  }
+  function scheduleAllFreeAlarms(){
+    if(!S.startDate){ toast('Bitte zuerst das Startdatum festlegen.',true); return; }
+    if(!S.freeAlarm.enabled){ toast('Freie-Tage-Wecker ist deaktiviert.',true); return; }
+    if(!S.freeAlarm.time){ toast('Keine Weckzeit gesetzt.',true); return; }
+    if(!S.freeAlarm.days.length){ toast('Keine Wochentage ausgewählt.',true); return; }
+    if(!window.Android||typeof window.Android.setAlarmForDate!=='function'){ toast('Android-Bridge nicht verfügbar.',true); return; }
+    var hasSilent=typeof window.Android.setAlarmForDateSilent==='function';
+    var now=new Date(); var start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),12,0,0,0);
+    var pts=S.freeAlarm.time.split(':').map(Number),h=pts[0],m=pts[1];
+    var all=[];
+    for(var i=0;i<370;i++){
+      var d=new Date(start.getTime()+i*864e5);
+      var ds=toYmd(d);
+      var dow=(d.getDay()+6)%7;
+      if(S.freeAlarm.days.indexOf(dow)===-1) continue;
+      var sh=getShift(ds);
+      if(sh.type!==0) continue;
+      var alarmMs=new Date(d.getFullYear(),d.getMonth(),d.getDate(),h,m,0,0).getTime();
+      if(alarmMs<=Date.now()) continue;
+      all.push(ds);
+    }
+    if(!all.length){ toast('Keine passenden unbelegten Tage gefunden.',true); return; }
+    customConfirm(all.length+' Wecker f\u00fcr unbelegte Tage setzen?\n\nErster: '+fmtDe(all[0])+'\nLetzter: '+fmtDe(all[all.length-1]),function(){
+      var count=0,errors=0;
+      for(var i=0;i<all.length;i++){
+        var ds=all[i]; var p=ds.split('-').map(Number);
+        var key='free-day-'+ds;
+        try{
+          if(hasSilent) window.Android.setAlarmForDateSilent(p[0],p[1],p[2],h,m,key,'Freier Tag ('+fmtDe(ds)+')');
+          else window.Android.setAlarmForDate(p[0],p[1],p[2],h,m,key,'Freier Tag ('+fmtDe(ds)+')');
+          S.activeAlarms[ds]={alarmKey:key,time:S.freeAlarm.time,shiftName:'Freier Tag'};
+          count++;
+        }catch(e){ errors++; }
+      }
+      save(); renderCal();
+      var r='\u2705 '+count+' Wecker f\u00fcr freie Tage gesetzt';
+      if(errors) r+=' ('+errors+' fehlgeschlagen)';
+      toast(r,errors>0);
+    });
+  }
+
+  /* ── MUSTER ─────────────────────────────── */
+  function initPat(){
+    var req=S.weeksCount*7;
+    if(S.pattern.length!==req){
+      var p=new Array(req).fill(0);
+      for(var i=0;i<Math.min(S.pattern.length,req);i++) p[i]=S.pattern[i];
+      S.pattern=p;
+    }
+  }
+  function renderPat(){
+    var c=$('patGrid'); c.innerHTML='';
+    for(var w=0;w<S.weeksCount;w++){
+      var row=document.createElement('div'); row.className='wrow';
+      var lbl=document.createElement('span'); lbl.className='wlbl'; lbl.textContent='Woche '+(w+1); row.appendChild(lbl);
+      var days=document.createElement('div'); days.className='pdays';
+      for(var d=0;d<7;d++){
+        var idx=w*7+d, t=S.pattern[idx];
+        var btn=document.createElement('div');
+        btn.className='pday '+(SCLS[t]||'');
+        btn.textContent=t===0?DAYS[d]:SNAMES[t];
+        btn.dataset.idx=idx;
+        days.appendChild(btn);
+      }
+      row.appendChild(days); c.appendChild(row);
+    }
+  }
+  function cycleShift(idx){
+    S.pattern[idx]=(S.pattern[idx]+1)%5;
+    renderPat(); renderCal(); save();
+  }
+
+  /* ── AUSNAHMEN ──────────────────────────── */
+  function renderEx(){
+    var c=$('exList'); c.innerHTML='';
+    if(!S.exceptions.length){
+      c.innerHTML='<p class="small muted" style="margin:0;">Keine Ausnahmen.</p>'; return;
+    }
+    S.exceptions.slice().sort(function(a,b){return a.start.localeCompare(b.start);}).forEach(function(ex){
+      var txt=ex.start===ex.end?fmtDe(ex.start):fmtDe(ex.start)+' \u2013 '+fmtDe(ex.end);
+      var el=document.createElement('div'); el.className='exitem';
+      el.innerHTML='<span>'+esc(txt)+': <b>'+esc(ex.type)+'</b></span>'
+        +'<button class="danger sm xdel" data-id="'+esc(ex.id)+'">\u2715</button>';
+      c.appendChild(el);
+    });
+  }
+  function delEx(id){
+    S.exceptions=S.exceptions.filter(function(e){return e.id!==id;});
+    renderEx(); renderCal(); save();
+  }
+
+  /* ── KALENDER ───────────────────────────── */
+  function renderCal(){
+    var year=viewDate.getFullYear(), month=viewDate.getMonth();
+    var hols=holidays(year,S.bundesland||'NW');
+    $('mTitle').textContent=new Date(year,month,1).toLocaleString('de-DE',{month:'long',year:'numeric'});
+    var grid=document.createElement('div'); grid.className='cgrid';
+    // Header: KW-Ecke + Mo-So
+    var kwh=document.createElement('div'); kwh.className='dow'; kwh.textContent='KW'; grid.appendChild(kwh);
+    DAYS.forEach(function(d){var el=document.createElement('div');el.className='dow';el.textContent=d;grid.appendChild(el);});
+    var firstDow=(new Date(year,month,1).getDay()+6)%7;
+    var dim=new Date(year,month+1,0).getDate();
+    var today=todayYmd();
+    var now=new Date(); now.setHours(0,0,0,0);
+    // Slots: null=leer, Zahl=Tag
+    var slots=[];
+    for(var i=0;i<firstDow;i++) slots.push(null);
+    for(var d=1;d<=dim;d++) slots.push(d);
+    while(slots.length%7!==0) slots.push(null);
+    for(var r=0;r<slots.length;r+=7){
+      // KW-Zelle: ersten echten Tag der Zeile suchen
+      var kwDate=null;
+      for(var c=r;c<r+7;c++){ if(slots[c]!==null){kwDate=new Date(year,month,slots[c],12,0,0);break;} }
+      var kwNum=kwDate?getISOWeek(kwDate):'';
+      var kwCell=document.createElement('div');
+      kwCell.className='kw'; kwCell.textContent=kwNum?kwNum:'';
+      grid.appendChild(kwCell);
+      for(var c=r;c<r+7;c++){
+        var d=slots[c];
+        if(d===null){var el=document.createElement('div');el.className='cday dim';grid.appendChild(el);continue;}
+        var ds=toYmd(new Date(year,month,d,12,0,0));
+        var sh=getShift(ds);
+        var hol=hols[ds];
+        var isTod=ds===today;
+        var aa=S.activeAlarms[ds];
+        var acfg=sh.type>=1&&sh.type<=4&&S.alarmEnabled[sh.type]&&S.alarmTimes[sh.type];
+        var cell=document.createElement('div');
+        cell.className='cday'+(sh.cls?' '+sh.cls:'')+(hol&&sh.type!==-1?' holid':'')+(isTod?' today':'');
+        var cd=parseYmd(ds); cd.setHours(0,0,0,0);
+        if(sh.type>=1&&sh.type<=4&&cd>=now){
+          cell.classList.add('click');
+          (function(s,sf){cell.onclick=function(ev){ev.stopPropagation();toast('\u00D6ffne: '+sf.name+' '+fmtDe(s));openSheet(s,sf);};})(ds,sh);
+        }
+        if(isTod){var b=document.createElement('div');b.className='dtbadge';b.textContent='HEUTE';cell.appendChild(b);}
+        var num=document.createElement('div');
+        num.className='dnum'+(isTod?' tc':''); num.textContent=d+'.'; cell.appendChild(num);
+        if(hol){var p=document.createElement('div');p.className='dpill hp';p.textContent=hol;cell.appendChild(p);}
+        if(sh.name){
+          var p=document.createElement('div');
+          p.className='dpill'+(sh.type===-1?' ep':''); p.textContent=sh.name; cell.appendChild(p);
+        }
+        if(sh.type>=1&&sh.type<=4){
+          if(aa){
+            var ind=document.createElement('div');ind.className='aind';
+            ind.textContent='\uD83D\uDD14';ind.title='Wecker: '+aa.time+' Uhr';cell.appendChild(ind);
+          } else if(acfg){
+            var ind=document.createElement('div');ind.className='aind';ind.style.opacity='.35';
+            ind.textContent='\uD83D\uDD15';ind.title='Wecker stellbar: '+S.alarmTimes[sh.type];cell.appendChild(ind);
+          }
+        }
+        if(sh.type===0&&S.freeAlarm.enabled&&S.freeAlarm.time){
+          var dow2=(new Date(year,month,d,12,0,0).getDay()+6)%7;
+          if(S.freeAlarm.days.indexOf(dow2)!==-1){
+            if(aa){
+              var ind=document.createElement('div');ind.className='aind';
+              ind.textContent='\uD83D\uDD14';ind.title='Wecker: '+aa.time+' Uhr';cell.appendChild(ind);
+            } else if(cd>=now){
+              var ind=document.createElement('div');ind.className='aind';ind.style.opacity='.35';
+              ind.textContent='\uD83D\uDD15';ind.title='Freier Tag \u2013 Wecker: '+S.freeAlarm.time;cell.appendChild(ind);
+            }
+          }
+        }
+        grid.appendChild(cell);
+      }
+    }
+    var con=$('calGrid'); con.innerHTML=''; con.appendChild(grid);
+    renderAList();
+  }
+
+  /* ── WECKER-LISTE ───────────────────────── */
+  function renderAList(){
+    var card=$('aCard'), list=$('aList'); list.innerHTML='';
+    var entries=Object.entries(S.activeAlarms).sort(function(a,b){return a[0].localeCompare(b[0]);});
+    if(!entries.length){card.style.display='none';return;}
+    card.style.display='';
+    entries.forEach(function(e){
+      var ds=e[0],info=e[1];
+      var el=document.createElement('div'); el.className='exitem';
+      el.innerHTML='\uD83D\uDD14 <b>'+esc(fmtDe(ds))+'</b> \u2013 '+esc(info.shiftName)+' um '+esc(info.time)+' Uhr'
+        +'<button class="danger sm adel" data-date="'+esc(ds)+'" data-key="'+esc(info.alarmKey)+'">L\u00F6schen</button>';
+      list.appendChild(el);
+    });
+  }
+
+  /* ── BOTTOM SHEET ───────────────────────── */
+  function openSheet(ds,sh){
+    try{
+    var p=ds.split('-').map(Number);
+    document.getElementById('sDate').textContent=new Date(p[0],p[1]-1,p[2],12,0,0)
+      .toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    var bar=document.getElementById('sBar'); bar.textContent=sh.name||'\u2014'; bar.className='sbar '+(sh.cls||'');
+    var aa=S.activeAlarms[ds], time=S.alarmTimes[sh.type]||'', en=S.alarmEnabled[sh.type];
+    var txt=document.getElementById('sTxt'), btns=document.getElementById('sBtns');
+    if(aa){
+      txt.innerHTML='<strong>\uD83D\uDD14 Wecker gesetzt</strong><br><span class="muted small">Am '+esc(fmtDe(ds))+' um '+esc(aa.time)+' Uhr</span>';
+      btns.innerHTML='<button class="danger" id="scnBtn">\uD83D\uDD15 Wecker l\u00F6schen</button><button id="sclBtn">Schlie\u00DFen</button>';
+      document.getElementById('scnBtn').onclick=function(){cancelAlarm(ds,aa.alarmKey);};
+    } else if(time&&en){
+      var pts=time.split(':').map(Number);
+      var aDate=new Date(p[0],p[1]-1,p[2],pts[0],pts[1],0,0);
+      var diff=aDate.getTime()-Date.now();
+      if(diff<=0){
+        txt.innerHTML='<strong style="color:var(--danger);">\u26A0\uFE0F '+esc(time)+' Uhr am '+esc(fmtDe(ds))+' liegt in der Vergangenheit!</strong>'
+          +'<br><span class="muted small">Bitte w\u00E4hle einen zuk\u00FCnftigen Kalendertag oder \u00E4ndere die Weckerzeit in den Einstellungen.</span>';
+        btns.innerHTML='<button id="sclBtn">Schlie\u00DFen</button>';
+      } else {
+        var dm=Math.floor(diff/60000);
+        var diffTxt=dm<60?dm+' Min.':Math.floor(dm/60)+' Std. '+(dm%60)+' Min.';
+        txt.innerHTML='<strong>Wecker stellen f\u00FCr '+esc(time)+' Uhr</strong> (in '+esc(diffTxt)+')'
+          +'<br><span class="muted small">'+esc(sh.name)+'-Schicht \u2013 '+esc(fmtDe(ds))+'</span>';
+        btns.innerHTML='<button class="primary" id="ssetBtn" style="flex:2;">\uD83D\uDD14 Wecker stellen</button><button id="sclBtn">Abbrechen</button>';
+        document.getElementById('ssetBtn').onclick=function(){setAlarm(ds,sh);};
+      }
+    } else {
+      var reason=!time?'Keine Weckerzeit f\u00FCr \u201E'+esc(sh.name)+'\u201C konfiguriert.':'\u201E'+esc(sh.name)+'\u201C-Wecker ist deaktiviert.';
+      var defH=sh.type===2?5:sh.type===3?13:sh.type===4?21:7;
+      txt.innerHTML='<span class="muted small">'+reason+'</span>'
+        +'<div style="margin-top:.6rem;"><div class="tpick">'
+        +'<div class="tunit">'
+        +'<button type="button" class="tbtn" id="sqhU">\u25B2</button>'
+        +'<span class="tval" id="sqh">'+pad(defH)+'</span>'
+        +'<button type="button" class="tbtn" id="sqhD">\u25BC</button>'
+        +'</div>'
+        +'<span class="tcolon">:</span>'
+        +'<div class="tunit">'
+        +'<button type="button" class="tbtn" id="sqmU">\u25B2</button>'
+        +'<span class="tval" id="sqm">'+pad(0)+'</span>'
+        +'<button type="button" class="tbtn" id="sqmD">\u25BC</button>'
+        +'</div>'
+        +'<span class="tuhr">Uhr</span>'
+        +'</div></div>';
+      btns.innerHTML='<button class="primary" id="sqSet">\uD83D\uDD14 Speichern & Stellen</button><button id="sclBtn">Abbrechen</button>';
+      document.getElementById('sqhU').onclick=function(){var e=document.getElementById('sqh');e.textContent=pad((Number(e.textContent)+1)%24);};
+      document.getElementById('sqhD').onclick=function(){var e=document.getElementById('sqh');e.textContent=pad((Number(e.textContent)+23)%24);};
+      document.getElementById('sqmU').onclick=function(){var e=document.getElementById('sqm');e.textContent=pad((Number(e.textContent)+1)%60);};
+      document.getElementById('sqmD').onclick=function(){var e=document.getElementById('sqm');e.textContent=pad((Number(e.textContent)+59)%60);};
+      document.getElementById('sqSet').onclick=function(){
+        var hv=Number(document.getElementById('sqh').textContent);
+        var mv=Number(document.getElementById('sqm').textContent);
+        var t24=pad(hv)+':'+pad(mv);
+        S.alarmTimes[sh.type]=t24;
+        S.alarmEnabled[sh.type]=true;
+        save();
+        setAlarm(ds,sh);
+        renderAlarmSettings();
+      };
+    }
+    document.getElementById('sclBtn').onclick=closeSheet;
+    document.getElementById('overlay').style.display='block';
+    document.getElementById('sheet').style.display='block';
+    }catch(ex){toast('Fehler: '+ex.message,true);}
+  }
+  function closeSheet(){
+    document.getElementById('overlay').style.display='none';
+    document.getElementById('sheet').style.display='none';
+  }
+
+  /* ── ALARM BRIDGE ───────────────────────── */
+  function setAlarm(ds,sh){
+    try{
+      var time=S.alarmTimes[sh.type]||'';
+      if(!time){toast('Keine Weckerzeit f\u00FCr \u201E'+sh.name+'\u201C konfiguriert!',true);return;}
+      var pts=time.split(':').map(Number),h=pts[0],m=pts[1];
+      if(isNaN(h)||isNaN(m)){toast('Ung\u00FCltige Zeit: '+time,true);return;}
+      var p=ds.split('-').map(Number);
+      // Vergangenheits-Check clientseitig
+      var alarmMs=new Date(p[0],p[1]-1,p[2],h,m,0,0).getTime();
+      if(alarmMs<=Date.now()){
+        toast('\u26A0\uFE0F '+pad(h)+':'+pad(m)+' Uhr am '+fmtDe(ds)+' liegt in der Vergangenheit!',true);
+        return;
+      }
+      var key='shift-'+ds+'-t'+sh.type;
+      if(!window.Android||typeof window.Android.setAlarmForDate!=='function'){
+        toast('Android-Bridge nicht verf\u00FCgbar.',true);return;
+      }
+      window.Android.setAlarmForDate(p[0],p[1],p[2],h,m,key,sh.name+' ('+fmtDe(ds)+')');
+      S.activeAlarms[ds]={alarmKey:key,time:time,shiftName:sh.name};
+      save(); renderCal(); closeSheet();
+      toast('\u2705 Wecker gesetzt f\u00FCr '+pad(h)+':'+pad(m)+' Uhr am '+fmtDe(ds));
+    }catch(ex){
+      toast('Alarm-Fehler: '+ex.message,true);
+    }
+  }
+  function cancelAlarm(ds,key){
+    if(window.Android&&typeof window.Android.cancelAlarm==='function')
+      window.Android.cancelAlarm(key);
+    delete S.activeAlarms[ds];
+    save(); renderCal(); closeSheet(); toast('Wecker gel\u00F6scht.');
+  }
+
+  /* ── PERSISTENZ ─────────────────────────── */
+  function save(){try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}}
+  function load(){
+    try{
+      var raw=localStorage.getItem(LS); if(!raw){ S=createDefaultState(); return; }
+      hasSavedState = true;
+      var s=JSON.parse(raw); if(!s||typeof s!=='object')return;
+      if(typeof s.startDate==='string')   S.startDate=s.startDate;
+      if(typeof s.weeksCount==='number')  S.weeksCount=Math.max(1,Math.min(6,s.weeksCount));
+      if(typeof s.bundesland==='string')  S.bundesland=s.bundesland;
+      if(Array.isArray(s.pattern))        S.pattern=s.pattern;
+      if(Array.isArray(s.exceptions))     S.exceptions=s.exceptions;
+      if(s.alarmTimes&&typeof s.alarmTimes==='object')
+        [1,2,3,4].forEach(function(t){
+          if(typeof s.alarmTimes[t]==='string'){
+            // Validiere Format HH:MM
+            var m=s.alarmTimes[t].match(/^(\d{1,2}):(\d{2})$/);
+            if(m&&Number(m[1])<=23&&Number(m[2])<=59){
+              S.alarmTimes[t]=String(Number(m[1])).padStart(2,'0')+':'+m[2];
+            } else {
+              S.alarmTimes[t]=''; // Ung\u00FCltige Zeit l\u00F6schen
+            }
+          }
+        });
+      if(s.activeAlarms&&typeof s.activeAlarms==='object') S.activeAlarms=s.activeAlarms;
+      if(s.alarmEnabled&&typeof s.alarmEnabled==='object')
+        [1,2,3,4].forEach(function(t){if(typeof s.alarmEnabled[t]==='boolean')S.alarmEnabled[t]=s.alarmEnabled[t];});
+      if(s.freeAlarm&&typeof s.freeAlarm==='object'){
+        if(typeof s.freeAlarm.enabled==='boolean') S.freeAlarm.enabled=s.freeAlarm.enabled;
+        if(typeof s.freeAlarm.time==='string'){
+          var fm=s.freeAlarm.time.match(/^(\d{1,2}):(\d{2})$/);
+          if(fm&&Number(fm[1])<=23&&Number(fm[2])<=59) S.freeAlarm.time=String(Number(fm[1])).padStart(2,'0')+':'+fm[2];
+        }
+        if(Array.isArray(s.freeAlarm.days)) S.freeAlarm.days=s.freeAlarm.days.filter(function(d){return d>=0&&d<=6;});
+      }
+    }catch(e){}
+  }
+
+  /* ── EVENTS ─────────────────────────────── */
+  $('themeBtn').onclick=cycleTheme;
+  $('settingsBtn').onclick=function(){$('settingsPanel').classList.toggle('hidden');};
+  $('doneSettings').onclick=function(){
+    $('settingsPanel').classList.add('hidden');
+    save();
+  };
+  ['sdDay','sdMon','sdYear'].forEach(function(id){
+    $(id).addEventListener('change',function(){
+      S.startDate=getDateFromSelects();
+      var d=parseYmd(S.startDate);
+      if(!isNaN(d)) viewDate=new Date(d.getFullYear(),d.getMonth(),1,12,0,0);
+      renderCal(); save();
+    });
+  });
+  $('bundesland').addEventListener('change',function(e){S.bundesland=e.target.value;renderCal();save();});
+  $('decWeeks').onclick=function(){
+    if(S.weeksCount<=1)return; S.weeksCount--;
+    $('weeksVal').textContent=S.weeksCount; initPat();renderPat();renderCal();save();
+  };
+  $('incWeeks').onclick=function(){
+    if(S.weeksCount>=6)return; S.weeksCount++;
+    $('weeksVal').textContent=S.weeksCount; initPat();renderPat();renderCal();save();
+  };
+  $('resetAll').onclick=function(){
+    customConfirm('Wirklich alles l\u00f6schen?\nAlle Einstellungen und Wecker werden zur\u00fcckgesetzt.',function(){
+      S=createDefaultState();
+      S.startDate=todayYmd();
+      initPat();
+      try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}
+      setDateSelects(S.startDate);
+      $('weeksVal').textContent=S.weeksCount;
+      $('bundesland').value=S.bundesland;
+      renderAlarmSettings(); renderFreeAlarmSettings(); renderPat(); renderEx(); renderCal();
+      $('settingsPanel').classList.add('hidden');
+      toast('Alles zur\u00fcckgesetzt. Alle Wecker sind jetzt deaktiviert.');
+    });
+  };
+  $('alarmBox').addEventListener('change',function(e){
+    var id=e.target.id||'';
+    // Checkbox: ae1..ae4
+    var mt=id.match(/^ae(\d)$/);
+    if(mt){
+      var t=Number(mt[1]); if(t<1||t>4)return;
+      S.alarmEnabled[t]=e.target.checked;save();renderCal();
+      toast(SNAMES[t]+'-Wecker '+(e.target.checked?'aktiviert':'deaktiviert')+'.');
+    }
+  });
+  $('patGrid').addEventListener('click',function(e){
+    var b=e.target.closest('.pday'); if(b) cycleShift(Number(b.dataset.idx));
+  });
+  $('clearPat').onclick=function(){S.pattern=new Array(S.weeksCount*7).fill(0);renderPat();renderCal();save();};
+  $('addEx').onclick=function(){
+    var s=$('exS').value, e=$('exE').value||s, t=$('exT').value;
+    if(!s){toast('Startdatum fehlt!',true);return;}
+    if(e<s){toast('Bis-Datum vor Von-Datum!',true);return;}
+    S.exceptions.push({id:uid(),start:s,end:e,type:t});
+    renderEx();renderCal();save();
+    $('exS').value='';$('exE').value='';toast(t+' eingetragen!');
+  };
+  $('exList').addEventListener('click',function(e){var b=e.target.closest('.xdel');if(b)delEx(b.dataset.id);});
+  $('prevM').onclick=function(){viewDate.setMonth(viewDate.getMonth()-1);renderCal();};
+  $('nextM').onclick=function(){viewDate.setMonth(viewDate.getMonth()+1);renderCal();};
+  $('todayM').onclick=function(){viewDate=new Date();viewDate.setDate(1);viewDate.setHours(12,0,0,0);renderCal();};
+  $('aList').addEventListener('click',function(e){var b=e.target.closest('.adel');if(b)cancelAlarm(b.dataset.date,b.dataset.key);});
+  $('overlay').onclick=function(){closeSheet();};
+  $('testAlarmBtn').onclick=function(){
+    if(window.Android&&typeof window.Android.testAlarm==='function'){
+      window.Android.testAlarm();
+    } else {
+      toast('Android-Bridge nicht verf\u00FCgbar.',true);
+    }
+  };
+
+  /* ── INIT ───────────────────────────────── */
+  S.startDate=todayYmd();
+  load(); initPat();
+  // Migration: Frei-Defaults setzen falls leer (alte Versionen hatten '' / false)
+  if(!S.alarmTimes[1]) S.alarmTimes[1]='07:00';
+  initDateSelects();
+  setDateSelects(S.startDate);
+  $('weeksVal').textContent=S.weeksCount;
+  $('bundesland').value=S.bundesland;
+  renderAlarmSettings(); renderFreeAlarmSettings(); renderPat(); renderEx(); renderCal();
+  $('settingsPanel').classList.add('hidden');
+})();
+</script>
+</body>
+</html>

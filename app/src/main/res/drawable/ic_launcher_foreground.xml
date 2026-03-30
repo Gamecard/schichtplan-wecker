@@ -1,0 +1,53 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Kalenderblatt: abgerundetes Rechteck -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M26,28 L82,28 Q86,28 86,32 L86,84 Q86,88 82,88 L26,88 Q22,88 22,84 L22,32 Q22,28 26,28 Z" />
+
+    <!-- Roter oberer Bereich (Monat) -->
+    <path
+        android:fillColor="#EF4444"
+        android:pathData="M26,28 L82,28 Q86,28 86,32 L86,44 L22,44 L22,32 Q22,28 26,28 Z" />
+
+    <!-- Aufhaenge-Ringe links -->
+    <path
+        android:fillColor="#9CA3AF"
+        android:pathData="M36,24 Q36,22 38,22 Q40,22 40,24 L40,32 Q40,34 38,34 Q36,34 36,32 Z" />
+
+    <!-- Aufhaenge-Ringe rechts -->
+    <path
+        android:fillColor="#9CA3AF"
+        android:pathData="M68,24 Q68,22 70,22 Q72,22 72,24 L72,32 Q72,34 70,34 Q68,34 68,32 Z" />
+
+    <!-- Feiner Rand -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#D1D5DB"
+        android:strokeWidth="1"
+        android:pathData="M26,28 L82,28 Q86,28 86,32 L86,84 Q86,88 82,88 L26,88 Q22,88 22,84 L22,32 Q22,28 26,28 Z" />
+
+    <!-- Horizontale Linien (Kalenderraster) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#E5E7EB"
+        android:strokeWidth="0.5"
+        android:pathData="M26,56 L82,56 M26,68 L82,68 M26,80 L82,80" />
+
+    <!-- Vertikale Linien -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#E5E7EB"
+        android:strokeWidth="0.5"
+        android:pathData="M38,44 L38,88 M54,44 L54,88 M70,44 L70,88" />
+
+    <!-- Blauer Punkt: heutiger Tag -->
+    <path
+        android:fillColor="#2563EB"
+        android:pathData="M54,66 m-7,0 a7,7 0,1 1,14 0 a7,7 0,1 1,-14 0" />
+
+</vector>

@@ -1,0 +1,1458 @@
+<!doctype html>
+<html lang="de" data-theme="system">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Schichtplan Kalender – Freie Tage & Schichten online</title>
+  <meta name="description" content="Interaktiver Schichtplan-Kalender für freie Tage, Früh-, Spät- und Nachtschichten mit Wochenrhythmus, Feiertagen, Ausnahmen und Teil-Link.">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+  <meta name="author" content="Freie Tage & Schichten">
+  <meta name="application-name" content="Freie Tage & Schichten">
+  <meta name="theme-color" content="#2563eb">
+  <meta property="og:locale" content="de_DE">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Schichtplan Kalender – Freie Tage & Schichten online">
+  <meta property="og:description" content="Interaktiver Schichtplan-Kalender mit Wochenrhythmus, Feiertagen, Ausnahmen und Teil-Link.">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Schichtplan Kalender – Freie Tage & Schichten online">
+  <meta name="twitter:description" content="Interaktiver Schichtplan-Kalender mit Wochenrhythmus, Feiertagen, Ausnahmen und Teil-Link.">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"Freie Tage & Schichten","applicationCategory":"BusinessApplication","applicationSubCategory":"Calendar","operatingSystem":"Any","browserRequirements":"JavaScript erforderlich","inLanguage":"de-DE","description":"Interaktiver Schichtplan-Kalender für freie Tage, Früh-, Spät- und Nachtschichten mit Wochenrhythmus, Feiertagen, Ausnahmen und Teil-Link."}</script>
+
+  <style>
+    :root {
+      --bg: #ffffff; --fg: #111418; --muted: #6b7280; --primary: #2563eb;
+      --primary-hover: #1d4ed8; --primary-contrast: #ffffff; --accent: #10b981;
+      --danger: #ef4444; --danger-hover: #dc2626; --card: #f8fafc;
+      --border: #e5e7eb; --holiday: #f59e0b33; --holiday-border: #f59e0b; --free: #10b9811f;
+      --exception: #9333ea20; --chip-bg: #e5e7eb;
+      --frueh: #facc15; --frueh-bg: #fef08a44;
+      --spaet: #f97316; --spaet-bg: #fed7aa44;
+      --nacht: #64748b; --nacht-bg: #e2e8f044;
+    }
+    html[data-theme="light"] {
+      --bg: #ffffff; --fg: #111418; --muted: #6b7280; --primary: #2563eb;
+      --primary-hover: #1d4ed8; --primary-contrast: #ffffff; --accent: #10b981;
+      --danger: #ef4444; --danger-hover: #dc2626; --card: #f8fafc;
+      --border: #e5e7eb; --holiday: #f59e0b33; --holiday-border: #f59e0b; --free: #10b9811f;
+      --exception: #9333ea20; --chip-bg: #e5e7eb;
+      --frueh: #facc15; --frueh-bg: #fef08a44;
+      --spaet: #f97316; --spaet-bg: #fed7aa44;
+      --nacht: #64748b; --nacht-bg: #e2e8f044;
+    }
+    html[data-theme="dark"] {
+      --bg: #0b0d10; --fg: #e5e7eb; --muted: #9ca3af; --primary: #3b82f6;
+      --primary-hover: #60a5fa; --primary-contrast: #0b0d10; --accent: #22c55e;
+      --danger: #ef4444; --danger-hover: #dc2626; --card: #111418;
+      --border: #262b33; --holiday: #f59e0b33; --holiday-border: #f59e0b; --free: #10b9811f;
+      --exception: #9333ea20; --chip-bg: #1f2937;
+      --frueh: #facc15; --frueh-bg: #fef08a44;
+      --spaet: #f97316; --spaet-bg: #fed7aa44;
+      --nacht: #94a3b8; --nacht-bg: #1e293b66;
+    }
+    @media (prefers-color-scheme: dark) {
+      html[data-theme="system"] {
+        --bg: #0b0d10; --fg: #e5e7eb; --muted: #9ca3af; --primary: #3b82f6;
+        --primary-hover: #60a5fa; --primary-contrast: #0b0d10; --accent: #22c55e;
+        --danger: #ef4444; --danger-hover: #dc2626; --card: #111418;
+        --border: #262b33; --holiday: #f59e0b33; --holiday-border: #f59e0b; --free: #10b9811f;
+        --exception: #9333ea20; --chip-bg: #1f2937;
+        --frueh: #facc15; --frueh-bg: #fef08a44;
+        --spaet: #f97316; --spaet-bg: #fed7aa44;
+        --nacht: #94a3b8; --nacht-bg: #1e293b66;
+      }
+    }
+
+    html, body { height: 100%; }
+    body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.5; padding-bottom: 40px; }
+    h1 { font-size: 1.25rem; margin: 0; font-weight: 700; }
+    .header-brand { display: grid; gap: 0.2rem; }
+    .header-actions { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+    .fab { position: fixed; right: 20px; bottom: 20px; z-index: 60; display: inline-flex; align-items: center; gap: 0.55rem; padding: 0.8rem 1rem; border-radius: 999px; border: 1px solid transparent; background: var(--primary); color: var(--primary-contrast); box-shadow: 0 10px 28px rgba(0,0,0,0.24); font-weight: 700; cursor: pointer; }
+    .fab:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    .fab .fab-icon { display: inline-flex; width: 1.6rem; height: 1.6rem; border-radius: 999px; background: rgba(255,255,255,0.18); align-items: center; justify-content: center; font-size: 0.95rem; }
+    .privacy-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.52); z-index: 70; display: none; align-items: center; justify-content: center; padding: 1rem; }
+    .privacy-overlay.open { display: flex; }
+    .privacy-dialog { width: min(720px, 100%); max-height: 86vh; overflow: auto; background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 20px 48px rgba(0,0,0,0.24); }
+    .privacy-head { display: flex; justify-content: space-between; gap: 1rem; align-items: center; padding: 1rem 1.1rem; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--card); }
+    .privacy-title { font-weight: 800; font-size: 1.05rem; }
+    .icon-btn { background: var(--chip-bg); color: var(--fg); border-color: var(--border); padding: 0.45rem 0.7rem; }
+    .privacy-body { padding: 1.1rem; display: grid; gap: 1rem; }
+    .privacy-card { border: 1px solid var(--border); border-radius: 12px; padding: 1rem; background: var(--bg); }
+    .privacy-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: flex-end; padding: 1rem 1.1rem; border-top: 1px solid var(--border); }
+    .toggle-row { display: flex; gap: 0.8rem; justify-content: space-between; align-items: center; }
+    .switch { position: relative; width: 52px; height: 30px; display: inline-block; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; inset: 0; background: var(--chip-bg); border: 1px solid var(--border); border-radius: 999px; transition: .2s; }
+    .slider:before { content: ''; position: absolute; width: 22px; height: 22px; left: 3px; top: 3px; background: var(--bg); border-radius: 999px; transition: .2s; box-shadow: 0 1px 2px rgba(0,0,0,.18); }
+    .switch input:checked + .slider { background: var(--primary); border-color: var(--primary); }
+    .switch input:checked + .slider:before { transform: translateX(22px); }
+    .list-tight { margin: 0.4rem 0 0 1.1rem; padding: 0; }
+    .list-tight li { margin: 0.28rem 0; }
+
+    header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; gap: 1rem; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--bg); z-index: 10; box-shadow: 0 1px 2px rgba(0,0,0,0.05); flex-wrap: wrap; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1rem; }
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1.5rem; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02); grid-column: span 12; }
+    .stack { display: grid; gap: 1rem; }
+    .row { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
+    .row-nowrap { flex-wrap: nowrap; }
+    .items-end { align-items: flex-end; }
+    .justify-between { justify-content: space-between; }
+
+    .flex-1 { flex: 1; }
+    .mt-1 { margin-top: 0.5rem; }
+    .mt-2 { margin-top: 1rem; }
+    .pt-2 { padding-top: 1rem; }
+    .border-t { border-top: 1px solid var(--border); }
+    .hidden { display: none !important; }
+    .w-fit { width: fit-content; }
+    .mb-2 { margin-bottom: 0.5rem; }
+
+    label { font-weight: 600; display: block; margin-bottom: 0.25rem; }
+    .muted { color: var(--muted); font-weight: 400; }
+    .small { font-size: 0.85rem; color: var(--muted); }
+    input, select, button, .btn { font: inherit; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--fg); transition: all 0.2s ease; }
+    input[type="date"] { cursor: pointer; }
+    button, .btn { background: var(--primary); color: var(--primary-contrast); border: 1px solid transparent; cursor: pointer; font-weight: 600; }
+    button:hover, .btn:hover { filter: brightness(1.1); }
+    button:active { transform: scale(0.95); }
+    button.secondary { background: var(--chip-bg); color: var(--fg); border-color: var(--border); }
+    button.danger { background: var(--danger); color: white; }
+    .btn-icon { padding: 0.4rem 1rem; font-size: 1.2rem; border-radius: 8px; }
+
+    .chip { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.75rem; border-radius: 999px; background: var(--chip-bg); color: var(--fg); font-size: 0.9rem; cursor: pointer; }
+    .section-title { font-weight: 700; margin: 0; font-size: 1.1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+    .section-title.no-border { border: none; padding: 0; }
+
+    .pattern-row { display: flex; flex-direction: column; gap: 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem; }
+    .pattern-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .pattern-days { display: flex; gap: 0.35rem; width: 100%; }
+    .pattern-day { flex: 1; padding: 0.6rem 0.1rem; text-align: center; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); font-size: 0.85rem; font-weight: 600; cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: center; }
+    .pattern-day.free { background: var(--free); border-color: var(--accent); }
+    .pattern-day.frueh { background: var(--frueh-bg); border-color: var(--frueh); }
+    .pattern-day.spaet { background: var(--spaet-bg); border-color: var(--spaet); }
+    .pattern-day.nacht { background: var(--nacht-bg); border-color: var(--nacht); }
+
+    .calendar-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .calendar-title { font-weight: 700; font-size: 1.1rem; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--border); gap: 1px; }
+    .calendar-grid .dow { background: var(--chip-bg); padding: 0.75rem; text-align: center; font-weight: 600; }
+    .day { min-height: 100px; padding: 0.5rem; background: var(--bg); border-left: 4px solid transparent; display: flex; flex-direction: column; position: relative; }
+    .day .date { font-size: 0.9rem; font-weight: 600; color: var(--muted); margin-bottom: 0.25rem; }
+
+    .day.free { background-color: var(--free); border-left-color: var(--accent); }
+    .day.frueh { background-color: var(--frueh-bg); border-left-color: var(--frueh); }
+    .day.spaet { background-color: var(--spaet-bg); border-left-color: var(--spaet); }
+    .day.nacht { background-color: var(--nacht-bg); border-left-color: var(--nacht); }
+    .day.exception { box-shadow: inset 0 0 0 3px #a855f799; }
+    .day.holiday { background-color: var(--holiday) !important; border-left-color: var(--holiday-border) !important; }
+    .day.dimmed { opacity: 0.4; }
+    .day.today { outline: 3px solid var(--primary); outline-offset: -3px; }
+    .day.today .date { color: var(--primary); font-weight: 800; }
+    .today-badge { font-size: 0.7rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+
+    .pill { display: inline-flex; font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; margin-top: auto; }
+    .pill.holiday-pill { background: var(--holiday-border); color: #fff; margin-bottom: 4px; }
+    .pill.exception-pill { background: #a855f7; color: white; }
+
+    /* Legende */
+    .legend { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
+    .legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; }
+    .legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+
+    .alarm-grid { display: grid; grid-template-columns: repeat(2, minmax(180px, 1fr)); gap: 0.8rem; }
+    .alarm-cell { padding: 0.7rem; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
+    .alarm-cell input[type="time"] { width: 100%; }
+
+    /* Toast */
+    #toast { visibility: hidden; min-width: 250px; background-color: var(--accent); color: white; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 50; left: 50%; bottom: 30px; transform: translateX(-50%); font-weight: bold; }
+    #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+    #toast.error { background-color: var(--danger); }
+    @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+    @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+
+    footer { margin-top: 3rem; padding: 2rem 1rem; border-top: 1px solid var(--border); text-align: center; color: var(--muted); font-size: 0.9rem; }
+
+    /* Drucken */
+    @media print {
+      header, #section-settings, #showSettingsBtn, .calendar-header button, footer { display: none !important; }
+      body { padding: 0; }
+      .card { box-shadow: none; border: none; }
+      .day { min-height: 70px; }
+    }
+
+    @media (min-width: 768px) {
+      .pattern-row { flex-direction: row; align-items: center; }
+      .pattern-row > span { width: 80px; margin-bottom: 0; }
+    }
+    body.shared-link-view .calendar-card { scroll-margin-top: 0.25rem; }
+
+    @media (max-width: 768px) {
+      header { padding: 0.7rem 0.9rem; gap: 0.7rem; }
+      h1 { font-size: 1.05rem; }
+      .header-brand .small { display: none; }
+      .header-actions { gap: 0.45rem; }
+      .header-actions button { padding: 0.48rem 0.62rem; font-size: 0.84rem; }
+      .container { padding: 0.8rem 0.55rem; }
+      .card { padding: 0.9rem; }
+      .calendar-header { gap: 0.5rem; }
+      .calendar-header button { padding: 0.48rem 0.58rem; font-size: 0.85rem; }
+      .calendar-title { font-size: 1rem; text-align: center; }
+      .show-settings-inline-hint { display: none; }
+    }
+
+    @media (max-width: 768px) {
+      body.shared-link-view header { display: none; }
+      body.shared-link-view .container { padding: 0.28rem 0.38rem 5rem; }
+      body.shared-link-view .calendar-card { padding: 0.55rem; border-radius: 10px; }
+      body.shared-link-view .calendar-header { margin-top: 0; gap: 0.35rem; }
+      body.shared-link-view .calendar-header button { padding: 0.42rem 0.48rem; font-size: 0.8rem; }
+      body.shared-link-view .calendar-title { font-size: 0.96rem; line-height: 1.2; }
+      body.shared-link-view .calendar-grid { border-radius: 10px; }
+      body.shared-link-view .calendar-grid .dow { padding: 0.42rem 0.12rem; font-size: 0.78rem; }
+      body.shared-link-view .day { min-height: 68px; padding: 0.2rem; }
+      body.shared-link-view .date { font-size: 0.82rem; }
+      body.shared-link-view .pill { font-size: 0.68rem; padding: 0.16rem 0.38rem; }
+      body.shared-link-view #showSettingsBtn { position: fixed; left: 12px; bottom: 12px; z-index: 65; margin: 0 !important; width: auto; max-width: calc(100vw - 88px); padding: 0.64rem 0.84rem; font-size: 0.82rem; border-radius: 999px; box-shadow: 0 10px 22px rgba(0,0,0,0.22); }
+      body.shared-link-view .fab { right: 12px; bottom: 12px; padding: 0.62rem 0.78rem; }
+      body.shared-link-view .fab span:last-child { display: none; }
+      body.shared-link-view .fab .fab-icon { width: 1.45rem; height: 1.45rem; }
+    }
+
+    @media (max-width: 768px) {
+      .grid { grid-template-columns: 1fr; }
+      .day { min-height: 80px; padding: 0.25rem; }
+      .calendar-grid .dow { padding: 0.5rem 0.2rem; font-size: 0.8rem; }
+      .pattern-day { font-size: 0.75rem; padding: 0.5rem 0; }
+      .alarm-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-brand">
+      <h1>Freie Tage & Schichten</h1>
+      <div class="small">Schichtplan-Kalender mit Wochenrhythmus, Feiertagen und Ausnahmen.</div>
+    </div>
+    <div class="header-actions">
+      <button id="themeToggleBtn" class="secondary" type="button" title="Farbschema wechseln" aria-label="Farbschema wechseln">🖥️ System</button>
+      <button id="printBtn" class="secondary" title="Kalender drucken">🖨️ Drucken</button>
+    </div>
+  </header>
+
+  <div class="container stack">
+    <section id="section-settings" class="grid">
+      <div class="card stack">
+        <div class="section-title">Grundeinstellungen</div>
+        <div class="row items-end">
+          <div>
+            <label for="startDate">Startdatum (Woche 1)</label>
+            <input type="date" id="startDate">
+          </div>
+          <div>
+            <label>Wochen im Rhythmus</label>
+            <div class="row row-nowrap items-end">
+              <button id="decWeeks" class="secondary btn-icon" aria-label="Wochen verringern">−</button>
+              <span id="weeksDisplay" style="font-weight: bold; font-size: 1.1rem; min-width: 2ch; text-align: center;" aria-live="polite">5</span>
+              <button id="incWeeks" class="secondary btn-icon" aria-label="Wochen erhöhen">+</button>
+            </div>
+          </div>
+          <div>
+            <label for="bundesland">Bundesland (Feiertage)</label>
+            <select id="bundesland">
+              <option value="NW">Nordrhein-Westfalen</option>
+              <option value="BW">Baden-Württemberg</option>
+              <option value="BY">Bayern</option>
+              <option value="BE">Berlin</option>
+              <option value="BB">Brandenburg</option>
+              <option value="HB">Bremen</option>
+              <option value="HH">Hamburg</option>
+              <option value="HE">Hessen</option>
+              <option value="MV">Mecklenburg-Vorpommern</option>
+              <option value="NI">Niedersachsen</option>
+              <option value="RP">Rheinland-Pfalz</option>
+              <option value="SL">Saarland</option>
+              <option value="SN">Sachsen</option>
+              <option value="ST">Sachsen-Anhalt</option>
+              <option value="SH">Schleswig-Holstein</option>
+              <option value="TH">Thüringen</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row mt-1">
+          <button id="resetAll" class="danger">Alles zurücksetzen</button>
+        </div>
+
+        <div class="stack mt-1 pt-2 border-t">
+          <div class="section-title no-border">Wecker je Legende</div>
+          <div class="small">Zeit pro Schichttyp festlegen. Im Kalender auf einen Tag tippen, um den passenden Wecker zu setzen.</div>
+          <div id="alarmSettings" class="alarm-grid" role="group" aria-label="Weckerzeiten pro Schicht"></div>
+        </div>
+
+        <div class="row mt-1 pt-2 border-t">
+          <div class="flex-1">
+            <label for="shareLink">Teilen: Dein Link zu deinem Plan</label>
+            <div class="row">
+              <input type="text" id="shareLink" readonly aria-label="Teilbarer Link" style="flex:1; font-family: monospace; font-size: 0.85rem; background: var(--chip-bg); cursor: text;">
+              <button id="copyCodeBtn" class="secondary">Link kopieren</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card stack">
+        <div class="row justify-between">
+          <div class="section-title no-border">Wochenmuster definieren <span class="muted small" style="font-weight: normal;">(Tippen zum Ändern)</span></div>
+          <button id="clearPattern" class="secondary" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Muster leeren</button>
+        </div>
+        <div id="weekPattern" class="stack mt-1" role="group" aria-label="Wochenmuster"></div>
+
+        <!-- Legende -->
+        <div class="legend pt-2 border-t">
+          <span class="small" style="font-weight:600;">Legende:</span>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent);"></div><span>Frei</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--frueh);"></div><span>Früh</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--spaet);"></div><span>Spät</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--nacht);"></div><span>Nacht</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:#a855f7;"></div><span>Ausnahme</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--holiday-border);"></div><span>Feiertag</span></div>
+        </div>
+      </div>
+
+      <div class="card stack">
+        <div class="section-title">Ausnahmen / Urlaub</div>
+        <div class="row items-end">
+          <div><label for="exDateStart" class="small">Von Datum</label><input type="date" id="exDateStart"></div>
+          <div><label for="exDateEnd" class="small">Bis Datum (optional)</label><input type="date" id="exDateEnd"></div>
+          <div><label for="exType" class="small">Typ</label>
+            <select id="exType">
+              <option value="Urlaub">Urlaub</option>
+              <option value="Schulung">Schulung</option>
+            </select>
+          </div>
+          <button id="addException">Hinzufügen</button>
+        </div>
+        <div id="exceptionsList" class="stack mt-1" style="gap: 0.5rem;" role="list" aria-label="Ausnahmen"></div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card stack calendar-card">
+        <button id="showSettingsBtn" class="secondary w-fit mb-2 hidden">⚙️ Plan anpassen (Einstellungen einblenden)</button>
+
+        <div class="calendar-header">
+          <button id="prevMonth" class="secondary" aria-label="Vorheriger Monat">◀ Vorheriger</button>
+          <div id="monthTitle" class="calendar-title" aria-live="polite">Monat Jahr</div>
+          <button id="nextMonth" class="secondary" aria-label="Nächster Monat">Nächster ▶</button>
+        </div>
+        <div id="calendarView" class="stack" role="main"></div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    <strong>Impressum</strong><br>
+    E-Mail: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="4e2521203a2f253a0e7c7a3e222f20603b25">[email&#160;protected]</a><br>
+  </footer>
+
+  <button id="privacyFab" class="fab" type="button" aria-label="Datenschutz- und Speichereinstellungen öffnen" title="Datenschutz & Speicher">
+    <span class="fab-icon">🛡️</span>
+    <span>Datenschutz</span>
+  </button>
+
+  <div id="privacyOverlay" class="privacy-overlay" aria-hidden="true">
+    <div class="privacy-dialog" role="dialog" aria-modal="true" aria-labelledby="privacyTitle">
+      <div class="privacy-head">
+        <div>
+          <div id="privacyTitle" class="privacy-title">Datenschutz &amp; Speicher</div>
+          <div class="small">Deine Einstellungen werden lokal in deinem Browser gespeichert.</div>
+        </div>
+        <button id="privacyCloseBtn" class="icon-btn secondary" type="button" aria-label="Fenster schließen">✕</button>
+      </div>
+      <div class="privacy-body">
+        <section class="privacy-card">
+          <div class="toggle-row">
+            <div>
+              <strong>Teil-Link aktiv nutzen</strong>
+              <div class="small">Wenn aktiviert, kannst du deinen Plan als Link teilen.</div>
+            </div>
+            <label class="switch" aria-label="Teil-Link erlauben">
+              <input type="checkbox" id="shareLinksEnabled">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </section>
+
+        <section class="privacy-card">
+          <strong>Was lokal gespeichert wird</strong>
+          <ul class="list-tight small">
+            <li>Startdatum, Wochenrhythmus und Bundesland</li>
+            <li>Schichtmuster und eingetragene Ausnahmen</li>
+            <li>Farbschema (System / Hell / Dunkel)</li>
+          </ul>
+        </section>
+
+        <section class="privacy-card">
+          <strong>Hinweis zur privaten Nutzung</strong>
+          <p class="small" style="margin-top:0.5rem;">Diese Website ist für private Nutzung gedacht. Es werden in dieser Version keine Analyse- oder Marketingdienste eingebunden.</p>
+        </section>
+      </div>
+      <div class="privacy-actions">
+        <a class="btn secondary" href="datenschutzhinweise-private-website.html" target="_blank" rel="noopener">Datenschutzhinweise öffnen</a>
+        <button id="resetLocalDataBtn" class="danger" type="button">Lokale Daten löschen</button>
+        <button id="privacySaveBtn" type="button">Speichern</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" role="status" aria-live="polite">Aktion erfolgreich!</div>
+
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+    // ============================================================
+    // KONSTANTEN
+    // ============================================================
+    const WEEKDAYS     = ['Mo','Di','Mi','Do','Fr','Sa','So'];
+    const SHIFT_CLASSES = { 0: '', 1: 'free', 2: 'frueh', 3: 'spaet', 4: 'nacht' };
+    const SHIFT_NAMES   = { 0: '', 1: 'Frei', 2: 'Früh', 3: 'Spät', 4: 'Nacht' };
+    const LS_KEY        = 'freie-tage-kalender-v8';
+    const THEME_KEY     = 'freie-tage-theme-v1';
+    const SHARE_PREF_KEY = 'freie-tage-share-enabled-v1';
+    const THEME_SEQUENCE = ['system', 'light', 'dark'];
+    const THEME_LABELS   = { system: '🖥️ System', light: '☀️ Hell', dark: '🌙 Dunkel' };
+    const SHOW_SETTINGS_LABEL = '⚙️ Plan anpassen (Einstellungen einblenden)';
+    const SHOW_SETTINGS_MOBILE_LABEL = '⚙️ Einstellungen';
+
+    // Schema-Version für zukünftige Migrationen
+    const SCHEMA_VERSION = 1;
+
+    // ============================================================
+    // STATE  (einzige „Quelle der Wahrheit")
+    // ============================================================
+    let state = {
+      _v: SCHEMA_VERSION,
+      startDate:   todayLocalYmd(),
+      weeksCount:  5,
+      bundesland:  'NW',
+      pattern:     [],
+      exceptions:  [],
+      alarmTimes:  { 1: '', 2: '05:30', 3: '12:30', 4: '20:00' }
+    };
+
+    let currentDisplayDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1, 12, 0, 0);
+    let loadedFromShareLink = false;
+
+    // ============================================================
+    // THEME / SEO / PRIVACY UI
+    // ============================================================
+    function updateThemeToggleUI(theme) {
+      const btn = document.getElementById('themeToggleBtn');
+      if (!btn) return;
+      btn.textContent = THEME_LABELS[theme] || THEME_LABELS.system;
+      const label = theme === 'light' ? 'hell' : theme === 'dark' ? 'dunkel' : 'System';
+      btn.setAttribute('aria-label', `Farbschema: ${label}. Klicken zum Wechseln.`);
+      btn.title = 'Farbschema wechseln';
+    }
+
+    function updateThemeColorMeta(theme) {
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (!meta) return;
+      const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      meta.setAttribute('content', isDark ? '#0b0d10' : '#2563eb');
+    }
+
+    function applyTheme(theme, { persist = true } = {}) {
+      const normalized = THEME_SEQUENCE.includes(theme) ? theme : 'system';
+      document.documentElement.setAttribute('data-theme', normalized);
+      updateThemeToggleUI(normalized);
+      updateThemeColorMeta(normalized);
+      if (persist) {
+        try { localStorage.setItem(THEME_KEY, normalized); } catch (e) {}
+      }
+    }
+
+    function cycleTheme() {
+      const current = document.documentElement.getAttribute('data-theme') || 'system';
+      const currentIdx = THEME_SEQUENCE.indexOf(current);
+      const nextTheme = THEME_SEQUENCE[(currentIdx + 1) % THEME_SEQUENCE.length];
+      applyTheme(nextTheme);
+    }
+
+    function initTheme() {
+      let storedTheme = document.documentElement.getAttribute('data-theme') || 'system';
+      try {
+        storedTheme = localStorage.getItem(THEME_KEY) || storedTheme;
+      } catch (e) {}
+      applyTheme(storedTheme, { persist: false });
+
+      if (window.matchMedia) {
+        const media = window.matchMedia('(prefers-color-scheme: dark)');
+        const syncSystemTheme = () => {
+          if ((document.documentElement.getAttribute('data-theme') || 'system') === 'system') {
+            updateThemeColorMeta('system');
+          }
+        };
+        if (media.addEventListener) media.addEventListener('change', syncSystemTheme);
+        else if (media.addListener) media.addListener(syncSystemTheme);
+      }
+    }
+
+    function upsertMeta(selector, attributes) {
+      let node = document.head.querySelector(selector);
+      if (!node) {
+        node = document.createElement('meta');
+        document.head.appendChild(node);
+      }
+      Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
+      return node;
+    }
+
+    function initSeoMeta() {
+      const canonicalUrl = `${location.origin}${location.pathname}`;
+      let canonical = document.head.querySelector('link[rel="canonical"]');
+      if (!canonical) {
+        canonical = document.createElement('link');
+        canonical.setAttribute('rel', 'canonical');
+        document.head.appendChild(canonical);
+      }
+      canonical.setAttribute('href', canonicalUrl);
+      upsertMeta('meta[property="og:url"]', { property: 'og:url', content: canonicalUrl });
+    }
+
+    function isShareEnabled() {
+      try {
+        const stored = localStorage.getItem(SHARE_PREF_KEY);
+        return stored === null ? true : stored === '1';
+      } catch (e) {
+        return true;
+      }
+    }
+
+    function setShareEnabled(value) {
+      try { localStorage.setItem(SHARE_PREF_KEY, value ? '1' : '0'); } catch (e) {}
+      updateShareUiState();
+    }
+
+    function updateShareUiState() {
+      const enabled = isShareEnabled();
+      const shareInput = document.getElementById('shareLink');
+      const copyBtn = document.getElementById('copyCodeBtn');
+      if (shareInput) {
+        shareInput.disabled = !enabled;
+        shareInput.value = enabled ? shareInput.value : 'Teil-Link deaktiviert';
+      }
+      if (copyBtn) copyBtn.disabled = !enabled;
+      const toggle = document.getElementById('shareLinksEnabled');
+      if (toggle) toggle.checked = enabled;
+    }
+
+    function syncShowSettingsButtonLabel() {
+      const btn = document.getElementById('showSettingsBtn');
+      if (!btn) return;
+      const isMobile = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+      const compact = document.body.classList.contains('shared-link-view') && isMobile;
+      btn.textContent = compact ? SHOW_SETTINGS_MOBILE_LABEL : SHOW_SETTINGS_LABEL;
+      btn.setAttribute('aria-label', compact ? 'Einstellungen einblenden' : 'Plan anpassen (Einstellungen einblenden)');
+      btn.title = compact ? 'Einstellungen einblenden' : 'Plan anpassen';
+    }
+
+    function activateSharedLinkView() {
+      const mobile = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+      if (!loadedFromShareLink) {
+        document.body.classList.remove('shared-link-view');
+        syncShowSettingsButtonLabel();
+        return;
+      }
+
+      document.body.classList.add('shared-link-view');
+      syncShowSettingsButtonLabel();
+
+      if (mobile) {
+        requestAnimationFrame(() => {
+          const target = document.querySelector('.calendar-card') || document.getElementById('calendarView') || document.getElementById('monthTitle');
+          if (target) target.scrollIntoView({ behavior: 'auto', block: 'start' });
+          window.scrollTo(0, 0);
+        });
+      }
+    }
+
+    function openPrivacyModal() {
+      const overlay = document.getElementById('privacyOverlay');
+      if (!overlay) return;
+      updateShareUiState();
+      overlay.classList.add('open');
+      overlay.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closePrivacyModal() {
+      const overlay = document.getElementById('privacyOverlay');
+      if (!overlay) return;
+      overlay.classList.remove('open');
+      overlay.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
+    function clearLocalPlanData() {
+      try {
+        localStorage.removeItem(LS_KEY);
+        localStorage.removeItem(THEME_KEY);
+        localStorage.removeItem(SHARE_PREF_KEY);
+      } catch (e) {}
+      showToast('Lokale Daten gelöscht. Seite wird neu geladen.');
+      setTimeout(() => { location.href = location.pathname; }, 700);
+    }
+
+    // ============================================================
+    // HILFSFUNKTIONEN
+    // ============================================================
+
+    /** XSS-Schutz */
+    function escapeHTML(str) {
+      if (!str) return '';
+      return String(str).replace(/[&<>'"]/g, tag => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+      }[tag] || tag));
+    }
+
+    /** Kollisionssichere ID (bevorzugt Web-Crypto, Fallback auf Math.random) */
+    function generateId() {
+      if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+      }
+      // Fallback für sehr alte Browser
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
+    }
+
+    /** Toast-Benachrichtigung (optional als Fehler färben) */
+    function showToast(msg, isError = false) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className   = isError ? 'show error' : 'show';
+      setTimeout(() => { t.className = ''; }, 3000);
+    }
+
+    /** Datum TT.MM.JJJJ formatieren */
+    function formatDateDe(ymdString) {
+      if (!ymdString) return '';
+      const [y, m, d] = ymdString.split('-');
+      if (!y || !m || !d) return escapeHTML(ymdString);
+      return `${d}.${m}.${y}`;
+    }
+
+    /** Lokales Datum sicher als YYYY-MM-DD formatieren (ohne UTC-Verschiebung) */
+    function toLocalYmd(dateObj) {
+      const d = new Date(dateObj);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    /** YYYY-MM-DD explizit als lokales Datum interpretieren */
+    function parseYmdAsLocal(ymdString) {
+      if (!ymdString || !/^\d{4}-\d{2}-\d{2}$/.test(ymdString)) return new Date(NaN);
+      const [y, m, d] = ymdString.split('-').map(Number);
+      return new Date(y, m - 1, d, 12, 0, 0);
+    }
+
+    /** Heutiges lokales Datum als YYYY-MM-DD */
+    function todayLocalYmd() {
+      return toLocalYmd(new Date());
+    }
+
+    /** Datum im Share-Link kompakter speichern (YYYYMMDD) */
+    function compactDate(ymdString) {
+      return typeof ymdString === 'string' ? ymdString.replace(/-/g, '') : '';
+    }
+
+    /** Kompaktes Datumsformat aus Share-Link zurückwandeln */
+    function expandCompactDate(compactValue) {
+      if (!compactValue) return '';
+      if (/^\d{8}$/.test(compactValue)) {
+        return `${compactValue.slice(0, 4)}-${compactValue.slice(4, 6)}-${compactValue.slice(6, 8)}`;
+      }
+      return compactValue;
+    }
+
+    const PATTERN_CHUNK_DIGITS = 22;
+    const PATTERN_CHUNK_WIDTH  = 10;
+
+    /** Muster platzsparend von Basis-5 nach Basis-36 kodieren */
+    function encodePattern(patternArray) {
+      const digits = (patternArray || []).map(v => Number(v || 0)).join('');
+      if (!digits) return '';
+      const parts = [];
+      for (let i = 0; i < digits.length; i += PATTERN_CHUNK_DIGITS) {
+        const chunk = digits.slice(i, i + PATTERN_CHUNK_DIGITS);
+        let value = 0;
+        for (const digit of chunk) value = value * 5 + Number(digit);
+        parts.push(value.toString(36).padStart(PATTERN_CHUNK_WIDTH, '0'));
+      }
+      return parts.join('');
+    }
+
+    /** Kompakt kodiertes Muster zurück in das Tagesarray wandeln */
+    function decodePattern(encoded, totalLength) {
+      if (!encoded || !totalLength) return Array(totalLength || 0).fill(0);
+      const chunkCount = Math.ceil(totalLength / PATTERN_CHUNK_DIGITS);
+      let digits = '';
+      for (let i = 0; i < chunkCount; i++) {
+        const block = encoded.slice(i * PATTERN_CHUNK_WIDTH, (i + 1) * PATTERN_CHUNK_WIDTH);
+        let value = parseInt(block || '0', 36);
+        const chunkLength = Math.min(PATTERN_CHUNK_DIGITS, totalLength - digits.length);
+        const chunkDigits = Array(chunkLength).fill('0');
+        for (let pos = chunkLength - 1; pos >= 0; pos--) {
+          chunkDigits[pos] = String(value % 5);
+          value = Math.floor(value / 5);
+        }
+        digits += chunkDigits.join('');
+      }
+      return digits.slice(0, totalLength).split('').map(Number);
+    }
+
+    function bytesToBase64(bytes) {
+      let binary = '';
+      const step = 0x8000;
+      for (let i = 0; i < bytes.length; i += step) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + step));
+      }
+      return btoa(binary);
+    }
+
+    function base64ToBytes(base64) {
+      const binary = atob(base64);
+      return Uint8Array.from(binary, char => char.charCodeAt(0));
+    }
+
+    /** UTF-8 + Base64URL für kürzere, URL-sichere Links */
+    function encodeSharePayload(value) {
+      let base64;
+      if (typeof TextEncoder !== 'undefined') {
+        base64 = bytesToBase64(new TextEncoder().encode(value));
+      } else {
+        base64 = btoa(unescape(encodeURIComponent(value)));
+      }
+      return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+    }
+
+    function decodeSharePayload(value) {
+      const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+      const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
+      if (typeof TextDecoder !== 'undefined') {
+        return new TextDecoder().decode(base64ToBytes(padded));
+      }
+      return decodeURIComponent(escape(atob(padded)));
+    }
+
+    /** Datepicker auf mobilen Browsern öffnen */
+    function attachPickerFallback(inputId) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      input.addEventListener('click', function () {
+        if (this.showPicker) this.showPicker();
+      });
+    }
+
+    function normalizeAlarmTimes(raw) {
+      const fallback = { 1: '', 2: '05:30', 3: '12:30', 4: '20:00' };
+      const source = raw && typeof raw === 'object' ? raw : {};
+      return {
+        1: typeof source[1] === 'string' ? source[1] : fallback[1],
+        2: typeof source[2] === 'string' ? source[2] : fallback[2],
+        3: typeof source[3] === 'string' ? source[3] : fallback[3],
+        4: typeof source[4] === 'string' ? source[4] : fallback[4]
+      };
+    }
+
+    function renderAlarmSettings() {
+      const container = document.getElementById('alarmSettings');
+      if (!container) return;
+      const shiftTypes = [1, 2, 3, 4];
+      container.innerHTML = shiftTypes.map(type => `
+        <div class="alarm-cell">
+          <label for="alarm-${type}">${SHIFT_NAMES[type]}</label>
+          <input type="time" id="alarm-${type}" data-shift="${type}" value="${escapeHTML(state.alarmTimes[type] || '')}">
+        </div>
+      `).join('');
+    }
+
+    function setAlarmForDay(dateStr, shiftInfo) {
+      const time = state.alarmTimes[shiftInfo.type] || '';
+      if (!time) {
+        return showToast(`Für ${shiftInfo.name} ist keine Weckerzeit gesetzt.`, true);
+      }
+      if (!window.Android || typeof window.Android.setAlarmForDate !== 'function') {
+        return showToast('Android-Wecker ist hier nicht verfügbar.', true);
+      }
+
+      const [h, m] = time.split(':').map(Number);
+      if (Number.isNaN(h) || Number.isNaN(m)) {
+        return showToast('Ungültige Weckerzeit.', true);
+      }
+
+      const [year, month, day] = dateStr.split('-').map(Number);
+      if ([year, month, day].some(Number.isNaN)) {
+        return showToast('Ungültiges Datum.', true);
+      }
+
+      const alarmKey = `shift-${dateStr}-${shiftInfo.type}`;
+
+      window.Android.setAlarmForDate(
+        year,
+        month,
+        day,
+        h,
+        m,
+        alarmKey,
+        `${shiftInfo.name} (${dateStr})`
+      );
+      showToast(`Wecker für ${shiftInfo.name} um ${time} gesetzt.`);
+    }
+
+    // ============================================================
+    // URL / LINK-SHARING
+    // ============================================================
+
+    /** Komprimiert State für kurze URLs */
+    function packState(st) {
+      const packed = {
+        s: compactDate(st.startDate),
+        p: encodePattern(st.pattern)
+      };
+      if (st.weeksCount !== 5) packed.w = st.weeksCount;
+      if (st.bundesland !== 'NW') packed.b = st.bundesland;
+      if (st.alarmTimes) packed.a = [st.alarmTimes[1] || '', st.alarmTimes[2] || '', st.alarmTimes[3] || '', st.alarmTimes[4] || ''];
+      if (st.exceptions.length) {
+        packed.e = st.exceptions.map(ex => [
+          compactDate(ex.start),
+          ex.end === ex.start ? '' : compactDate(ex.end),
+          ex.type.charAt(0)
+        ]);
+      }
+      return packed;
+    }
+
+    /** Entpackt State aus URL-Daten */
+    function unpackState(packed) {
+      const typeMap = { U: 'Urlaub', K: 'Krank', S: 'Schulung' };
+      const weeksCount = Number(packed.w) || 5;
+      const patternLength = weeksCount * 7;
+      return {
+        _v:          SCHEMA_VERSION,
+        startDate:   expandCompactDate(packed.s) || todayLocalYmd(),
+        weeksCount:  weeksCount,
+        bundesland:  packed.b || 'NW',
+        pattern:     decodePattern(packed.p || '', patternLength),
+        alarmTimes:  normalizeAlarmTimes({
+          1: packed.a && packed.a[0],
+          2: packed.a && packed.a[1],
+          3: packed.a && packed.a[2],
+          4: packed.a && packed.a[3]
+        }),
+        exceptions:  (packed.e || []).map(arr => ({
+          id:    generateId(),
+          start: expandCompactDate(arr[0]),
+          end:   expandCompactDate(arr[1] || arr[0]),
+          type:  typeMap[arr[2]] || 'Urlaub'
+        }))
+      };
+    }
+
+    /** Validiert geladene State-Objekte auf Mindestfelder */
+    function isValidState(obj) {
+      if (!obj || typeof obj !== 'object') return false;
+      if (typeof obj.startDate !== 'string') return false;
+      if (!Array.isArray(obj.pattern))       return false;
+      if (!Array.isArray(obj.exceptions))    return false;
+      return true;
+    }
+
+    function generateShareLink() {
+      try {
+        if (!isShareEnabled()) {
+          document.getElementById('shareLink').value = 'Teil-Link deaktiviert';
+          return;
+        }
+        const packed = packState(state);
+        const encoded = encodeSharePayload(JSON.stringify(packed));
+        const url = `${location.origin}${location.pathname}?p=${encoded}`;
+        document.getElementById('shareLink').value = url;
+      } catch (e) {
+        console.error('Link konnte nicht generiert werden:', e);
+      }
+    }
+
+    // ============================================================
+    // PERSISTENZ  (localStorage + URL)
+    // ============================================================
+
+    function persistState({ notify = false, errorNotify = false } = {}) {
+      try {
+        localStorage.setItem(LS_KEY, JSON.stringify(state));
+        generateShareLink();
+        if (notify) showToast('Gespeichert & Link aktualisiert!');
+        return true;
+      } catch (e) {
+        if (errorNotify) showToast('Speichern fehlgeschlagen (Storage voll?)', true);
+        console.error('Persistieren fehlgeschlagen:', e);
+        return false;
+      }
+    }
+
+    function saveStateSilently() {
+      persistState();
+    }
+
+    /** Migriert alte Datenstrukturen (Exceptions als Objekt statt Array) */
+    function migrateState(raw) {
+      if (raw.exceptions && !Array.isArray(raw.exceptions)) {
+        raw.exceptions = Object.entries(raw.exceptions).map(([dateKey, type]) => ({
+          id:    generateId(),
+          start: dateKey,
+          end:   dateKey,
+          type
+        }));
+      }
+      raw.alarmTimes = normalizeAlarmTimes(raw.alarmTimes);
+      return raw;
+    }
+
+    function loadState() {
+      const urlParams = new URLSearchParams(location.search);
+      const compactPlanData = urlParams.get('p');
+      const legacyPlanData  = urlParams.get('plan');
+      let loadedState = null;
+
+      if (compactPlanData || legacyPlanData) {
+        try {
+          const raw = compactPlanData
+            ? JSON.parse(decodeSharePayload(compactPlanData))
+            : JSON.parse(decodeURIComponent(atob(legacyPlanData)));
+
+          const built = raw.s !== undefined ? unpackState(raw) : migrateState(raw);
+          if (!isValidState(built)) throw new Error('Ungültiger Plan-Inhalt');
+
+          loadedState = built;
+          loadedFromShareLink = true;
+          showToast('Plan aus Link erfolgreich geladen!');
+          document.getElementById('section-settings').classList.add('hidden');
+          document.getElementById('showSettingsBtn').classList.remove('hidden');
+        } catch (e) {
+          showToast('Fehler beim Laden des Links – Standard wird verwendet.', true);
+          console.warn('URL-Plan parse error:', e);
+        }
+      } else {
+        try {
+          const saved = localStorage.getItem(LS_KEY);
+          if (saved) loadedState = migrateState(JSON.parse(saved));
+        } catch (e) {
+          console.warn('localStorage parse error:', e);
+        }
+      }
+
+      if (loadedState && isValidState(loadedState)) {
+        state = Object.assign({}, state, loadedState);
+      }
+
+      const preferredDisplayDate = parseYmdAsLocal(state.startDate);
+      if (!Number.isNaN(preferredDisplayDate.getTime())) {
+        currentDisplayDate = new Date(preferredDisplayDate.getFullYear(), preferredDisplayDate.getMonth(), 1, 12, 0, 0);
+      }
+
+      // UI synchronisieren
+      document.getElementById('startDate').value    = state.startDate;
+      document.getElementById('weeksDisplay').innerText = state.weeksCount;
+      document.getElementById('bundesland').value   = state.bundesland || 'NW';
+      state.alarmTimes = normalizeAlarmTimes(state.alarmTimes);
+
+      initPattern();
+      renderAlarmSettings();
+      renderPattern();
+      renderExceptions();
+      renderCalendar();
+      generateShareLink();
+      activateSharedLinkView();
+    }
+
+    // ============================================================
+    // MUSTER
+    // ============================================================
+
+    function initPattern() {
+      const required = state.weeksCount * 7;
+      if (state.pattern.length !== required) {
+        const newPattern = Array(required).fill(0);
+        for (let i = 0; i < Math.min(state.pattern.length, required); i++) {
+          newPattern[i] = state.pattern[i];
+        }
+        state.pattern = newPattern;
+      }
+    }
+
+    function renderPattern() {
+      const container = document.getElementById('weekPattern');
+      let html = '';
+
+      for (let w = 0; w < state.weeksCount; w++) {
+        html += `<div class="pattern-row">
+                   <span class="muted" style="font-weight:600;font-size:0.9rem;">Woche ${w + 1}</span>
+                   <div class="pattern-days">`;
+
+        for (let d = 0; d < 7; d++) {
+          const idx         = w * 7 + d;
+          const shiftType   = state.pattern[idx];
+          const shiftClass  = SHIFT_CLASSES[shiftType];
+          const displayText = shiftType === 0 ? WEEKDAYS[d] : SHIFT_NAMES[shiftType];
+
+          html += `<div class="pattern-day ${shiftClass}"
+                        data-index="${idx}"
+                        role="button"
+                        tabindex="0"
+                        aria-label="${WEEKDAYS[d]}: ${SHIFT_NAMES[shiftType] || 'Kein Dienst'}"
+                        title="${WEEKDAYS[d]}: klicken zum Ändern"
+                   >${displayText}</div>`;
+        }
+
+        html += `  </div></div>`;
+      }
+
+      container.innerHTML = html;
+    }
+
+    function cycleShift(index) {
+      state.pattern[index] = (state.pattern[index] + 1) % 5;
+      renderPattern();
+      renderCalendar();
+      saveStateSilently();
+    }
+
+    // ============================================================
+    // AUSNAHMEN
+    // ============================================================
+
+    function renderExceptions() {
+      const list = document.getElementById('exceptionsList');
+      list.innerHTML = '';
+
+      if (!state.exceptions.length) {
+        list.innerHTML = `<p class="small muted" style="margin:0;">Noch keine Ausnahmen eingetragen.</p>`;
+        return;
+      }
+
+      state.exceptions
+        .slice()
+        .sort((a, b) => a.start.localeCompare(b.start))
+        .forEach(ex => {
+          const dateText = ex.start === ex.end
+            ? formatDateDe(ex.start)
+            : `${formatDateDe(ex.start)} – ${formatDateDe(ex.end)}`;
+
+          const el = document.createElement('div');
+          el.className = 'row chip';
+          el.style.background = 'var(--exception)';
+          el.setAttribute('role', 'listitem');
+          el.innerHTML = `
+            <span>${escapeHTML(dateText)}: <b>${escapeHTML(ex.type)}</b></span>
+            <button class="secondary exception-del-btn"
+                    data-id="${escapeHTML(ex.id)}"
+                    aria-label="${escapeHTML(ex.type)} am ${escapeHTML(dateText)} löschen"
+                    style="padding:0.1rem 0.5rem;font-size:0.8rem;">✕</button>`;
+          list.appendChild(el);
+        });
+    }
+
+    function removeException(id) {
+      state.exceptions = state.exceptions.filter(ex => ex.id !== id);
+      renderExceptions();
+      renderCalendar();
+      saveStateSilently();
+    }
+
+    // ============================================================
+    // FEIERTAGE
+    // ============================================================
+
+    /** Berechnet gesetzliche Feiertage für Jahr + Bundesland */
+    function getHolidays(year, bundesland) {
+      const holidays = {};
+
+      const add = (m, d, name) => {
+        holidays[`${year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`] = name;
+      };
+
+      // Feste bundesweite Feiertage
+      add(1,  1,  'Neujahr');
+      add(5,  1,  'Tag der Arbeit');
+      add(10, 3,  'Tag der Dt. Einheit');
+      add(12, 25, '1. Weihnachtstag');
+      add(12, 26, '2. Weihnachtstag');
+
+      // Osterberechnung (Gaußscher Algorithmus)
+      const a = year % 19, b = year % 4,  c = year % 7;
+      const k = Math.floor(year / 100);
+      const p = Math.floor((13 + 8 * k) / 25);
+      const q = Math.floor(k / 4);
+      const M = (15 - p + k - q) % 30;
+      const N = (4  + k - q) % 7;
+      const d = (19 * a + M) % 30;
+      const e = (2  * b + 4 * c + 6 * d + N) % 7;
+      let osterTag   = 22 + d + e;
+      let osterMonat = 3;
+
+      if (osterTag > 31) { osterTag -= 31; osterMonat = 4; }
+      if (d === 29 && e === 6)           { osterTag = 19; osterMonat = 4; }
+      if (d === 28 && e === 6 && a > 10) { osterTag = 18; osterMonat = 4; }
+
+      const ostersonntag = new Date(year, osterMonat - 1, osterTag, 12, 0, 0);
+
+      const addRelative = (daysOffset, name) => {
+        const date = new Date(ostersonntag.getTime() + daysOffset * 864e5);
+        add(date.getMonth() + 1, date.getDate(), name);
+      };
+
+      addRelative(-2, 'Karfreitag');
+      addRelative( 1, 'Ostermontag');
+      addRelative(39, 'Christi Himmelfahrt');
+      addRelative(50, 'Pfingstmontag');
+
+      // Länderspezifische Feiertage
+      if (['BW','BY','ST'].includes(bundesland))                    add(1,  6,  'Hl. Drei Könige');
+      if (['BE','MV'].includes(bundesland))                         add(3,  8,  'Frauentag');
+      if (['BW','BY','HE','NW','RP','SL'].includes(bundesland))    addRelative(60, 'Fronleichnam');
+      if (['BW','BY','NW','RP','SL'].includes(bundesland))         add(11, 1,  'Allerheiligen');
+      if (bundesland === 'TH')                                      add(9,  20, 'Weltkindertag');
+      if (['BB','MV','SN','ST','TH'].includes(bundesland))         add(10, 31, 'Reformationstag');
+      if (bundesland === 'SN') {
+        const bussUndBettag = new Date(year, 10, 23, 12, 0, 0);
+        while (bussUndBettag.getDay() !== 3) {
+          bussUndBettag.setDate(bussUndBettag.getDate() - 1);
+        }
+        add(bussUndBettag.getMonth() + 1, bussUndBettag.getDate(), 'Buß- u. Bettag');
+      }
+
+      return holidays;
+    }
+
+    // ============================================================
+    // KALENDER
+    // ============================================================
+
+    /** Gibt den Montag der Woche zurück, in der `dateObj` liegt */
+    function getMondayOfWeek(dateObj) {
+      const d   = new Date(dateObj);
+      const day = d.getDay(); // 0=So, 1=Mo … 6=Sa
+      const diff = day === 0 ? -6 : 1 - day; // Versatz zum Montag
+      d.setDate(d.getDate() + diff);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+
+    function getShiftForDate(dateStr, dateObj) {
+      // Ausnahme hat Vorrang
+      const ex = state.exceptions.find(e => dateStr >= e.start && dateStr <= e.end);
+      if (ex) return { type: -1, name: escapeHTML(ex.type), class: 'exception' };
+
+      if (!state.startDate) return { type: 0, name: '', class: '' };
+
+      // Auf den Montag der Startwoche normalisieren,
+      // damit Muster-Index 0 immer = Montag ist.
+      const startMonday = getMondayOfWeek(parseYmdAsLocal(state.startDate));
+
+      const target = new Date(dateObj);
+      target.setHours(0, 0, 0, 0);
+
+      const diffDays = Math.round((target - startMonday) / 864e5);
+      if (diffDays < 0) return { type: 0, name: '', class: '' };
+
+      const patternIdx = diffDays % (state.weeksCount * 7);
+      const shiftType  = state.pattern[patternIdx] ?? 0;
+
+      return { type: shiftType, name: SHIFT_NAMES[shiftType], class: SHIFT_CLASSES[shiftType] };
+    }
+
+    function shiftDisplayedMonth(delta) {
+      currentDisplayDate = new Date(
+        currentDisplayDate.getFullYear(),
+        currentDisplayDate.getMonth() + delta,
+        1,
+        12,
+        0,
+        0
+      );
+      renderCalendar();
+    }
+
+    function renderCalendar() {
+      const year     = currentDisplayDate.getFullYear();
+      const month    = currentDisplayDate.getMonth();
+      const holidays = getHolidays(year, state.bundesland || 'NW');
+
+      document.getElementById('monthTitle').innerText =
+        new Date(year, month, 1).toLocaleString('de-DE', { month: 'long', year: 'numeric' });
+
+      const firstDay    = new Date(year, month, 1);
+      const startingDay = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      // DOM-Fragment statt innerHTML-String – einmaliger Reflow
+      const grid = document.createElement('div');
+      grid.className = 'calendar-grid';
+      grid.setAttribute('role', 'grid');
+      grid.setAttribute('aria-label', document.getElementById('monthTitle').innerText);
+
+      for (const d of WEEKDAYS) {
+        const dow = document.createElement('div');
+        dow.className = 'dow';
+        dow.setAttribute('role', 'columnheader');
+        dow.textContent = d;
+        grid.appendChild(dow);
+      }
+
+      for (let i = 0; i < startingDay; i++) {
+        const empty = document.createElement('div');
+        empty.className = 'day dimmed';
+        empty.setAttribute('aria-hidden', 'true');
+        grid.appendChild(empty);
+      }
+
+      for (let i = 1; i <= daysInMonth; i++) {
+        const dateObj   = new Date(year, month, i, 12, 0, 0);
+        const dateStr   = toLocalYmd(dateObj);
+        const shiftInfo = getShiftForDate(dateStr, dateObj);
+        const holiday   = holidays[dateStr];
+        const isToday   = dateStr === todayLocalYmd();
+
+        const cell = document.createElement('div');
+        cell.className = 'day ' + shiftInfo.class
+          + (holiday && shiftInfo.class !== 'exception' ? ' holiday' : '')
+          + (isToday ? ' today' : '');
+        cell.setAttribute('role', 'gridcell');
+        cell.setAttribute('aria-label',
+          `${i}. ${holiday ? holiday + ', ' : ''}${shiftInfo.name || 'kein Dienst'}`);
+
+        const dateDiv = document.createElement('div');
+        dateDiv.className   = 'date';
+        dateDiv.textContent = `${i}.`;
+        if (isToday) {
+          const badge = document.createElement('div');
+          badge.className   = 'today-badge';
+          badge.textContent = 'Heute';
+          cell.appendChild(badge);
+        }
+        cell.appendChild(dateDiv);
+
+        if (holiday) {
+          const pill = document.createElement('span');
+          pill.className   = 'pill holiday-pill';
+          pill.textContent = holiday;
+          cell.appendChild(pill);
+        }
+
+        if (shiftInfo.name) {
+          const pill = document.createElement('span');
+          pill.className   = 'pill ' + (shiftInfo.class === 'exception' ? 'exception-pill' : '');
+          pill.textContent = shiftInfo.name;
+          cell.appendChild(pill);
+        }
+
+        if (shiftInfo.type >= 1 && shiftInfo.type <= 4) {
+          cell.style.cursor = 'pointer';
+          cell.title = `Tippen: Wecker für ${shiftInfo.name} setzen`;
+          cell.addEventListener('click', () => setAlarmForDay(dateStr, shiftInfo));
+        }
+
+        grid.appendChild(cell);
+      }
+
+      const view = document.getElementById('calendarView');
+      view.innerHTML = '';
+      view.appendChild(grid);
+    }
+
+    // ============================================================
+    // WOCHENZAHL ÄNDERN
+    // ============================================================
+
+    function changeWeeks(delta) {
+      const newVal = state.weeksCount + delta;
+      if (newVal >= 1 && newVal <= 12) {
+        state.weeksCount = newVal;
+        document.getElementById('weeksDisplay').innerText = state.weeksCount;
+        initPattern();
+        renderPattern();
+        renderCalendar();
+        saveStateSilently();
+      }
+    }
+
+    // ============================================================
+    // CLIPBOARD (moderne API mit Fallback)
+    // ============================================================
+
+    async function copyToClipboard(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } catch (e) {
+          // Fallback bei abgelehnter Berechtigung
+        }
+      }
+      // Legacy-Fallback
+      const el = document.createElement('textarea');
+      el.value = text;
+      el.style.cssText = 'position:fixed;opacity:0;';
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      return true;
+    }
+
+    // ============================================================
+    // EVENT LISTENER
+    // ============================================================
+
+    function setupEventListeners() {
+      document.getElementById('bundesland').addEventListener('change', e => {
+        state.bundesland = e.target.value;
+        renderCalendar();
+        saveStateSilently();
+      });
+
+      document.getElementById('startDate').addEventListener('change', e => {
+        state.startDate = e.target.value;
+        const startViewDate = parseYmdAsLocal(state.startDate);
+        if (!Number.isNaN(startViewDate.getTime())) {
+          currentDisplayDate = new Date(startViewDate.getFullYear(), startViewDate.getMonth(), 1, 12, 0, 0);
+        }
+        renderCalendar();
+        saveStateSilently();
+      });
+
+      document.getElementById('decWeeks').addEventListener('click', () => changeWeeks(-1));
+      document.getElementById('incWeeks').addEventListener('click', () => changeWeeks(1));
+
+      document.getElementById('resetAll').addEventListener('click', () => {
+        if (confirm('Wirklich alles löschen?')) {
+          localStorage.removeItem(LS_KEY);
+          location.href = location.pathname;
+        }
+      });
+
+      document.getElementById('copyCodeBtn').addEventListener('click', async () => {
+        if (!isShareEnabled()) return showToast('Teil-Link ist aktuell deaktiviert.', true);
+        const link = document.getElementById('shareLink').value;
+        await copyToClipboard(link);
+        showToast('Link in Zwischenablage kopiert!');
+      });
+
+      document.getElementById('shareLink').addEventListener('click', function () {
+        if (!isShareEnabled()) return;
+        this.select();
+      });
+
+      document.getElementById('showSettingsBtn').addEventListener('click', e => {
+        document.getElementById('section-settings').classList.remove('hidden');
+        e.target.classList.add('hidden');
+        document.body.classList.remove('shared-link-view');
+        syncShowSettingsButtonLabel();
+      });
+
+      document.getElementById('clearPattern').addEventListener('click', () => {
+        state.pattern = Array(state.weeksCount * 7).fill(0);
+        renderPattern();
+        renderCalendar();
+        saveStateSilently();
+      });
+
+      document.getElementById('alarmSettings').addEventListener('change', e => {
+        const input = e.target.closest('input[type="time"][data-shift]');
+        if (!input) return;
+        const shiftType = Number(input.dataset.shift);
+        if (shiftType < 1 || shiftType > 4) return;
+        state.alarmTimes[shiftType] = input.value || '';
+        saveStateSilently();
+        showToast(`Weckerzeit für ${SHIFT_NAMES[shiftType]} gespeichert.`);
+      });
+
+      // Event Delegation – Pattern
+      document.getElementById('weekPattern').addEventListener('click', e => {
+        const target = e.target.closest('.pattern-day');
+        if (target) cycleShift(parseInt(target.dataset.index, 10));
+      });
+
+      // Keyboard-Support für Pattern
+      document.getElementById('weekPattern').addEventListener('keydown', e => {
+        if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('pattern-day')) {
+          e.preventDefault();
+          cycleShift(parseInt(e.target.dataset.index, 10));
+        }
+      });
+
+      // Ausnahme hinzufügen
+      document.getElementById('addException').addEventListener('click', () => {
+        let start = document.getElementById('exDateStart').value;
+        let end = document.getElementById('exDateEnd').value;
+        const type = document.getElementById('exType').value;
+        if (!start) return showToast('Bitte mindestens ein Startdatum wählen!', true);
+        if (!end) end = start;
+        if (new Date(end) < new Date(start)) return showToast('Das Bis-Datum darf nicht vor dem Von-Datum liegen!', true);
+        state.exceptions.push({ id: generateId(), start, end, type });
+        renderExceptions();
+        renderCalendar();
+        saveStateSilently();
+        document.getElementById('exDateStart').value = '';
+        document.getElementById('exDateEnd').value   = '';
+        showToast(type + ' hinzugefügt!');
+      });
+
+      // Event Delegation – Ausnahmen löschen
+      document.getElementById('exceptionsList').addEventListener('click', e => {
+        const btn = e.target.closest('.exception-del-btn');
+        if (btn) removeException(btn.dataset.id);
+      });
+
+      document.getElementById('prevMonth').addEventListener('click', () => {
+        shiftDisplayedMonth(-1);
+      });
+
+      document.getElementById('nextMonth').addEventListener('click', () => {
+        shiftDisplayedMonth(1);
+      });
+
+      document.getElementById('printBtn').addEventListener('click', () => window.print());
+      document.getElementById('themeToggleBtn').addEventListener('click', cycleTheme);
+      document.getElementById('privacyFab').addEventListener('click', openPrivacyModal);
+      document.getElementById('privacyCloseBtn').addEventListener('click', closePrivacyModal);
+      document.getElementById('privacySaveBtn').addEventListener('click', () => {
+        setShareEnabled(document.getElementById('shareLinksEnabled').checked);
+        generateShareLink();
+        closePrivacyModal();
+        showToast('Datenschutz-Einstellungen gespeichert!');
+      });
+      document.getElementById('resetLocalDataBtn').addEventListener('click', clearLocalPlanData);
+      document.getElementById('privacyOverlay').addEventListener('click', e => {
+        if (e.target.id === 'privacyOverlay') closePrivacyModal();
+      });
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closePrivacyModal();
+      });
+      attachPickerFallback('startDate');
+      attachPickerFallback('exDateStart');
+      attachPickerFallback('exDateEnd');
+    }
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    currentDisplayDate = new Date();
+    initTheme();
+    initSeoMeta();
+    setupEventListeners();
+    loadState();
+    updateShareUiState();
+  </script>
+</body>
+</html>

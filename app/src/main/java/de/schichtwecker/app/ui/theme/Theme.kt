@@ -1,4 +1,4 @@
-package com.mein.schichtplan.ui.theme
+package de.schichtwecker.app.ui.theme
 
 import android.app.Activity
 import android.os.Build

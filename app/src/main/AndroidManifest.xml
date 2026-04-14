@@ -22,7 +22,7 @@
         tools:targetApi="35">
 
         <activity
-            android:name="com.mein.schichtplan.MainActivity"
+            android:name="de.schichtwecker.app.MainActivity"
             android:exported="true"
             android:theme="@style/Theme.MyApplication">
             <intent-filter>
@@ -32,12 +32,12 @@
         </activity>
 
         <receiver
-            android:name="com.mein.schichtplan.AlarmReceiver"
+            android:name="de.schichtwecker.app.AlarmReceiver"
             android:enabled="true"
             android:exported="false" />
 
         <activity
-            android:name="com.mein.schichtplan.AlarmActivity"
+            android:name="de.schichtwecker.app.AlarmActivity"
             android:exported="false"
             android:showWhenLocked="true"
             android:turnScreenOn="true"

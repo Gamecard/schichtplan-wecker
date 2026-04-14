@@ -4,7 +4,15 @@ plugins {
 }
 
 android {
-    namespace = "com.mein.schichtplan"
+    signingConfigs {
+        create("release") {
+            storeFile = file("release.jks")
+            storePassword = "schichtwecker2024"
+            keyAlias = "release"
+            keyPassword = "schichtwecker2024"
+        }
+    }
+    namespace = "de.schichtwecker.app"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -12,7 +20,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.mein.schichtplan"
+        applicationId = "de.schichtwecker.app"
         minSdk = 35
         targetSdk = 36
         versionCode = 1
@@ -23,7 +31,9 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

@@ -4,50 +4,81 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Kalenderblatt: abgerundetes Rechteck -->
+    <!-- Kalenderblatt -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M26,28 L82,28 Q86,28 86,32 L86,84 Q86,88 82,88 L26,88 Q22,88 22,84 L22,32 Q22,28 26,28 Z" />
+        android:pathData="M28,30 L80,30 Q84,30 84,34 L84,82 Q84,86 80,86 L28,86 Q24,86 24,82 L24,34 Q24,30 28,30 Z" />
 
-    <!-- Roter oberer Bereich (Monat) -->
+    <!-- Oberer farbiger Bereich -->
     <path
         android:fillColor="#EF4444"
-        android:pathData="M26,28 L82,28 Q86,28 86,32 L86,44 L22,44 L22,32 Q22,28 26,28 Z" />
+        android:pathData="M28,30 L80,30 Q84,30 84,34 L84,46 L24,46 L24,34 Q24,30 28,30 Z" />
 
     <!-- Aufhaenge-Ringe links -->
     <path
         android:fillColor="#9CA3AF"
-        android:pathData="M36,24 Q36,22 38,22 Q40,22 40,24 L40,32 Q40,34 38,34 Q36,34 36,32 Z" />
+        android:pathData="M38,26 Q38,23 40.5,23 Q43,23 43,26 L43,34 Q43,37 40.5,37 Q38,37 38,34 Z" />
 
     <!-- Aufhaenge-Ringe rechts -->
     <path
         android:fillColor="#9CA3AF"
-        android:pathData="M68,24 Q68,22 70,22 Q72,22 72,24 L72,32 Q72,34 70,34 Q68,34 68,32 Z" />
+        android:pathData="M65,26 Q65,23 67.5,23 Q70,23 70,26 L70,34 Q70,37 67.5,37 Q65,37 65,34 Z" />
 
-    <!-- Feiner Rand -->
+    <!-- Schicht-Pills im Kalender -->
+    <!-- Frei (gruen) -->
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#D1D5DB"
-        android:strokeWidth="1"
-        android:pathData="M26,28 L82,28 Q86,28 86,32 L86,84 Q86,88 82,88 L26,88 Q22,88 22,84 L22,32 Q22,28 26,28 Z" />
+        android:fillColor="#22C55E"
+        android:pathData="M30,50 L40,50 L40,56 L30,56 Z" />
+    <!-- Frueh (gelb) -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M44,50 L54,50 L54,56 L44,56 Z" />
+    <!-- Spaet (orange) -->
+    <path
+        android:fillColor="#EA580C"
+        android:pathData="M58,50 L68,50 L68,56 L58,56 Z" />
+    <!-- Nacht (grau-blau) -->
+    <path
+        android:fillColor="#64748B"
+        android:pathData="M72,50 L82,50 L82,56 L72,56 Z" />
 
-    <!-- Horizontale Linien (Kalenderraster) -->
+    <!-- Kalenderraster-Linien horizontal -->
     <path
         android:fillColor="#00000000"
         android:strokeColor="#E5E7EB"
-        android:strokeWidth="0.5"
-        android:pathData="M26,56 L82,56 M26,68 L82,68 M26,80 L82,80" />
+        android:strokeWidth="0.6"
+        android:pathData="M24,62 L84,62 M24,74 L84,74" />
 
-    <!-- Vertikale Linien -->
+    <!-- Kalenderraster-Linien vertikal -->
     <path
         android:fillColor="#00000000"
         android:strokeColor="#E5E7EB"
-        android:strokeWidth="0.5"
-        android:pathData="M38,44 L38,88 M54,44 L54,88 M70,44 L70,88" />
+        android:strokeWidth="0.6"
+        android:pathData="M40,46 L40,86 M56,46 L56,86 M72,46 L72,86" />
 
-    <!-- Blauer Punkt: heutiger Tag -->
+    <!-- Heutiger Tag: blauer Kreis -->
     <path
-        android:fillColor="#2563EB"
-        android:pathData="M54,66 m-7,0 a7,7 0,1 1,14 0 a7,7 0,1 1,-14 0" />
+        android:fillColor="#3F5EC2"
+        android:pathData="M46,66 m-6,0 a6,6 0,1 1,12 0 a6,6 0,1 1,-12 0" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M44.5,66 L47.5,66 L47.5,64 L48.5,64 L48.5,66 L49.5,66 L49.5,64 L50.5,64 L50.5,66 Q50.5,66.8 49.8,66.8 L44.5,66.8 Z" />
+
+    <!-- Wecker-Glocke unten-rechts als Badge -->
+    <path
+        android:fillColor="#3F5EC2"
+        android:pathData="M72,78 m10,0 a10,10 0,1 0,-20 0 a10,10 0,1 0,20 0" />
+    <!-- Glocken-Korpus -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M68,76 Q68,73 72,73 Q76,73 76,76 L76,78 L68,78 Z" />
+    <!-- Glocken-Knauf -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M72,72.5 m-1.5,0 a1.5,1.5 0,1 1,3 0 a1.5,1.5 0,1 1,-3 0" />
+    <!-- Glocken-Unterteil -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M66.5,78 L77.5,78 L77.5,79 Q77.5,79.5 77,79.5 L67,79.5 Q66.5,79.5 66.5,79 Z" />
 
 </vector>

@@ -5,224 +5,624 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>Mein Schichtplan</title>
   <style>
+    /* ═══════════════════════════════════════════════════════
+       MATERIAL DESIGN 3 — Tonal Palette System
+       Primary seed: #4758A8 (indigo-blue), M3 tonal mapping
+       ═══════════════════════════════════════════════════════ */
     :root {
-      --bg:#ffffff; --fg:#111418; --muted:#6b7280;
-      --primary:#2563eb; --primary-fg:#ffffff;
-      --card:#f8fafc; --border:#e5e7eb; --chip:#e5e7eb;
-      --accent:#10b981; --danger:#ef4444;
-      --frueh:#ca8a04;  --frueh-bg:#fef9c3;
-      --spaet:#ea580c;  --spaet-bg:#ffedd5;
-      --nacht:#64748b;  --nacht-bg:#f1f5f9;
-      --free-bg:#f0fdf4;
-      --hol:#fef3c7;    --hol-b:#f59e0b;
+      /* M3 Light — Surface tones from seed #4758A8 */
+      --md-seed:#4758A8;
+      --md-primary:#3F5EC2;
+      --md-on-primary:#FFFFFF;
+      --md-primary-container:#DBE1FF;
+      --md-on-primary-container:#00174C;
+      --md-secondary:#565E71;
+      --md-on-secondary:#FFFFFF;
+      --md-secondary-container:#DAE2F9;
+      --md-on-secondary-container:#131B2C;
+      --md-tertiary:#715574;
+      --md-on-tertiary:#FFFFFF;
+      --md-tertiary-container:#FBD7FC;
+      --md-on-tertiary-container:#29132E;
+      --md-error:#BA1A1A;
+      --md-on-error:#FFFFFF;
+      --md-error-container:#FFDAD6;
+      --md-background:#FAF8FF;
+      --md-on-background:#1A1B21;
+      --md-surface:#FAF8FF;
+      --md-on-surface:#1A1B21;
+      --md-surface-variant:#E2E1EC;
+      --md-on-surface-variant:#45464F;
+      --md-outline:#757680;
+      --md-outline-variant:#C5C6D0;
+      --md-surface-container-lowest:#FFFFFF;
+      --md-surface-container-low:#F4F3FB;
+      --md-surface-container:#EEEDF5;
+      --md-surface-container-high:#E8E7EF;
+      --md-surface-container-highest:#E2E1EA;
+      --md-inverse-surface:#2F3036;
+      --md-inverse-on-surface:#F1F0F7;
+
+      /* Mapped tokens for app */
+      --bg:var(--md-background);
+      --fg:var(--md-on-background);
+      --muted:var(--md-on-surface-variant);
+      --primary:var(--md-primary);
+      --primary-fg:var(--md-on-primary);
+      --primary-container:var(--md-primary-container);
+      --card:var(--md-surface-container-low);
+      --border:var(--md-outline-variant);
+      --chip:var(--md-surface-container);
+      --chip-hover:var(--md-surface-container-high);
+      --accent:#2DA44E;
+      --danger:var(--md-error);
+      --frueh:#BD8100;  --frueh-bg:#FFF0C2; --frueh-light:#F5DC6A;
+      --spaet:#C25A07;  --spaet-bg:#FFDCCE; --spaet-light:#FFB490;
+      --nacht:#50567A;  --nacht-bg:#ECECF4; --nacht-light:#7C8098;
+      --free-bg:#DEF5E5;
+      --hol:#FFF0C2;    --hol-b:#BD8100;
+
+      /* Typography tokens (M3 scale) */
+      --t-display-lg:3.56rem; --t-display-md:2.75rem; --t-display-sm:2.25rem;
+      --t-headline-lg:2rem;   --t-headline-md:1.75rem; --t-headline-sm:1.5rem;
+      --t-title-lg:1.375rem;  --t-title-md:1rem;       --t-title-sm:0.875rem;
+      --t-body-lg:1rem;       --t-body-md:0.875rem;     --t-body-sm:0.75rem;
+      --t-label-lg:0.875rem;  --t-label-md:0.75rem;    --t-label-sm:0.6875rem;
+
+      /* Shape tokens (M3) */
+      --shape-xs:4px; --shape-sm:8px; --shape-md:12px; --shape-lg:16px; --shape-xl:28px; --shape-full:9999px;
+
+      /* Elevation (M3 tonal) */
+      --elev-0:transparent;
+      --elev-1:0 1px 3px 1px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+      --elev-2:0 2px 6px 2px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+      --elev-3:0 4px 8px 3px rgba(0,0,0,.09),0 1px 3px rgba(0,0,0,.06);
+      --elev-4:0 6px 10px 4px rgba(0,0,0,.09),0 2px 3px rgba(0,0,0,.06);
+      --elev-5:0 8px 12px 6px rgba(0,0,0,.1),0 4px 4px rgba(0,0,0,.06);
+
+      /* Motion (M3) */
+      --motion-easing-standard:cubic-bezier(.2,0,0,1);
+      --motion-easing-emphasized:cubic-bezier(.2,0,0,1);
+      --motion-easing-decelerated:cubic-bezier(0,0,0,1);
+      --motion-duration-short:200ms;
+      --motion-duration-medium:350ms;
+      --motion-duration-long:500ms;
+      --motion-duration-extralong:700ms;
     }
     html[data-theme="dark"] {
-      --bg:#0f172a; --fg:#e2e8f0; --muted:#94a3b8;
-      --primary:#3b82f6;
-      --card:#1e293b; --border:#334155; --chip:#1e293b;
-      --accent:#22c55e; --danger:#f87171;
-      --frueh:#ca8a04; --frueh-bg:#422006;
-      --spaet:#ea580c; --spaet-bg:#431407;
-      --nacht:#94a3b8; --nacht-bg:#1e293b;
-      --free-bg:#052e16; --hol:#451a03; --hol-b:#d97706;
+      --md-seed:#B8C5FF;
+      --md-primary:#B8C5FF;
+      --md-on-primary:#08228A;
+      --md-primary-container:#263CA8;
+      --md-on-primary-container:#DBE1FF;
+      --md-secondary:#BEC7E0;
+      --md-on-secondary:#283041;
+      --md-secondary-container:#3E4759;
+      --md-on-secondary-container:#DAE2F9;
+      --md-tertiary:#DFBBDF;
+      --md-on-tertiary:#402844;
+      --md-tertiary-container:#583E5C;
+      --md-on-tertiary-container:#FBD7FC;
+      --md-error:#FFB4AB;
+      --md-on-error:#690005;
+      --md-error-container:#93000A;
+      --md-background:#12131A;
+      --md-on-background:#E2E1E9;
+      --md-surface:#12131A;
+      --md-on-surface:#E2E1E9;
+      --md-surface-variant:#45464F;
+      --md-on-surface-variant:#C5C6D0;
+      --md-outline:#8F909A;
+      --md-outline-variant:#45464F;
+      --md-surface-container-lowest:#0C0E14;
+      --md-surface-container-low:#1A1B22;
+      --md-surface-container:#1E1F26;
+      --md-surface-container-high:#282930;
+      --md-surface-container-highest:#33343B;
+
+      --bg:var(--md-background);
+      --fg:var(--md-on-surface);
+      --muted:var(--md-on-surface-variant);
+      --primary:var(--md-primary);
+      --primary-fg:var(--md-on-primary);
+      --primary-container:var(--md-primary-container);
+      --card:var(--md-surface-container);
+      --border:var(--md-outline-variant);
+      --chip:var(--md-surface-container-high);
+      --chip-hover:var(--md-surface-container-highest);
+      --accent:#60D880;
+      --danger:var(--md-error);
+      --frueh:#FBD844; --frueh-bg:#3A2D00; --frueh-light:#BD8100;
+      --spaet:#FFB472; --spaet-bg:#3A1500; --spaet-light:#C25A07;
+      --nacht:#B8BBD0; --nacht-bg:#1E1F26; --nacht-light:#6E7191;
+      --free-bg:#052E16;
+      --hol:#3A2D00;   --hol-b:#FBD844;
+
+      --elev-1:0 1px 3px 1px rgba(0,0,0,.24),0 1px 2px rgba(0,0,0,.18);
+      --elev-2:0 2px 6px 2px rgba(0,0,0,.24),0 1px 2px rgba(0,0,0,.18);
+      --elev-3:0 4px 8px 3px rgba(0,0,0,.26),0 1px 3px rgba(0,0,0,.18);
+      --elev-4:0 6px 10px 4px rgba(0,0,0,.26),0 2px 3px rgba(0,0,0,.18);
+      --elev-5:0 8px 12px 6px rgba(0,0,0,.28),0 4px 4px rgba(0,0,0,.18);
     }
     @media (prefers-color-scheme:dark) {
       html[data-theme="system"] {
-        --bg:#0f172a; --fg:#e2e8f0; --muted:#94a3b8;
-        --primary:#3b82f6;
-        --card:#1e293b; --border:#334155; --chip:#1e293b;
-        --accent:#22c55e; --danger:#f87171;
-        --frueh:#ca8a04; --frueh-bg:#422006;
-        --spaet:#ea580c; --spaet-bg:#431407;
-        --nacht:#94a3b8; --nacht-bg:#1e293b;
-        --free-bg:#052e16; --hol:#451a03; --hol-b:#d97706;
+        --md-seed:#B8C5FF;
+        --md-primary:#B8C5FF;
+        --md-on-primary:#08228A;
+        --md-primary-container:#263CA8;
+        --md-on-primary-container:#DBE1FF;
+        --md-secondary:#BEC7E0;
+        --md-on-secondary:#283041;
+        --md-secondary-container:#3E4759;
+        --md-on-secondary-container:#DAE2F9;
+        --md-tertiary:#DFBBDF;
+        --md-on-tertiary:#402844;
+        --md-tertiary-container:#583E5C;
+        --md-on-tertiary-container:#FBD7FC;
+        --md-error:#FFB4AB;
+        --md-on-error:#690005;
+        --md-error-container:#93000A;
+        --md-background:#12131A;
+        --md-on-background:#E2E1E9;
+        --md-surface:#12131A;
+        --md-on-surface:#E2E1E9;
+        --md-surface-variant:#45464F;
+        --md-on-surface-variant:#C5C6D0;
+        --md-outline:#8F909A;
+        --md-outline-variant:#45464F;
+        --md-surface-container-lowest:#0C0E14;
+        --md-surface-container-low:#1A1B22;
+        --md-surface-container:#1E1F26;
+        --md-surface-container-high:#282930;
+        --md-surface-container-highest:#33343B;
+
+        --bg:var(--md-background);
+        --fg:var(--md-on-surface);
+        --muted:var(--md-on-surface-variant);
+        --primary:var(--md-primary);
+        --primary-fg:var(--md-on-primary);
+        --primary-container:var(--md-primary-container);
+        --card:var(--md-surface-container);
+        --border:var(--md-outline-variant);
+        --chip:var(--md-surface-container-high);
+        --chip-hover:var(--md-surface-container-highest);
+        --accent:#60D880;
+        --danger:var(--md-error);
+        --frueh:#FBD844; --frueh-bg:#3A2D00; --frueh-light:#BD8100;
+        --spaet:#FFB472; --spaet-bg:#3A1500; --spaet-light:#C25A07;
+        --nacht:#B8BBD0; --nacht-bg:#1E1F26; --nacht-light:#6E7191;
+        --free-bg:#052E16;
+        --hol:#3A2D00;   --hol-b:#FBD844;
+
+        --elev-1:0 1px 3px 1px rgba(0,0,0,.24),0 1px 2px rgba(0,0,0,.18);
+        --elev-2:0 2px 6px 2px rgba(0,0,0,.24),0 1px 2px rgba(0,0,0,.18);
+        --elev-3:0 4px 8px 3px rgba(0,0,0,.26),0 1px 3px rgba(0,0,0,.18);
+        --elev-4:0 6px 10px 4px rgba(0,0,0,.26),0 2px 3px rgba(0,0,0,.18);
+        --elev-5:0 8px 12px 6px rgba(0,0,0,.28),0 4px 4px rgba(0,0,0,.18);
       }
     }
+
+    /* ═══════════════════════════════════════════════════════
+       BASE — M3 Typography & Reset
+       ═══════════════════════════════════════════════════════ */
     *, *::before, *::after { box-sizing: border-box; }
     html, body { height:100%; margin:0; }
     body {
-      font-family: system-ui, -apple-system, sans-serif;
+      font-family:'Roboto','Segoe UI',system-ui,-apple-system,sans-serif;
       background: var(--bg); color: var(--fg);
-      font-size: 15px; line-height: 1.5; padding-bottom: 2rem;
+      font-size: var(--t-body-md); line-height: 1.5; padding-bottom: 0;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+      letter-spacing: .011em;
     }
+
+    /* ═══════════════════════════════════════════════════════
+       M3 SURFACE — Top app bar
+       ═══════════════════════════════════════════════════════ */
     header {
       display:flex; align-items:center; justify-content:space-between;
-      padding:.7rem 1rem; border-bottom:1px solid var(--border);
-      background:var(--bg); position:sticky; top:0; z-index:20;
-      box-shadow:0 1px 3px rgba(0,0,0,.06);
+      padding:6px 16px;
+      background:var(--md-surface); position:sticky; top:0; z-index:20;
+      border-bottom:1px solid var(--border);
     }
-    .hdr-title { font-weight:800; font-size:1.05rem; }
-    .hdr-btns  { display:flex; gap:.4rem; }
+    .hdr-title { font-weight:500; font-size:var(--t-title-lg); line-height:1.25; letter-spacing:0; }
+    .hdr-btns  { display:flex; gap:4px; }
+
+    /* ═══════════════════════════════════════════════════════
+       M3 BUTTONS — Filled, Tonal, Outlined, Text
+       ═══════════════════════════════════════════════════════ */
     button {
-      font:inherit; cursor:pointer; border-radius:8px;
-      border:1px solid var(--border); background:var(--chip);
-      color:var(--fg); padding:.5rem .8rem; font-weight:600;
-      transition:filter .15s, transform .1s;
+      font:inherit; cursor:pointer; border-radius:var(--shape-full);
+      border:none; background:transparent; color:var(--fg);
+      padding:10px 24px; font-weight:500;
+      font-size:var(--t-label-lg); letter-spacing:.01em; line-height:1.25;
+      transition:background var(--motion-duration-short) var(--motion-easing-standard),
+                 box-shadow var(--motion-duration-short) var(--motion-easing-standard),
+                 color var(--motion-duration-short) var(--motion-easing-standard);
+      position:relative; overflow:hidden;
     }
-    button:active { filter:brightness(.85); }
-    button.primary { background:var(--primary); color:#fff; border-color:transparent; }
-    button.danger  { background:var(--danger);  color:#fff; border-color:transparent; }
-    button.sm   { padding:.3rem .6rem; font-size:.82rem; }
-    button.icon { padding:.45rem .65rem; font-size:1.05rem; line-height:1; }
+    button:active { opacity:.88; }
+    /* Filled (default state = tonal) */
+    button.primary {
+      background:var(--md-primary); color:var(--md-on-primary);
+      box-shadow:var(--elev-0);
+    }
+    button.primary:hover { box-shadow:var(--elev-1); }
+    button.danger {
+      background:var(--md-error); color:var(--md-on-error);
+    }
+    button.sm {
+      padding:6px 16px; font-size:var(--t-label-md);
+      border-radius:var(--shape-sm);
+    }
+    button.icon {
+      width:40px; height:40px; padding:0;
+      border-radius:var(--shape-full);
+      display:inline-flex; align-items:center; justify-content:center;
+      font-size:1.25rem;
+      background:transparent;
+    }
+    button.icon:hover { background:var(--chip); }
+    button.icon:active { background:var(--chip-hover); }
+    /* Outlined buttons for sheet actions */
+    .sbtns button:not(.primary):not(.danger) {
+      border:1px solid var(--border); color:var(--fg);
+      background:transparent;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       M3 TEXT FIELDS
+       ═══════════════════════════════════════════════════════ */
     input, select {
-      font:inherit; padding:.5rem .7rem; border-radius:8px;
-      border:1px solid var(--border); background:var(--bg); color:var(--fg); width:100%;
+      font:inherit; padding:12px 16px;
+      border-radius:var(--shape-xs);
+      border:1.5px solid var(--border); background:var(--md-surface-container-lowest);
+      color:var(--fg); width:100%;
+      transition:border var(--motion-duration-short) var(--motion-easing-standard),
+                 box-shadow var(--motion-duration-short) var(--motion-easing-standard);
     }
-    label { font-weight:600; font-size:.83rem; color:var(--muted); display:block; margin-bottom:.2rem; }
-    .wrap   { max-width:680px; margin:0 auto; padding:.9rem; }
-    .card   { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:.9rem; margin-bottom:.9rem; }
-    .ctitle { font-weight:700; font-size:.95rem; margin:0 0 .7rem; }
-    .stack  { display:grid; gap:.7rem; }
-    .row    { display:flex; gap:.6rem; flex-wrap:wrap; align-items:flex-end; }
+    input:focus, select:focus {
+      border-color:var(--md-primary);
+      box-shadow:0 0 0 2px var(--md-primary-container);
+      outline:none;
+    }
+    label {
+      font-weight:500; font-size:var(--t-label-md); color:var(--muted);
+      display:block; margin-bottom:4px; letter-spacing:.03em;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       LAYOUT
+       ═══════════════════════════════════════════════════════ */
+    .wrap   { max-width:960px; margin:0 auto; padding:0 8px 16px; }
+    .card   {
+      background:var(--card); border:1px solid var(--border);
+      border-radius:var(--shape-lg); padding:16px; margin-bottom:12px;
+    }
+    .ctitle { font-weight:500; font-size:var(--t-title-md); margin:0 0 12px; letter-spacing:.01em; }
+    .stack  { display:grid; gap:12px; }
+    .row    { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
     .f1     { flex:1; min-width:110px; }
     .hidden { display:none !important; }
     .muted  { color:var(--muted); }
-    .small  { font-size:.82rem; }
-    /* toggle */
-    .sw { position:relative; width:44px; height:26px; display:inline-block; flex-shrink:0; }
+    .small  { font-size:var(--t-body-sm); }
+
+    /* ═══════════════════════════════════════════════════════
+       M3 SWITCH
+       ═══════════════════════════════════════════════════════ */
+    .sw { position:relative; width:52px; height:32px; display:inline-block; flex-shrink:0; }
     .sw input { opacity:0; width:0; height:0; }
-    .sl { position:absolute; inset:0; background:var(--chip); border:1px solid var(--border); border-radius:999px; transition:.2s; }
-    .sl::before { content:""; position:absolute; width:18px; height:18px; left:3px; top:3px; background:var(--bg); border-radius:50%; transition:.2s; box-shadow:0 1px 2px rgba(0,0,0,.2); }
-    .sw input:checked + .sl { background:var(--primary); border-color:var(--primary); }
-    .sw input:checked + .sl::before { transform:translateX(18px); }
-    /* alarm rows */
-    .arow {
-      display:flex; align-items:center; gap:.6rem;
-      padding:.55rem .7rem; border-radius:8px; border-left:4px solid var(--border);
+    .sl {
+      position:absolute; inset:0;
+      background:var(--chip); border:2px solid var(--md-outline);
+      border-radius:16px;
+      transition:background var(--motion-duration-medium) var(--motion-easing-standard),
+                 border-color var(--motion-duration-medium) var(--motion-easing-standard);
     }
-    .arow.free  { border-left-color:var(--accent); background:var(--free-bg); }
-    .arow.frueh { border-left-color:var(--frueh);  background:var(--frueh-bg); }
-    .arow.spaet { border-left-color:var(--spaet);  background:var(--spaet-bg); }
-    .arow.nacht { border-left-color:var(--nacht);  background:var(--nacht-bg); }
-    .arow .slbl { font-weight:700; min-width:44px; font-size:.9rem; }
-    /* time picker +/- */
+    .sl::before {
+      content:""; position:absolute; width:18px; height:18px;
+      left:6px; top:5px; background:var(--md-outline);
+      border-radius:var(--shape-full);
+      transition:left var(--motion-duration-medium) var(--motion-easing-emphasized),
+                 width var(--motion-duration-medium) var(--motion-easing-emphasized),
+                 height var(--motion-duration-medium) var(--motion-easing-emphasized),
+                 background var(--motion-duration-medium) var(--motion-easing-standard),
+                 box-shadow var(--motion-duration-medium) var(--motion-easing-standard);
+    }
+    .sw input:checked + .sl {
+      background:var(--md-primary); border-color:var(--md-primary);
+    }
+    .sw input:checked + .sl::before {
+      left:26px; width:24px; height:24px; top:3px;
+      background:var(--md-on-primary);
+      box-shadow:0 2px 4px rgba(0,0,0,.2);
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       SHIFT ALARM ROWS — M3 List items
+       ═══════════════════════════════════════════════════════ */
+    .arow {
+      display:flex; align-items:center; gap:12px;
+      padding:12px 16px; border-radius:var(--shape-md);
+      background:var(--md-surface-container-low);
+      transition:background var(--motion-duration-short) var(--motion-easing-standard);
+    }
+    .arow.free  { background:var(--free-bg); border-left:4px solid var(--accent); }
+    .arow.frueh { background:var(--frueh-bg); border-left:4px solid var(--frueh); }
+    .arow.spaet { background:var(--spaet-bg); border-left:4px solid var(--spaet); }
+    .arow.nacht { background:var(--nacht-bg); border-left:4px solid var(--nacht); }
+    .arow .slbl { font-weight:500; min-width:48px; font-size:var(--t-label-lg); }
+
+    /* ═══════════════════════════════════════════════════════
+       TIME PICKER — M3 Stepper
+       ═══════════════════════════════════════════════════════ */
     .tpick { display:flex; align-items:center; gap:0; flex:1; justify-content:center; }
     .tunit { display:flex; flex-direction:column; align-items:center; gap:2px; }
-    .tunit .tbtn { width:38px; height:30px; display:flex; align-items:center; justify-content:center;
-      font-size:1rem; font-weight:800; border-radius:6px; border:1px solid var(--border);
-      background:var(--chip); color:var(--fg); cursor:pointer; user-select:none; padding:0;
-      -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
-    .tunit .tbtn:active { background:var(--primary); color:#fff; }
-    .tunit .tval { font-size:1.4rem; font-weight:800; min-width:32px; text-align:center;
-      font-variant-numeric:tabular-nums; line-height:1.2; }
-    .tcolon { font-weight:800; font-size:1.5rem; margin:0 3px; padding-top:2px; }
-    .tuhr { font-size:.85rem; color:var(--muted); margin-left:6px; padding-top:2px; }
-    /* pattern */
-    .wrow { display:flex; gap:.25rem; align-items:center; margin-bottom:.35rem; }
-    .wlbl { font-size:.78rem; color:var(--muted); font-weight:600; min-width:56px; }
-    .pdays { display:flex; gap:.25rem; flex:1; }
-    .pday {
-      flex:1; padding:.4rem .05rem; text-align:center; border-radius:6px;
-      border:1px solid var(--border); background:var(--bg);
-      font-size:.72rem; font-weight:700; cursor:pointer; user-select:none;
-      overflow:hidden; white-space:nowrap;
+    .tunit .tbtn {
+      width:40px; height:36px; display:flex; align-items:center; justify-content:center;
+      font-size:1rem; font-weight:500; border-radius:var(--shape-full);
+      border:none; background:var(--md-surface-container-high); color:var(--fg);
+      cursor:pointer; user-select:none; padding:0;
+      -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+      transition:background var(--motion-duration-short) var(--motion-easing-standard);
     }
+    .tunit .tbtn:active { background:var(--md-primary); color:var(--md-on-primary); }
+    .tunit .tval {
+      font-size:2rem; font-weight:500; min-width:36px; text-align:center;
+      font-variant-numeric:tabular-nums; line-height:1.2;
+    }
+    .tcolon { font-weight:300; font-size:2rem; margin:0 4px; padding-top:4px; color:var(--muted); }
+    .tuhr { font-size:var(--t-body-sm); color:var(--muted); margin-left:8px; font-weight:500; }
+
+    /* ═══════════════════════════════════════════════════════
+       SHIFT TYPE SELECTOR — M3 Filter Chips
+       ═══════════════════════════════════════════════════════ */
+    .sftbtn {
+      flex:1; min-width:0; padding:8px 4px;
+      border-radius:var(--shape-sm);
+      font-size:var(--t-label-md); font-weight:500; letter-spacing:.02em;
+      border:1px solid var(--border); background:transparent; color:var(--fg);
+      cursor:pointer; text-align:center;
+      -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+      transition:all var(--motion-duration-short) var(--motion-easing-standard);
+    }
+    .sftbtn.sftbtn-active {
+      background:var(--md-primary); color:var(--md-on-primary);
+      border-color:var(--md-primary);
+    }
+    .sftbtn:active { opacity:.85; }
+
+    /* ═══════════════════════════════════════════════════════
+       PATTERN GRID
+       ═══════════════════════════════════════════════════════ */
+    .wrow { display:flex; gap:4px; align-items:center; margin-bottom:6px; }
+    .wlbl { font-size:var(--t-label-md); color:var(--muted); font-weight:500; min-width:56px; }
+    .pdays { display:flex; gap:4px; flex:1; }
+    .pday {
+      flex:1; padding:6px 2px; text-align:center;
+      border-radius:var(--shape-sm);
+      border:1.5px solid var(--border); background:var(--md-surface-container-lowest);
+      font-size:var(--t-label-sm); font-weight:600; cursor:pointer; user-select:none;
+      overflow:hidden; white-space:nowrap;
+      transition:all var(--motion-duration-short) var(--motion-easing-standard);
+    }
+    .pday:active { transform:scale(.92); }
     .pday.free  { background:var(--free-bg); border-color:var(--accent); }
     .pday.frueh { background:var(--frueh-bg); border-color:var(--frueh); }
     .pday.spaet { background:var(--spaet-bg); border-color:var(--spaet); }
     .pday.nacht { background:var(--nacht-bg); border-color:var(--nacht); }
-    /* legend */
-    .legend { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; padding-top:.6rem; border-top:1px solid var(--border); }
-    .li { display:flex; align-items:center; gap:.3rem; font-size:.8rem; }
-    .ld { width:10px; height:10px; border-radius:3px; flex-shrink:0; }
-    /* calendar */
-    .mnav  { display:flex; align-items:center; justify-content:space-between; gap:.5rem; margin-bottom:.7rem; }
-    .mtitle { font-weight:700; font-size:1rem; text-align:center; flex:1; }
+
+    /* ═══════════════════════════════════════════════════════
+       LEGEND
+       ═══════════════════════════════════════════════════════ */
+    .legend { display:flex; gap:12px; flex-wrap:wrap; align-items:center; padding-top:12px; border-top:1px solid var(--border); margin-top:8px; }
+    .li { display:flex; align-items:center; gap:6px; font-size:var(--t-label-md); font-weight:500; color:var(--muted); }
+    .ld { width:12px; height:12px; border-radius:3px; flex-shrink:0; }
+
+    /* ═══════════════════════════════════════════════════════
+       CALENDAR — M3 Cards with tonal elevation
+       ═══════════════════════════════════════════════════════ */
+    .mnav  { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px; padding:0 4px; }
+    .mtitle { font-weight:500; font-size:var(--t-title-lg); text-align:center; flex:1; letter-spacing:0; }
     .cgrid {
-      display:grid; grid-template-columns:2rem repeat(7,1fr);
-      gap:2px; border:1px solid var(--border); border-radius:10px;
-      overflow:hidden; background:var(--border);
+      display:grid; grid-template-columns:2.4rem repeat(7,1fr);
+      gap:0; border-radius:var(--shape-lg);
+      overflow:hidden; background:var(--md-surface-container-high);
+      width:100%; min-width:0;
+      box-shadow:var(--elev-2);
     }
-    .dow { background:var(--chip); padding:.45rem .1rem; text-align:center; font-size:.73rem; font-weight:700; color:var(--muted); }
-    .kw  { background:var(--chip); padding:.25rem .05rem; text-align:center; font-size:.58rem; font-weight:700; color:var(--muted); display:flex; align-items:center; justify-content:center; line-height:1.2; }
+    .dow {
+      background:var(--md-surface-container); padding:10px 0; text-align:center;
+      font-size:var(--t-label-sm); font-weight:500; color:var(--muted);
+      border-bottom:1px solid var(--border);
+      text-transform:uppercase; letter-spacing:.08em;
+    }
+    .kw {
+      background:var(--md-surface-container); padding:6px 0; text-align:center;
+      font-size:.55rem; font-weight:600; color:var(--muted);
+      display:flex; align-items:center; justify-content:center; line-height:1.2;
+      border-right:1px solid var(--border); border-bottom:1px solid var(--border);
+    }
     .cday {
-      min-height:68px; padding:.25rem; background:var(--bg);
-      border-left:3px solid transparent;
+      min-height:82px; padding:4px; background:var(--md-surface-container-lowest);
+      border-left:3.5px solid transparent;
+      border-bottom:1px solid var(--border);
+      border-right:1px solid var(--border);
       display:flex; flex-direction:column; position:relative;
+      min-width:0; overflow:hidden;
+      transition:background var(--motion-duration-short) var(--motion-easing-standard);
     }
+    .cday.dim { opacity:.15; pointer-events:none; }
     .cday.click { cursor:pointer; }
-    .cday.click:active { filter:brightness(.9); }
+    .cday.click:active { filter:brightness(.97); }
     .cday.free  { background:var(--free-bg);  border-left-color:var(--accent); }
     .cday.frueh { background:var(--frueh-bg); border-left-color:var(--frueh); }
     .cday.spaet { background:var(--spaet-bg); border-left-color:var(--spaet); }
     .cday.nacht { background:var(--nacht-bg); border-left-color:var(--nacht); }
-    .cday.excep { box-shadow:inset 0 0 0 2px #a855f7; }
+    .cday.excep { box-shadow:inset 0 0 0 2.5px var(--md-tertiary); }
     .cday.holid { background:var(--hol) !important; border-left-color:var(--hol-b) !important; }
-    .cday.dim   { opacity:.22; pointer-events:none; }
-    .cday.today { outline:2px solid var(--primary); outline-offset:-2px; }
-    .dnum { font-size:.78rem; font-weight:700; color:var(--muted); line-height:1.1; }
-    .dnum.tc { color:var(--primary); }
-    .dtbadge { font-size:.58rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:.04em; line-height:1; margin-bottom:1px; }
-    .dpill { font-size:.62rem; padding:.12rem .35rem; border-radius:3px; font-weight:700; margin-top:auto; }
-    .hp { background:var(--hol-b); color:#fff; }
-    .ep { background:#a855f7; color:#fff; }
-    .aind { position:absolute; top:2px; right:3px; font-size:.82rem; line-height:1; }
-    /* exceptions */
+    .cday.today {
+      outline:3px solid var(--md-primary); outline-offset:-3px;
+      background:var(--md-primary-container);
+      z-index:1;
+    }
+    .dnum { font-size:var(--t-label-md); font-weight:600; color:var(--muted); line-height:1.3; }
+    .dnum.tc { color:var(--md-primary); font-weight:700; }
+    .dtbadge {
+      font-size:.55rem; font-weight:700; color:var(--md-primary);
+      text-transform:uppercase; letter-spacing:.08em; line-height:1; margin-bottom:1px;
+    }
+    .dpill {
+      font-size:.6rem; padding:2px 6px; border-radius:var(--shape-xs);
+      font-weight:600; margin-top:auto; white-space:nowrap;
+      overflow:hidden; text-overflow:ellipsis; max-width:100%;
+    }
+    .hp { background:var(--hol-b); color:var(--md-on-primary); }
+    .ep { background:var(--md-tertiary); color:var(--md-on-tertiary); }
+    .aind { position:absolute; top:2px; right:3px; font-size:.85rem; line-height:1; }
+
+    /* ═══════════════════════════════════════════════════════
+       EXCEPTION LIST
+       ═══════════════════════════════════════════════════════ */
     .exitem {
       display:flex; align-items:center; justify-content:space-between;
-      gap:.4rem; padding:.35rem .6rem;
-      background:var(--bg); border:1px solid var(--border); border-radius:8px; font-size:.85rem;
+      gap:8px; padding:8px 12px;
+      background:var(--md-surface-container-low);
+      border-radius:var(--shape-md); font-size:var(--t-body-md);
     }
-    /* sheet */
+
+    /* ═══════════════════════════════════════════════════════
+       M3 BOTTOM SHEET
+       ═══════════════════════════════════════════════════════ */
     .overlay {
       position:fixed; top:0; left:0; right:0; bottom:0;
-      background:rgba(0,0,0,.48);
-      z-index:100; display:none;
+      background:rgba(47,48,54,.55);
+      backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+      z-index:100; overflow-y:auto; -webkit-overflow-scrolling:touch;
+      transform:translateY(100%);
+      transition:transform var(--motion-duration-medium) var(--motion-easing-emphasized);
+      pointer-events:none;
     }
+    .overlay.open { transform:translateY(0); pointer-events:auto; }
     .sheet {
-      position:fixed; left:0; right:0; bottom:0;
-      background:var(--bg); max-width:500px; margin:0 auto;
-      border-radius:20px 20px 0 0; padding:1.1rem;
-      max-height:88vh; overflow-y:auto; z-index:101;
+      background:var(--md-surface-container-low);
+      max-width:500px; margin:0 auto;
+      border-radius:var(--shape-xl) var(--shape-xl) 0 0; padding:16px 20px 32px;
+      min-height:30vh; box-shadow:var(--elev-3);
     }
-    .shandle { width:36px; height:4px; background:var(--border); border-radius:2px; margin:0 auto .9rem; }
-    .sdate { font-weight:800; font-size:1rem; margin-bottom:.5rem; }
-    .sbar { padding:.65rem .8rem; border-radius:10px; font-weight:700; border-left:5px solid var(--border); margin-bottom:.8rem; }
+    .settings-overlay {
+      position:fixed; top:0; left:0; right:0; bottom:0;
+      background:var(--bg); z-index:90; overflow-y:auto; -webkit-overflow-scrolling:touch;
+      transform:translateY(100%);
+      transition:transform var(--motion-duration-medium) var(--motion-easing-emphasized);
+      pointer-events:none;
+    }
+    .settings-overlay.open { transform:translateY(0); pointer-events:auto; }
+    .settings-inner { max-width:560px; margin:0 auto; padding:16px 16px 32px; }
+
+    /* ═══════════════════════════════════════════════════════
+       M3 SHEET DRAG HANDLE & CONTENT
+       ═══════════════════════════════════════════════════════ */
+    .shandle { width:32px; height:4px; background:var(--md-outline); border-radius:2px; margin:0 auto 16px; opacity:.4; }
+    .sdate { font-weight:500; font-size:var(--t-title-lg); margin-bottom:8px; }
+    .sbar {
+      padding:12px 16px; border-radius:var(--shape-md);
+      font-weight:500; font-size:var(--t-title-sm);
+      border-left:5px solid var(--md-outline); margin-bottom:12px;
+    }
     .sbar.free  { background:var(--free-bg); border-left-color:var(--accent); }
     .sbar.frueh { background:var(--frueh-bg); border-left-color:var(--frueh); }
     .sbar.spaet { background:var(--spaet-bg); border-left-color:var(--spaet); }
     .sbar.nacht { background:var(--nacht-bg); border-left-color:var(--nacht); }
     .sinfo {
-      display:flex; align-items:center; gap:.7rem; padding:.65rem;
-      border:1px solid var(--border); border-radius:10px; background:var(--card); margin-bottom:.8rem;
+      display:flex; align-items:center; gap:12px; padding:12px;
+      border-radius:var(--shape-md); background:var(--md-surface-container); margin-bottom:12px;
     }
     .sinfo-ico { font-size:1.5rem; }
-    .sinfo-txt { flex:1; }
-    .sbtns { display:flex; gap:.5rem; }
+    .sinfo-txt { flex:1; font-size:var(--t-body-md); }
+    .sbtns { display:flex; gap:8px; }
     .sbtns button { flex:1; }
-    /* toast */
+
+    /* ═══════════════════════════════════════════════════════
+       M3 SNACKBAR (Toast)
+       ═══════════════════════════════════════════════════════ */
     #toast {
-      visibility:hidden; position:fixed; left:50%; bottom:20px;
-      transform:translateX(-50%); background:#1e293b; color:#fff;
-      padding:.65rem 1.1rem; border-radius:10px; font-weight:600;
+      visibility:hidden; position:fixed; left:50%; bottom:24px;
+      transform:translateX(-50%);
+      background:var(--md-inverse-surface); color:var(--md-inverse-on-surface);
+      padding:14px 24px; border-radius:var(--shape-xs);
+      font-weight:500; font-size:var(--t-body-md);
       z-index:200; min-width:200px; text-align:center; white-space:nowrap;
+      box-shadow:var(--elev-3); letter-spacing:.01em;
     }
-    #toast.show { visibility:visible; animation:tin .3s, tout .3s 2.5s forwards; }
-    #toast.err  { background:var(--danger); }
-    @keyframes tin  { from{opacity:0;bottom:6px} to{opacity:1;bottom:20px} }
-    @keyframes tout { from{opacity:1} to{opacity:0} }
+    #toast.show { visibility:visible; animation:tin .35s var(--motion-easing-emphasized), tout .35s 2.5s forwards; }
+    #toast.err  { background:var(--md-error); color:var(--md-on-error); }
+    @keyframes tin  { from{opacity:0;transform:translateX(-50%) translateY(12px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+    @keyframes tout { from{opacity:1;transform:translateX(-50%) translateY(0)} to{opacity:0;transform:translateX(-50%) translateY(12px)} }
+
     @media (max-width:420px) {
-      .cday { min-height:56px; padding:.18rem; }
-      .dnum { font-size:.7rem; }
-      .dpill { font-size:.56rem; padding:.1rem .25rem; }
+      .cday { min-height:62px; padding:3px; }
+      .dnum { font-size:.65rem; }
+      .dpill { font-size:.5rem; padding:1px 4px; }
+      .kw { font-size:.5rem; }
+      .aind { font-size:.72rem; }
     }
-    /* confirm modal */
+
+    /* ═══════════════════════════════════════════════════════
+       M3 DIALOG
+       ═══════════════════════════════════════════════════════ */
     .cdlg-bg {
-      position:fixed;inset:0;background:rgba(0,0,0,.52);z-index:300;display:flex;
-      align-items:center;justify-content:center;padding:1rem;
+      position:fixed;inset:0;
+      background:rgba(47,48,54,.5);
+      z-index:300;display:flex;
+      align-items:center;justify-content:center;padding:24px;
+      backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
     }
     .cdlg {
-      background:var(--bg);border:1px solid var(--border);border-radius:16px;
-      padding:1.3rem 1.2rem;max-width:340px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.22);
+      background:var(--md-surface-container-high);
+      border-radius:var(--shape-xl);
+      padding:24px;max-width:340px;width:100%;
+      box-shadow:var(--elev-3);
     }
-    .cdlg-msg { font-size:.93rem;line-height:1.55;white-space:pre-line;margin-bottom:1rem; }
-    .cdlg-btns { display:flex;gap:.5rem;justify-content:flex-end; }
+    .cdlg-msg { font-size:var(--t-body-lg);line-height:1.55;white-space:pre-line;margin-bottom:24px; }
+    .cdlg-btns { display:flex;gap:8px;justify-content:flex-end; }
+
+    /* ═══════════════════════════════════════════════════════
+       ONBOARDING WIZARD
+       ═══════════════════════════════════════════════════════ */
+    .wiz-bg {
+      position:fixed;top:0;left:0;right:0;bottom:0;
+      background:rgba(47,48,54,.55);
+      z-index:400; display:flex;align-items:center;justify-content:center;padding:20px;
+      overflow-y:auto;-webkit-overflow-scrolling:touch;
+      backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    }
+    .wiz {
+      background:var(--md-surface-container-high);
+      border-radius:var(--shape-xl);
+      padding:28px 24px 20px;max-width:420px;width:100%;
+      box-shadow:var(--elev-4); margin:auto;
+    }
+    .wiz-icon { font-size:3rem;text-align:center;margin-bottom:12px; }
+    .wiz-title { font-weight:500;font-size:var(--t-headline-sm);text-align:center;margin-bottom:12px;letter-spacing:0; }
+    .wiz-body { font-size:var(--t-body-lg);line-height:1.65;color:var(--fg);margin-bottom:20px; }
+    .wiz-body ul { padding-left:1.2rem;margin:.4rem 0; }
+    .wiz-body li { margin-bottom:.3rem; }
+    .wiz-dots { display:flex;justify-content:center;gap:8px;margin-bottom:20px; }
+    .wiz-dot {
+      width:8px;height:8px;border-radius:50%;
+      background:var(--md-surface-container-highest);
+      border:2px solid var(--md-outline-variant);
+      transition:all var(--motion-duration-medium) var(--motion-easing-standard);
+    }
+    .wiz-dot.active { background:var(--md-primary);border-color:var(--md-primary);transform:scale(1.3); }
+    .wiz-nav { display:flex;gap:8px;justify-content:space-between; }
+    .wiz-nav button { flex:1; }
   </style>
 </head>
 <body>
 
 <header>
-  <div class="hdr-title"><span id="hdrCalIcon" style="display:inline-flex;align-items:center;justify-content:center;position:relative;width:1.6em;height:1.6em;vertical-align:middle;margin-right:.3em"><svg viewBox="0 0 32 32" width="1.6em" height="1.6em" style="position:absolute;top:0;left:0"><rect x="1" y="4" width="30" height="27" rx="3" fill="var(--card)" stroke="var(--border)" stroke-width="1"/><rect x="1" y="4" width="30" height="8" rx="3" fill="#EF4444"/><rect x="8" y="2" width="2.5" height="5" rx="1" fill="var(--muted)"/><rect x="21.5" y="2" width="2.5" height="5" rx="1" fill="var(--muted)"/><text id="hdrCalDay" x="16" y="25" text-anchor="middle" font-size="13" font-weight="800" fill="var(--fg)"></text><text id="hdrCalMon" x="16" y="10.5" text-anchor="middle" font-size="5.5" font-weight="700" fill="white"></text></svg></span>Mein Schichtplan</div>
+  <div class="hdr-title"><span id="hdrCalIcon" style="display:inline-flex;align-items:center;justify-content:center;position:relative;width:1.6em;height:1.6em;vertical-align:middle;margin-right:8px"><svg viewBox="0 0 32 32" width="1.6em" height="1.6em" style="position:absolute;top:0;left:0"><rect x="1" y="5" width="30" height="25" rx="4" fill="var(--md-primary-container)" stroke="var(--border)" stroke-width=".8"/><rect x="1" y="5" width="30" height="7" rx="4" fill="var(--md-primary)"/><rect x="1" y="10" width="30" height="2" fill="var(--md-primary)"/><rect x="8.5" y="2" width="2.4" height="5.5" rx="1.2" fill="var(--muted)"/><rect x="21.1" y="2" width="2.4" height="5.5" rx="1.2" fill="var(--muted)"/><text id="hdrCalDay" x="16" y="24" text-anchor="middle" font-size="12" font-weight="500" fill="var(--md-on-primary-container)"></text><text id="hdrCalMon" x="16" y="10" text-anchor="middle" font-size="5" font-weight="500" fill="var(--md-on-primary)"></text></svg></span>Mein Schichtplan</div>
   <div class="hdr-btns">
     <button class="icon" id="themeBtn" title="Farbschema wechseln">&#x1F5A5;&#xFE0F;</button>
     <button class="icon" id="settingsBtn" title="Einstellungen">&#x2699;&#xFE0F;</button>
@@ -231,7 +631,13 @@
 
 <div class="wrap">
 
-  <!-- ======= EINSTELLUNGEN ======= -->
+  <!-- ======= EINSTELLUNGEN (OVERLAY) ======= -->
+  <div class="settings-overlay" id="settingsOverlay">
+    <div class="settings-inner">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem;">
+        <div style="font-weight:800;font-size:1.05rem;">&#x2699;&#xFE0F; Einstellungen</div>
+        <button class="icon" id="closeSettings" title="Schlie&szlig;en">&#x2715;</button>
+      </div>
   <div id="settingsPanel">
 
     <div class="card">
@@ -278,6 +684,7 @@
         </div>
         <div class="row" style="justify-content:flex-start;">
           <button class="primary sm" id="doneSettings">Kalender anzeigen</button>
+          <button class="sm" id="startWizBtn">&#x2753;&nbsp;Anleitung</button>
           <button class="danger sm" id="resetAll">&#x26A0;&#xFE0F;&nbsp;Alles zur&uuml;cksetzen</button>
         </div>
       </div>
@@ -293,6 +700,16 @@
       <div style="margin-top:.7rem;display:flex;gap:.5rem;align-items:center;">
         <button class="sm" id="testAlarmBtn" style="background:#f59e0b;color:#fff;border-color:transparent;">&#x1F514; Test-Alarm (15 Sek.)</button>
         <span class="small muted">Testet ob der Wecker funktioniert</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">&#x1F3B5;&nbsp;Klingelton</div>
+      <div class="small muted" style="margin-bottom:.6rem;">W&auml;hle einen eigenen Klingelton aus deinen Dateien oder nutze den Android-Standard.</div>
+      <div id="ringtoneBox" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+        <button class="primary sm" id="pickRingtoneBtn">&#x1F4C1; Klingelton w&auml;hlen</button>
+        <button class="sm" id="resetRingtoneBtn" style="display:none;">&#x27F3; Standard</button>
+        <span class="small muted" id="ringtoneName" style="flex:1;">Standard-Klingelton</span>
       </div>
     </div>
 
@@ -340,13 +757,15 @@
     </div>
 
   </div><!-- /settingsPanel -->
+    </div>
+  </div><!-- /settingsOverlay -->
 
-  <!-- ======= KALENDER ======= -->
-  <div class="card">
-    <div class="mnav">
+  <!-- ======= KALENDAR ======= -->
+  <div id="calSection" style="margin:0 -.5rem;padding:.5rem .5rem 0;">
+    <div class="mnav" style="padding:.35rem 0;">
       <button id="prevM" aria-label="Vorheriger Monat">&#x25C4;</button>
       <div id="mTitle" class="mtitle">Monat Jahr</div>
-      <button id="todayM" class="sm">Heute</button>
+      <button id="todayM" class="sm primary">Heute</button>
       <button id="nextM" aria-label="N&auml;chster Monat">&#x25BA;</button>
     </div>
     <div id="calGrid"></div>
@@ -361,8 +780,9 @@
 </div><!-- /wrap -->
 
 <!-- ======= BOTTOM SHEET ======= -->
-<div class="overlay" id="overlay" style="display:none;"></div>
-<div class="sheet" id="sheet" style="display:none;">
+<div class="overlay" id="overlay">
+  <div style="padding-top:3rem;"></div>
+  <div class="sheet" id="sheet">
     <div class="shandle"></div>
     <div class="sdate"  id="sDate"></div>
     <div class="sbar"   id="sBar"></div>
@@ -370,7 +790,9 @@
       <div class="sinfo-ico">&#x23F0;</div>
       <div class="sinfo-txt" id="sTxt"></div>
     </div>
+    <div id="sPicker" style="display:none;padding:.6rem 0;text-align:center;"></div>
     <div class="sbtns" id="sBtns"></div>
+  </div>
 </div>
 
 <div id="toast"></div>
@@ -380,6 +802,20 @@
     <div class="cdlg-btns">
       <button class="sm" id="cdlgCancel">Abbrechen</button>
       <button class="primary sm" id="cdlgOk">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======= EINRICHTUNGSASSISTENT ======= -->
+<div class="wiz-bg" id="wizBg" style="display:none;">
+  <div class="wiz">
+    <div class="wiz-icon" id="wizIcon"></div>
+    <div class="wiz-title" id="wizTitle"></div>
+    <div class="wiz-body" id="wizBody"></div>
+    <div class="wiz-dots" id="wizDots"></div>
+    <div class="wiz-nav">
+      <button class="sm" id="wizPrev">Zur&uuml;ck</button>
+      <button class="primary sm" id="wizNext">Weiter</button>
     </div>
   </div>
 </div>
@@ -419,7 +855,7 @@ window.onerror=function(msg,src,line,col,err){
       pattern:[], exceptions:[],
       alarmTimes:{1:'07:00',2:'05:30',3:'13:00',4:'21:00'},
       alarmEnabled:{1:false,2:false,3:false,4:false},
-      activeAlarms:{},
+      activeAlarms:[],
       freeAlarm:{enabled:false,time:'07:00',days:[0,1,2,3,4]}
     };
   }
@@ -487,6 +923,25 @@ window.onerror=function(msg,src,line,col,err){
 
   function $(id){ return document.getElementById(id); }
 
+  function addActiveAlarm(ds,alarmKey,time,shiftName){
+    if(!S.activeAlarms) S.activeAlarms=[];
+    var existing=S.activeAlarms.find(function(a){return a.ds===ds&&a.alarmKey===alarmKey;});
+    if(existing){existing.time=time;existing.shiftName=shiftName;return;}
+    S.activeAlarms.push({ds:ds,alarmKey:alarmKey,time:time,shiftName:shiftName});
+  }
+  function removeActiveAlarm(ds,alarmKey){
+    if(!S.activeAlarms)return;
+    S.activeAlarms=S.activeAlarms.filter(function(a){return !(a.ds===ds&&a.alarmKey===alarmKey);});
+  }
+  function getActiveAlarmsForDate(ds){
+    if(!S.activeAlarms)return[];
+    return S.activeAlarms.filter(function(a){return a.ds===ds;});
+  }
+  function getAllActiveAlarmsSorted(){
+    if(!S.activeAlarms)return[];
+    return S.activeAlarms.slice().sort(function(a,b){return a.ds.localeCompare(b.ds)||a.alarmKey.localeCompare(b.alarmKey);});
+  }
+
   /* ── THEME ──────────────────────────────── */
   var THEMES=['system','light','dark'];
   var TICOS={system:'\uD83D\uDDA5\uFE0F',light:'\u2600\uFE0F',dark:'\uD83C\uDF19'};
@@ -536,17 +991,17 @@ window.onerror=function(msg,src,line,col,err){
   function mondayOf(d){
     var dt=new Date(d),day=dt.getDay();
     dt.setDate(dt.getDate()+(day===0?-6:1-day));
-    dt.setHours(0,0,0,0); return dt;
+    dt.setHours(12,0,0,0); return dt;
   }
   function getShift(ds){
     var ex=S.exceptions.find(function(e){return ds>=e.start&&ds<=e.end;});
     if(ex) return {type:-1,name:ex.type,cls:'excep'};
     if(!S.startDate) return {type:0,name:'',cls:''};
     var sm=mondayOf(parseYmd(S.startDate));
-    var tgt=parseYmd(ds); tgt.setHours(0,0,0,0);
-    var diff=Math.round((tgt-sm)/864e5);
-    if(diff<0) return {type:0,name:'',cls:''};
-    var idx=diff%(S.weeksCount*7);
+    var tgt=parseYmd(ds);
+    var diffDays=Math.round((tgt.getTime()-sm.getTime())/864e5);
+    if(diffDays<0) return {type:0,name:'',cls:''};
+    var idx=diffDays%(S.weeksCount*7);
     var t=S.pattern[idx]!=null?S.pattern[idx]:0;
     return {type:t,name:SNAMES[t]||'',cls:SCLS[t]||''};
   }
@@ -554,12 +1009,16 @@ window.onerror=function(msg,src,line,col,err){
     var time=S.alarmTimes[shiftType]||'';
     var now=new Date();
     var start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),12,0,0,0);
+    var hols=holidays(now.getFullYear(),S.bundesland||'NW');
+    var nextYearHols=holidays(now.getFullYear()+1,S.bundesland||'NW');
     var results=[];
     for(var i=0;i<370;i++){
       var d=new Date(start.getTime()+i*864e5);
       var ds=toYmd(d);
       var sh=getShift(ds);
       if(sh.type!==shiftType) continue;
+      var hol=hols[ds]||nextYearHols[ds];
+      if(hol) continue;
       if(time){
         var pts=time.split(':').map(Number);
         var alarmMs=new Date(d.getFullYear(),d.getMonth(),d.getDate(),pts[0]||0,pts[1]||0,0,0).getTime();
@@ -614,9 +1073,11 @@ window.onerror=function(msg,src,line,col,err){
         var p=ds.split('-').map(Number);
         var key='shift-'+ds+'-t'+sh.type;
         try{
-          if(hasSilent) window.Android.setAlarmForDateSilent(p[0],p[1],p[2],h,m,key,sh.name+' ('+fmtDe(ds)+')');
-          else window.Android.setAlarmForDate(p[0],p[1],p[2],h,m,key,sh.name+' ('+fmtDe(ds)+')');
-          S.activeAlarms[ds]={alarmKey:key,time:time,shiftName:sh.name};
+          var ok=false;
+          if(hasSilent) ok=window.Android.setAlarmForDateSilent(p[0],p[1],p[2],h,m,key,sh.name+' ('+fmtDe(ds)+')');
+          else ok=window.Android.setAlarmForDate(p[0],p[1],p[2],h,m,key,sh.name+' ('+fmtDe(ds)+')');
+          if(ok===false){ errors++; continue; }
+          addActiveAlarm(ds,key,time,sh.name);
           count++;
         }catch(e){ errors++; }
       }
@@ -778,11 +1239,15 @@ window.onerror=function(msg,src,line,col,err){
     if(!window.Android||typeof window.Android.setAlarmForDate!=='function'){ toast('Android-Bridge nicht verfügbar.',true); return; }
     var hasSilent=typeof window.Android.setAlarmForDateSilent==='function';
     var now=new Date(); var start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),12,0,0,0);
+    var hols=holidays(now.getFullYear(),S.bundesland||'NW');
+    var nextYearHols=holidays(now.getFullYear()+1,S.bundesland||'NW');
     var pts=S.freeAlarm.time.split(':').map(Number),h=pts[0],m=pts[1];
     var all=[];
     for(var i=0;i<370;i++){
       var d=new Date(start.getTime()+i*864e5);
       var ds=toYmd(d);
+      var hol=hols[ds]||nextYearHols[ds];
+      if(hol) continue;
       var dow=(d.getDay()+6)%7;
       if(S.freeAlarm.days.indexOf(dow)===-1) continue;
       var sh=getShift(ds);
@@ -798,9 +1263,11 @@ window.onerror=function(msg,src,line,col,err){
         var ds=all[i]; var p=ds.split('-').map(Number);
         var key='free-day-'+ds;
         try{
-          if(hasSilent) window.Android.setAlarmForDateSilent(p[0],p[1],p[2],h,m,key,'Freier Tag ('+fmtDe(ds)+')');
-          else window.Android.setAlarmForDate(p[0],p[1],p[2],h,m,key,'Freier Tag ('+fmtDe(ds)+')');
-          S.activeAlarms[ds]={alarmKey:key,time:S.freeAlarm.time,shiftName:'Freier Tag'};
+          var ok=false;
+          if(hasSilent) ok=window.Android.setAlarmForDateSilent(p[0],p[1],p[2],h,m,key,'Freier Tag ('+fmtDe(ds)+')');
+          else ok=window.Android.setAlarmForDate(p[0],p[1],p[2],h,m,key,'Freier Tag ('+fmtDe(ds)+')');
+          if(ok===false){ errors++; continue; }
+          addActiveAlarm(ds,key,S.freeAlarm.time,'Freier Tag');
           count++;
         }catch(e){ errors++; }
       }
@@ -865,6 +1332,8 @@ window.onerror=function(msg,src,line,col,err){
   function renderCal(){
     var year=viewDate.getFullYear(), month=viewDate.getMonth();
     var hols=holidays(year,S.bundesland||'NW');
+    if(month===0) Object.assign(hols,holidays(year-1,S.bundesland||'NW'));
+    if(month===11) Object.assign(hols,holidays(year+1,S.bundesland||'NW'));
     $('mTitle').textContent=new Date(year,month,1).toLocaleString('de-DE',{month:'long',year:'numeric'});
     var grid=document.createElement('div'); grid.className='cgrid';
     // Header: KW-Ecke + Mo-So
@@ -894,14 +1363,14 @@ window.onerror=function(msg,src,line,col,err){
         var sh=getShift(ds);
         var hol=hols[ds];
         var isTod=ds===today;
-        var aa=S.activeAlarms[ds];
+        var aa=getActiveAlarmsForDate(ds);
         var acfg=sh.type>=1&&sh.type<=4&&S.alarmEnabled[sh.type]&&S.alarmTimes[sh.type];
         var cell=document.createElement('div');
         cell.className='cday'+(sh.cls?' '+sh.cls:'')+(hol&&sh.type!==-1?' holid':'')+(isTod?' today':'');
         var cd=parseYmd(ds); cd.setHours(0,0,0,0);
-        if(sh.type>=1&&sh.type<=4&&cd>=now){
+        if(cd>=new Date(new Date().getFullYear(),new Date().getMonth(),new Date().getDate(),0,0,0,0)){
           cell.classList.add('click');
-          (function(s,sf){cell.onclick=function(ev){ev.stopPropagation();toast('\u00D6ffne: '+sf.name+' '+fmtDe(s));openSheet(s,sf);};})(ds,sh);
+          (function(s,sf){cell.onclick=function(ev){ev.stopPropagation();openSheet(s,sf);};})(ds,sh);
         }
         if(isTod){var b=document.createElement('div');b.className='dtbadge';b.textContent='HEUTE';cell.appendChild(b);}
         var num=document.createElement('div');
@@ -911,47 +1380,43 @@ window.onerror=function(msg,src,line,col,err){
           var p=document.createElement('div');
           p.className='dpill'+(sh.type===-1?' ep':''); p.textContent=sh.name; cell.appendChild(p);
         }
-        if(sh.type>=1&&sh.type<=4){
-          if(aa){
-            var ind=document.createElement('div');ind.className='aind';
-            ind.textContent='\uD83D\uDD14';ind.title='Wecker: '+aa.time+' Uhr';cell.appendChild(ind);
-          } else if(acfg){
-            var ind=document.createElement('div');ind.className='aind';ind.style.opacity='.35';
-            ind.textContent='\uD83D\uDD15';ind.title='Wecker stellbar: '+S.alarmTimes[sh.type];cell.appendChild(ind);
-          }
-        }
-        if(sh.type===0&&S.freeAlarm.enabled&&S.freeAlarm.time){
-          var dow2=(new Date(year,month,d,12,0,0).getDay()+6)%7;
-          if(S.freeAlarm.days.indexOf(dow2)!==-1){
-            if(aa){
-              var ind=document.createElement('div');ind.className='aind';
-              ind.textContent='\uD83D\uDD14';ind.title='Wecker: '+aa.time+' Uhr';cell.appendChild(ind);
-            } else if(cd>=now){
-              var ind=document.createElement('div');ind.className='aind';ind.style.opacity='.35';
-              ind.textContent='\uD83D\uDD15';ind.title='Freier Tag \u2013 Wecker: '+S.freeAlarm.time;cell.appendChild(ind);
-            }
-          }
+        if(aa.length){
+          var ind=document.createElement('div');ind.className='aind';
+          ind.textContent='\uD83D\uDD14';ind.title='Wecker: '+aa.map(function(a){return a.time;}).join(', ')+' Uhr';cell.appendChild(ind);
         }
         grid.appendChild(cell);
       }
     }
     var con=$('calGrid'); con.innerHTML=''; con.appendChild(grid);
-    renderAList();
+    aListLimit=5; renderAList();
   }
 
   /* ── WECKER-LISTE ───────────────────────── */
+  var aListLimit=5;
   function renderAList(){
     var card=$('aCard'), list=$('aList'); list.innerHTML='';
-    var entries=Object.entries(S.activeAlarms).sort(function(a,b){return a[0].localeCompare(b[0]);});
+    var entries=getAllActiveAlarmsSorted();
     if(!entries.length){card.style.display='none';return;}
     card.style.display='';
-    entries.forEach(function(e){
-      var ds=e[0],info=e[1];
+    var show=entries.slice(0,aListLimit);
+    show.forEach(function(info){
       var el=document.createElement('div'); el.className='exitem';
-      el.innerHTML='\uD83D\uDD14 <b>'+esc(fmtDe(ds))+'</b> \u2013 '+esc(info.shiftName)+' um '+esc(info.time)+' Uhr'
-        +'<button class="danger sm adel" data-date="'+esc(ds)+'" data-key="'+esc(info.alarmKey)+'">L\u00F6schen</button>';
+      el.innerHTML='\uD83D\uDD14 <b>'+esc(fmtDe(info.ds))+'</b> \u2013 '+esc(info.shiftName)+' um '+esc(info.time)+' Uhr'
+        +'<button class="danger sm adel" data-date="'+esc(info.ds)+'" data-key="'+esc(info.alarmKey)+'">L\u00F6schen</button>';
       list.appendChild(el);
     });
+    if(entries.length>aListLimit){
+      var more=document.createElement('button');
+      more.className='sm';more.id='aMore';
+      more.textContent='\u25BC Mehr anzeigen ('+(entries.length-aListLimit)+' weitere)';
+      list.appendChild(more);
+    }
+    if(aListLimit>5){
+      var less=document.createElement('button');
+      less.className='sm';less.id='aLess';
+      less.textContent='\u25B2 Weniger anzeigen';
+      list.appendChild(less);
+    }
   }
 
   /* ── BOTTOM SHEET ───────────────────────── */
@@ -960,93 +1425,116 @@ window.onerror=function(msg,src,line,col,err){
     var p=ds.split('-').map(Number);
     document.getElementById('sDate').textContent=new Date(p[0],p[1]-1,p[2],12,0,0)
       .toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-    var bar=document.getElementById('sBar'); bar.textContent=sh.name||'\u2014'; bar.className='sbar '+(sh.cls||'');
-    var aa=S.activeAlarms[ds], time=S.alarmTimes[sh.type]||'', en=S.alarmEnabled[sh.type];
+    var aa=getActiveAlarmsForDate(ds);
     var txt=document.getElementById('sTxt'), btns=document.getElementById('sBtns');
-    if(aa){
-      txt.innerHTML='<strong>\uD83D\uDD14 Wecker gesetzt</strong><br><span class="muted small">Am '+esc(fmtDe(ds))+' um '+esc(aa.time)+' Uhr</span>';
+    var pickerEl=document.getElementById('sPicker');
+    if(pickerEl)pickerEl.innerHTML='';
+    var bar=document.getElementById('sBar');
+    if(aa.length){
+      var first=aa[0];
+      bar.textContent=first.shiftName||'Wecker'; bar.className='sbar '+(SCLS[first.alarmKey.match(/t(\d)/)?Number(RegExp.$1):0]||'');
+      txt.innerHTML='<strong>\uD83D\uDD14 Wecker gesetzt</strong><br><span class="muted small">Am '+esc(fmtDe(ds))+' um '+esc(aa.map(function(a){return a.time;}).join(', '))+' Uhr</span>';
+      if(pickerEl)pickerEl.style.display='none';
       btns.innerHTML='<button class="danger" id="scnBtn">\uD83D\uDD15 Wecker l\u00F6schen</button><button id="sclBtn">Schlie\u00DFen</button>';
-      document.getElementById('scnBtn').onclick=function(){cancelAlarm(ds,aa.alarmKey);};
-    } else if(time&&en){
-      var pts=time.split(':').map(Number);
-      var aDate=new Date(p[0],p[1]-1,p[2],pts[0],pts[1],0,0);
-      var diff=aDate.getTime()-Date.now();
-      if(diff<=0){
-        txt.innerHTML='<strong style="color:var(--danger);">\u26A0\uFE0F '+esc(time)+' Uhr am '+esc(fmtDe(ds))+' liegt in der Vergangenheit!</strong>'
-          +'<br><span class="muted small">Bitte w\u00E4hle einen zuk\u00FCnftigen Kalendertag oder \u00E4ndere die Weckerzeit in den Einstellungen.</span>';
-        btns.innerHTML='<button id="sclBtn">Schlie\u00DFen</button>';
-      } else {
-        var dm=Math.floor(diff/60000);
-        var diffTxt=dm<60?dm+' Min.':Math.floor(dm/60)+' Std. '+(dm%60)+' Min.';
-        txt.innerHTML='<strong>Wecker stellen f\u00FCr '+esc(time)+' Uhr</strong> (in '+esc(diffTxt)+')'
-          +'<br><span class="muted small">'+esc(sh.name)+'-Schicht \u2013 '+esc(fmtDe(ds))+'</span>';
-        btns.innerHTML='<button class="primary" id="ssetBtn" style="flex:2;">\uD83D\uDD14 Wecker stellen</button><button id="sclBtn">Abbrechen</button>';
-        document.getElementById('ssetBtn').onclick=function(){setAlarm(ds,sh);};
-      }
+      document.getElementById('scnBtn').onclick=function(){aa.forEach(function(a){cancelAlarm(ds,a.alarmKey);});};
     } else {
-      var reason=!time?'Keine Weckerzeit f\u00FCr \u201E'+esc(sh.name)+'\u201C konfiguriert.':'\u201E'+esc(sh.name)+'\u201C-Wecker ist deaktiviert.';
-      var defH=sh.type===2?5:sh.type===3?13:sh.type===4?21:7;
-      txt.innerHTML='<span class="muted small">'+reason+'</span>'
-        +'<div style="margin-top:.6rem;"><div class="tpick">'
-        +'<div class="tunit">'
-        +'<button type="button" class="tbtn" id="sqhU">\u25B2</button>'
-        +'<span class="tval" id="sqh">'+pad(defH)+'</span>'
-        +'<button type="button" class="tbtn" id="sqhD">\u25BC</button>'
-        +'</div>'
-        +'<span class="tcolon">:</span>'
-        +'<div class="tunit">'
-        +'<button type="button" class="tbtn" id="sqmU">\u25B2</button>'
-        +'<span class="tval" id="sqm">'+pad(0)+'</span>'
-        +'<button type="button" class="tbtn" id="sqmD">\u25BC</button>'
-        +'</div>'
-        +'<span class="tuhr">Uhr</span>'
-        +'</div></div>';
-      btns.innerHTML='<button class="primary" id="sqSet">\uD83D\uDD14 Speichern & Stellen</button><button id="sclBtn">Abbrechen</button>';
-      document.getElementById('sqhU').onclick=function(){var e=document.getElementById('sqh');e.textContent=pad((Number(e.textContent)+1)%24);};
-      document.getElementById('sqhD').onclick=function(){var e=document.getElementById('sqh');e.textContent=pad((Number(e.textContent)+23)%24);};
-      document.getElementById('sqmU').onclick=function(){var e=document.getElementById('sqm');e.textContent=pad((Number(e.textContent)+1)%60);};
-      document.getElementById('sqmD').onclick=function(){var e=document.getElementById('sqm');e.textContent=pad((Number(e.textContent)+59)%60);};
-      document.getElementById('sqSet').onclick=function(){
-        var hv=Number(document.getElementById('sqh').textContent);
-        var mv=Number(document.getElementById('sqm').textContent);
-        var t24=pad(hv)+':'+pad(mv);
-        S.alarmTimes[sh.type]=t24;
-        S.alarmEnabled[sh.type]=true;
-        save();
-        setAlarm(ds,sh);
-        renderAlarmSettings();
+      bar.textContent='\u23F0 Wecker stellen'; bar.className='sbar';
+      txt.innerHTML='<span class="muted small">'+esc(fmtDe(ds))+' \u2013 Schicht w\u00E4hlen:</span>';
+      if(pickerEl){
+        pickerEl.style.display='';
+        var shiftOpts=[
+          {t:0,n:'Einzelwecker',c:'',defH:7,defM:0},
+          {t:1,n:'Frei',c:'free',defH:7,defM:0},
+          {t:2,n:'Fr\u00FCh',c:'frueh',defH:5,defM:30},
+          {t:3,n:'Sp\u00E4t',c:'spaet',defH:13,defM:0},
+          {t:4,n:'Nacht',c:'nacht',defH:21,defM:0}
+        ];
+        var preSel=sh.type>=1&&sh.type<=4?sh.type:0;
+        var selType=preSel;
+        var html='<div style="display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.7rem;">';
+        for(var i=0;i<shiftOpts.length;i++){
+          var o=shiftOpts[i];
+          html+='<button type="button" class="sftbtn'+(selType===o.t?' sftbtn-active':'')+'" data-st="'+o.t+'" data-dh="'+o.defH+'" data-dm="'+o.defM+'">'+o.n+'</button>';
+        }
+        html+='</div>';
+        var initH,initM;
+        if(preSel>=1&&S.alarmTimes[preSel]){var pp=S.alarmTimes[preSel].split(':').map(Number);initH=pp[0];initM=pp[1];}
+        else{initH=7;initM=0;}
+        html+='<div class="tpick">'
+          +'<div class="tunit">'
+          +'<button type="button" class="tbtn" id="sqhU">\u25B2</button>'
+          +'<span class="tval" id="sqh">'+pad(initH)+'</span>'
+          +'<button type="button" class="tbtn" id="sqhD">\u25BC</button>'
+          +'</div>'
+          +'<span class="tcolon">:</span>'
+          +'<div class="tunit">'
+          +'<button type="button" class="tbtn" id="sqmU">\u25B2</button>'
+          +'<span class="tval" id="sqm">'+pad(initM)+'</span>'
+          +'<button type="button" class="tbtn" id="sqmD">\u25BC</button>'
+          +'</div>'
+          +'<span class="tuhr">Uhr</span>'
+          +'</div>';
+        pickerEl.innerHTML=html;
+        pickerEl.querySelectorAll('.sftbtn').forEach(function(btn){
+          btn.onclick=function(){
+            pickerEl.querySelectorAll('.sftbtn').forEach(function(b){b.classList.remove('sftbtn-active');});
+            btn.classList.add('sftbtn-active');
+            selType=Number(btn.dataset.st);
+            window._currentSelType=selType;
+            document.getElementById('sqh').textContent=pad(Number(btn.dataset.dh));
+            document.getElementById('sqm').textContent=pad(Number(btn.dataset.dm));
+            var st=selType;
+            if(st>=1&&S.alarmTimes[st]){var pt=S.alarmTimes[st].split(':').map(Number);document.getElementById('sqh').textContent=pad(pt[0]);document.getElementById('sqm').textContent=pad(pt[1]);}
+            if(st===0&&S.freeAlarm&&S.freeAlarm.time){var ft=S.freeAlarm.time.split(':').map(Number);document.getElementById('sqh').textContent=pad(ft[0]);document.getElementById('sqm').textContent=pad(ft[1]);}
+          };
+        });
+        document.getElementById('sqhU').onclick=function(){var e=document.getElementById('sqh');e.textContent=pad((Number(e.textContent)+1)%24);};
+        document.getElementById('sqhD').onclick=function(){var e=document.getElementById('sqh');e.textContent=pad((Number(e.textContent)+23)%24);};
+        document.getElementById('sqmU').onclick=function(){var e=document.getElementById('sqm');e.textContent=pad((Number(e.textContent)+1)%60);};
+        document.getElementById('sqmD').onclick=function(){var e=document.getElementById('sqm');e.textContent=pad((Number(e.textContent)+59)%60);};
+        window._currentSelType=selType;
+      }
+      btns.innerHTML='<button class="primary" id="ssetBtn" style="flex:2;">\uD83D\uDD14 Wecker stellen</button><button id="sclBtn">Abbrechen</button>';
+      document.getElementById('ssetBtn').onclick=function(){
+        var sel=window._currentSelType!==undefined?window._currentSelType:0;
+        setCustomAlarm(ds,sel);
       };
     }
     document.getElementById('sclBtn').onclick=closeSheet;
-    document.getElementById('overlay').style.display='block';
-    document.getElementById('sheet').style.display='block';
+    document.body.style.overflow='hidden';
+    var ov=document.getElementById('overlay');
+    ov.classList.add('open');
+    setTimeout(function(){ov.scrollTop=ov.scrollHeight;},50);
     }catch(ex){toast('Fehler: '+ex.message,true);}
   }
   function closeSheet(){
-    document.getElementById('overlay').style.display='none';
-    document.getElementById('sheet').style.display='none';
+    document.getElementById('overlay').classList.remove('open');
+    document.body.style.overflow='';
+    delete window._currentSelType;
   }
 
   /* ── ALARM BRIDGE ───────────────────────── */
-  function setAlarm(ds,sh){
+  function setCustomAlarm(ds,selType){
     try{
-      var time=S.alarmTimes[sh.type]||'';
-      if(!time){toast('Keine Weckerzeit f\u00FCr \u201E'+sh.name+'\u201C konfiguriert!',true);return;}
-      var pts=time.split(':').map(Number),h=pts[0],m=pts[1];
-      if(isNaN(h)||isNaN(m)){toast('Ung\u00FCltige Zeit: '+time,true);return;}
+      var h=Number(document.getElementById('sqh').textContent);
+      var m=Number(document.getElementById('sqm').textContent);
+      var time=pad(h)+':'+pad(m);
+      if(isNaN(h)||isNaN(m)){toast('Ung\u00FCltige Zeit!',true);return;}
       var p=ds.split('-').map(Number);
-      // Vergangenheits-Check clientseitig
       var alarmMs=new Date(p[0],p[1]-1,p[2],h,m,0,0).getTime();
       if(alarmMs<=Date.now()){
         toast('\u26A0\uFE0F '+pad(h)+':'+pad(m)+' Uhr am '+fmtDe(ds)+' liegt in der Vergangenheit!',true);
         return;
       }
-      var key='shift-'+ds+'-t'+sh.type;
+      var key=selType>=1&&selType<=4?('shift-'+ds+'-t'+selType):('custom-'+ds);
+      var shiftName=SNAMES[selType]||'Einzelwecker';
+      var label=shiftName+' ('+fmtDe(ds)+')';
       if(!window.Android||typeof window.Android.setAlarmForDate!=='function'){
         toast('Android-Bridge nicht verf\u00FCgbar.',true);return;
       }
-      window.Android.setAlarmForDate(p[0],p[1],p[2],h,m,key,sh.name+' ('+fmtDe(ds)+')');
-      S.activeAlarms[ds]={alarmKey:key,time:time,shiftName:sh.name};
+      var result=window.Android.setAlarmForDate(p[0],p[1],p[2],h,m,key,label);
+      if(result===false){toast('Wecker konnte nicht gesetzt werden (Berechtigung?).',true);return;}
+      addActiveAlarm(ds,key,time,shiftName);
       save(); renderCal(); closeSheet();
       toast('\u2705 Wecker gesetzt f\u00FCr '+pad(h)+':'+pad(m)+' Uhr am '+fmtDe(ds));
     }catch(ex){
@@ -1056,7 +1544,7 @@ window.onerror=function(msg,src,line,col,err){
   function cancelAlarm(ds,key){
     if(window.Android&&typeof window.Android.cancelAlarm==='function')
       window.Android.cancelAlarm(key);
-    delete S.activeAlarms[ds];
+    removeActiveAlarm(ds,key);
     save(); renderCal(); closeSheet(); toast('Wecker gel\u00F6scht.');
   }
 
@@ -1084,7 +1572,21 @@ window.onerror=function(msg,src,line,col,err){
             }
           }
         });
-      if(s.activeAlarms&&typeof s.activeAlarms==='object') S.activeAlarms=s.activeAlarms;
+      if(s.activeAlarms&&typeof s.activeAlarms==='object'){
+        if(Array.isArray(s.activeAlarms)){
+          S.activeAlarms=s.activeAlarms;
+        } else {
+          // Migration from old {date: {alarmKey, time, shiftName}} format
+          var migrated=[];
+          Object.keys(s.activeAlarms).forEach(function(ds){
+            var info=s.activeAlarms[ds];
+            if(info&&typeof info==='object'&&info.alarmKey){
+              migrated.push({ds:ds,alarmKey:info.alarmKey,time:info.time||'',shiftName:info.shiftName||info.shiftName||''});
+            }
+          });
+          S.activeAlarms=migrated;
+        }
+      }
       if(s.alarmEnabled&&typeof s.alarmEnabled==='object')
         [1,2,3,4].forEach(function(t){if(typeof s.alarmEnabled[t]==='boolean')S.alarmEnabled[t]=s.alarmEnabled[t];});
       if(s.freeAlarm&&typeof s.freeAlarm==='object'){
@@ -1098,11 +1600,81 @@ window.onerror=function(msg,src,line,col,err){
     }catch(e){}
   }
 
+  /* ── EINRICHTUNGSASSISTENT ────────────── */
+  var WIZ_KEY='schichtplan-wizard-done';
+  var wizSteps=[
+    { icon:'\uD83D\uDC4B', title:'Willkommen!',
+      body:'<b>Mein Schichtplan</b> hilft dir, deinen Schichtrhythmus im Blick zu behalten und automatisch Wecker zu stellen.'
+        +'<br><br>Diese kurze Anleitung zeigt dir die wichtigsten Funktionen.' },
+    { icon:'\uD83D\uDCC5', title:'Startdatum & Rhythmus',
+      body:'<ul>'
+        +'<li><b>Startdatum</b> \u2013 W\u00E4hle den Montag, an dem dein aktueller Rhythmus beginnt.</li>'
+        +'<li><b>Wochen im Rhythmus</b> \u2013 Wie viele Wochen umfasst ein kompletter Durchlauf? (1\u20136)</li>'
+        +'<li><b>Bundesland</b> \u2013 Damit Feiertage automatisch angezeigt werden.</li>'
+        +'</ul>'
+        +'Alles findest du unter <b>\u2699\uFE0F Einstellungen</b>.' },
+    { icon:'\uD83D\uDD04', title:'Schichtmuster anlegen',
+      body:'Im Bereich <b>Wochenrhythmus</b> legst du das Muster fest:'
+        +'<ul>'
+        +'<li>Tippe auf einen Tag, um zwischen <b>Frei</b>, <b>Fr\u00FCh</b>, <b>Sp\u00E4t</b> und <b>Nacht</b> zu wechseln.</li>'
+        +'<li>Das Muster wiederholt sich automatisch ab dem Startdatum.</li>'
+        +'</ul>' },
+    { icon:'\u23F0', title:'Wecker einstellen',
+      body:'<ul>'
+        +'<li>Unter <b>Weckerzeit pro Schicht</b> stellst du die Standard-Weckzeiten ein und aktivierst sie per Schalter.</li>'
+        +'<li>Tippe im Kalender auf einen Tag \u2192 <b>Wecker stellen</b> f\u00FCr genau dieses Datum.</li>'
+        +'<li><b>\u201EAlle stellen\u201C</b> setzt Wecker f\u00FCr die n\u00E4chsten 12 Monate auf einmal.</li>'
+        +'</ul>' },
+    { icon:'\uD83D\uDCCC', title:'Ausnahmen & Extras',
+      body:'<ul>'
+        +'<li><b>Ausnahmen</b> \u2013 Urlaub, Krank oder Schulung f\u00FCr einzelne Tage oder Zeitr\u00E4ume eintragen.</li>'
+        +'<li><b>Unbelegte-Tage-Wecker</b> \u2013 Wecker f\u00FCr freie Tage, nur an gew\u00E4hlten Wochentagen.</li>'
+        +'<li><b>Gesetzte Wecker</b> \u2013 Unter dem Kalender siehst du alle aktiven Wecker.</li>'
+        +'</ul>' },
+    { icon:'\uD83D\uDE80', title:'Los geht\u2019s!',
+      body:'Du kannst diese Anleitung jederzeit \u00FCber <b>\u2699\uFE0F Einstellungen \u2192 \u2753 Anleitung</b> erneut starten.'
+        +'<br><br>Viel Spa\u00DF mit deinem Schichtplan! \uD83C\uDF89' }
+  ];
+  var wizStep=0;
+  function renderWiz(){
+    var s=wizSteps[wizStep];
+    $('wizIcon').textContent=s.icon;
+    $('wizTitle').textContent=s.title;
+    $('wizBody').innerHTML=s.body;
+    var dots=$('wizDots'); dots.innerHTML='';
+    for(var i=0;i<wizSteps.length;i++){
+      var d=document.createElement('div');d.className='wiz-dot'+(i===wizStep?' active':'');
+      dots.appendChild(d);
+    }
+    $('wizPrev').style.visibility=wizStep===0?'hidden':'visible';
+    $('wizNext').textContent=wizStep===wizSteps.length-1?'Fertig':'Weiter';
+  }
+  function openWiz(){wizStep=0;renderWiz();$('wizBg').style.display='flex';}
+  function closeWiz(){$('wizBg').style.display='none';try{localStorage.setItem(WIZ_KEY,'1');}catch(e){}}
+  $('wizNext').onclick=function(){
+    if(wizStep<wizSteps.length-1){wizStep++;renderWiz();}
+    else closeWiz();
+  };
+  $('wizPrev').onclick=function(){
+    if(wizStep>0){wizStep--;renderWiz();}
+  };
+  $('wizBg').addEventListener('click',function(e){if(e.target===this)closeWiz();});
+
   /* ── EVENTS ─────────────────────────────── */
   $('themeBtn').onclick=cycleTheme;
-  $('settingsBtn').onclick=function(){$('settingsPanel').classList.toggle('hidden');};
+  $('settingsBtn').onclick=function(){
+    var ov=$('settingsOverlay');
+    ov.classList.toggle('open');
+  };
+  $('closeSettings').onclick=function(){
+    $('settingsOverlay').classList.remove('open');
+  };
+  $('settingsOverlay').onclick=function(e){
+    if(e.target===this) this.classList.remove('open');
+  };
+  $('startWizBtn').onclick=function(){openWiz();};
   $('doneSettings').onclick=function(){
-    $('settingsPanel').classList.add('hidden');
+    $('settingsOverlay').classList.remove('open');
     save();
   };
   ['sdDay','sdMon','sdYear'].forEach(function(id){
@@ -1124,6 +1696,12 @@ window.onerror=function(msg,src,line,col,err){
   };
   $('resetAll').onclick=function(){
     customConfirm('Wirklich alles l\u00f6schen?\nAlle Einstellungen und Wecker werden zur\u00fcckgesetzt.',function(){
+      // Cancel all Android alarms first
+      if(S.activeAlarms&&window.Android&&typeof window.Android.cancelAlarm==='function'){
+        S.activeAlarms.forEach(function(a){
+          try{window.Android.cancelAlarm(a.alarmKey);}catch(e){}
+        });
+      }
       S=createDefaultState();
       S.startDate=todayYmd();
       initPat();
@@ -1131,8 +1709,9 @@ window.onerror=function(msg,src,line,col,err){
       setDateSelects(S.startDate);
       $('weeksVal').textContent=S.weeksCount;
       $('bundesland').value=S.bundesland;
-      renderAlarmSettings(); renderFreeAlarmSettings(); renderPat(); renderEx(); renderCal();
-      $('settingsPanel').classList.add('hidden');
+   renderAlarmSettings(); renderFreeAlarmSettings(); renderPat(); renderEx(); renderCal();
+  updateRingtoneUI();
+      $('settingsOverlay').classList.remove('open');
       toast('Alles zur\u00fcckgesetzt. Alle Wecker sind jetzt deaktiviert.');
     });
   };
@@ -1162,13 +1741,47 @@ window.onerror=function(msg,src,line,col,err){
   $('prevM').onclick=function(){viewDate.setMonth(viewDate.getMonth()-1);renderCal();};
   $('nextM').onclick=function(){viewDate.setMonth(viewDate.getMonth()+1);renderCal();};
   $('todayM').onclick=function(){viewDate=new Date();viewDate.setDate(1);viewDate.setHours(12,0,0,0);renderCal();};
-  $('aList').addEventListener('click',function(e){var b=e.target.closest('.adel');if(b)cancelAlarm(b.dataset.date,b.dataset.key);});
-  $('overlay').onclick=function(){closeSheet();};
+  $('aList').addEventListener('click',function(e){
+    var b=e.target.closest('.adel');if(b)cancelAlarm(b.dataset.date,b.dataset.key);
+    if(e.target.id==='aMore'){aListLimit+=5;renderAList();}
+    if(e.target.id==='aLess'){aListLimit=5;renderAList();}
+  });
+  $('overlay').onclick=function(e){if(e.target===this)closeSheet();};
   $('testAlarmBtn').onclick=function(){
     if(window.Android&&typeof window.Android.testAlarm==='function'){
       window.Android.testAlarm();
     } else {
       toast('Android-Bridge nicht verf\u00FCgbar.',true);
+    }
+  };
+
+  /* ── KLINGELTON ──────────────────────────── */
+  function updateRingtoneUI(){
+    var nameEl=$('ringtoneName');
+    var resetBtn=$('resetRingtoneBtn');
+    if(window.Android&&typeof window.Android.usesCustomRingtone==='function'&&window.Android.usesCustomRingtone()){
+      var name=window.Android.getCustomRingtoneName&&window.Android.getCustomRingtoneName()||'Eigener Klingelton';
+      nameEl.innerHTML='&#x1F3B5; <b>'+esc(name)+'</b>';
+      resetBtn.style.display='';
+    } else {
+      nameEl.textContent='Standard-Klingelton';
+      resetBtn.style.display='none';
+    }
+  }
+  window.onRingtoneChanged=function(name){
+    updateRingtoneUI();
+  };
+  $('pickRingtoneBtn').onclick=function(){
+    if(window.Android&&typeof window.Android.pickRingtone==='function'){
+      window.Android.pickRingtone();
+    } else {
+      toast('Android-Bridge nicht verf\u00FCgbar.',true);
+    }
+  };
+  $('resetRingtoneBtn').onclick=function(){
+    if(window.Android&&typeof window.Android.resetRingtone==='function'){
+      window.Android.resetRingtone();
+      updateRingtoneUI();
     }
   };
 
@@ -1182,7 +1795,8 @@ window.onerror=function(msg,src,line,col,err){
   $('weeksVal').textContent=S.weeksCount;
   $('bundesland').value=S.bundesland;
   renderAlarmSettings(); renderFreeAlarmSettings(); renderPat(); renderEx(); renderCal();
-  $('settingsPanel').classList.add('hidden');
+  /* Wizard beim allerersten Start anzeigen */
+  try{if(!localStorage.getItem(WIZ_KEY))openWiz();}catch(e){}
 })();
 </script>
 </body>

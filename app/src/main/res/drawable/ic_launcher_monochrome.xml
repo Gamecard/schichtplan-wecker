@@ -1,0 +1,49 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Kalenderblatt -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M28,30 L80,30 Q84,30 84,34 L84,82 Q84,86 80,86 L28,86 Q24,86 24,82 L24,34 Q24,30 28,30 Z" />
+
+    <!-- Oberer Bereich -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M28,30 L80,30 Q84,30 84,34 L84,46 L24,46 L24,34 Q24,30 28,30 Z" />
+
+    <!-- Aufhaenge-Ringe links -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M38,26 Q38,23 40.5,23 Q43,23 43,26 L43,34 Q43,37 40.5,37 Q38,37 38,34 Z" />
+
+    <!-- Aufhaenge-Ringe rechts -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M65,26 Q65,23 67.5,23 Q70,23 70,26 L70,34 Q70,37 67.5,37 Q65,37 65,34 Z" />
+
+    <!-- Schicht-Pills -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M30,50 L40,50 L40,56 L30,56 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M44,50 L54,50 L54,56 L44,56 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M58,50 L68,50 L68,56 L58,56 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M72,50 L82,50 L82,56 L72,56 Z" />
+
+    <!-- Wecker-Badge -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M72,78 m10,0 a10,10 0,1 0,-20 0 a10,10 0,1 0,20 0" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M68,76 Q68,73 72,73 Q76,73 76,76 L76,78 L68,78 Z" />
+
+</vector>

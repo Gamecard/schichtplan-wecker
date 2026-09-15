@@ -30,6 +30,7 @@
 - Build: `./gradlew assembleDebug`
 - APK: `app/build/outputs/apk/debug/app-debug.apk`
 - Release: `isMinifyEnabled = true`, `isShrinkResources = true`
+- Release-Signierung: Werte aus `keystore.properties` im Repo-Root (NICHT committen, in .gitignore); ohne die Datei baut Release unsigniert
 
 ## Bekannte Patterns
 
@@ -74,7 +75,7 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 
 ### Ton-Wiedergabe
 - AlarmActivity spielt den Ton via `MediaPlayer` (looping) + Vibration
-- Notification hat KEIN `.setSound()` / `.setVibrate()` — sonst doppelter Ton
+- Notification UND Notification-Channel haben KEIN Sound/Vibration — sonst doppelter Ton (Kanal-Sound ertönt zusätzlich zum MediaPlayer-Loop!)
 - `onStop()` stoppt MediaPlayer, `onRestart()` startet ihn neu + löscht Notification
 
 ### Notification-Management
@@ -82,13 +83,15 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 - ✅ Statt dessen: `nm.cancel(requestCode)` für spezifische Alarm-Notification
 
 ### Snooze
-- `canScheduleExactAlarms()` MUSS vor `setAlarmClock()` geprüft werden
+- `setAlarmClock()` ist von der exakte-Alarm-Pflicht EXEMPT (AlarmClock-App-Pattern) — KEINE `canScheduleExactAlarms()`-Prüfung, KEINE `SCHEDULE_EXACT_ALARM`-Permission nötig
 - Snooze RequestCode: `900000 + originalRequestCode` (keine Trunkierung mit `& 0x0FFFFF`)
 
 ### activeAlarms (Datenstruktur)
 - Format: **Array** von `{ds:"YYYY-MM-DD", alarmKey:"...", time:"HH:MM", shiftName:"..."}`
 - älteres Format `{date: {alarmKey, time, shiftName}}` wird automatisch migriert (load()-Funktion)
 - Mehrere Wecker pro Tag möglich (Helfer: `addActiveAlarm`, `removeActiveAlarm`, `getActiveAlarmsForDate`)
+- Abgelaufene Wecker werden beim App-Start per `purgeExpiredAlarms()` entfernt (ds < heute)
+- `getAllActiveAlarmsSorted()` liefert NUR zukünftige Wecker (nächster zuerst)
 
 ### Reset-Verhalten
 - "Alles zurücksetzen" MUSS alle Android-Alarme per `cancelAlarm()` kündigen VOR `createDefaultState()`
@@ -116,9 +119,14 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 - ~~DST off-by-one~~ → Uhrzeit 12:00 statt 0:00 in mondayOf/getShift
 - ~~"Wecker stellbar"-Icons überall~~ → entfernt, nur noch echte Wecker-Icons
 - ~~pendingWebView Memory Leak~~ → onDestroy() setzt auf null
-- ~~Snooze ohne Berechtigungscheck~~ → canScheduleExactAlarms() vor setAlarmClock()
+- ~~Snooze ohne Berechtigungscheck~~ → Gate entfernt; setAlarmClock() braucht keine Exact-Alarm-Permission
 - ~~setAlarmForDate Rückgabewert ignoriert~~ → prüft jetzt false
 - ~~Reset löscht keine Android-Wecker~~ → cancelAlarm() vor createDefaultState()
+- ~~Doppelter Ton via Channel-Sound~~ → Notification-Channel ohne setSound()/Vibration, ID auf v4 gebumpt
+- ~~SCHEDULE_EXACT_ALARM nötig~~ → entfernt; setAlarmClock() ist exempt (kein Gate, kein Settings-Umleitungs-Spam beim Start)
+- ~~Buß-und-Bettag (SN) falsch, wenn 23.11. Mittwoch~~ → Rückwärtssuche ab 22.11. (16.–22.11. korrekt)
+- ~~Klingelton-Anzeige nach Neustart falsch~~ → updateRingtoneUI() im INIT
+- ~~save() verschluckt localStorage-Fehler~~ → Toast-Meldung bei Fehlern
 
 ## Build-Commands
 

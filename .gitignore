@@ -16,6 +16,8 @@
 local.properties
 *.jks
 *.keystore
+keystore.properties
+.idea/
 /app/build/
 /app/release.jks
-/index.html
+keystore.properties

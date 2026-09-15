@@ -85,7 +85,7 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         Log.d("SchichtplanAlarm", "POST_NOTIFICATIONS granted: $granted")
-        checkExactAlarmPermission()
+        checkFullScreenIntentPermission()
     }
 
     private val ringtonePicker = registerForActivityResult(
@@ -150,20 +150,8 @@ class MainActivity : ComponentActivity() {
         ) {
             notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else {
-            checkExactAlarmPermission()
+            checkFullScreenIntentPermission()
         }
-    }
-
-    private fun checkExactAlarmPermission() {
-        val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
-        if (!alarmManager.canScheduleExactAlarms()) {
-            Log.w("SchichtplanAlarm", "SCHEDULE_EXACT_ALARM not granted – opening settings")
-            startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                data = "package:$packageName".toUri()
-            })
-            return
-        }
-        checkFullScreenIntentPermission()
     }
 
     private fun checkFullScreenIntentPermission() {
@@ -198,17 +186,6 @@ class WebAppInterface(private val mContext: Context, private val activity: MainA
         mainHandler.post { Toast.makeText(mContext, text, Toast.LENGTH_LONG).show() }
     }
 
-    private fun openExactAlarmSettings() {
-        runCatching {
-            mContext.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                data = "package:${mContext.packageName}".toUri()
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            })
-        }.onFailure {
-            Log.e("SchichtplanAlarm", "Exact-Alarm-Einstellungen konnten nicht geöffnet werden", it)
-        }
-    }
-
     private fun scheduleAlarm(
         alarmTimeMillis: Long,
         requestCode: Int,
@@ -217,12 +194,6 @@ class WebAppInterface(private val mContext: Context, private val activity: MainA
         silent: Boolean = false
     ): Boolean {
         val alarmManager = mContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        if (!alarmManager.canScheduleExactAlarms()) {
-            Log.w("SchichtplanAlarm", "Exact alarms sind nicht erlaubt")
-            if (!silent) toast("Bitte exakte Alarme fuer die App erlauben")
-            openExactAlarmSettings()
-            return false
-        }
 
         val intent = Intent(mContext, AlarmReceiver::class.java).apply {
             putExtra("message", message)
@@ -256,27 +227,6 @@ class WebAppInterface(private val mContext: Context, private val activity: MainA
             if (!silent) toast("Fehler: Wecker konnte nicht geplant werden")
             return false
         }
-    }
-
-    @JavascriptInterface
-    @Keep
-    fun setAlarm(hour: Int, minute: Int, message: String) {
-        val calendar = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, hour)
-            set(Calendar.MINUTE, minute)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-            if (timeInMillis <= System.currentTimeMillis()) {
-                add(Calendar.DAY_OF_YEAR, 1)
-            }
-        }
-
-        scheduleAlarm(
-            alarmTimeMillis = calendar.timeInMillis,
-            requestCode = requestCodeFromKey("legacy-${message}-${hour}-${minute}"),
-            toastText = "Wecker gestellt für ${String.format(Locale.GERMAN, "%02d:%02d", hour, minute)}",
-            message = message
-        )
     }
 
     @JavascriptInterface

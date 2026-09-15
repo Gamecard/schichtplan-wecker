@@ -198,12 +198,6 @@ class AlarmActivity : ComponentActivity() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         try {
-            if (!alarmManager.canScheduleExactAlarms()) {
-                Log.w("SchichtplanAlarm", "Snooze: exact alarms nicht erlaubt")
-                android.widget.Toast.makeText(this, "Schlummern fehlgeschlagen – exakte Alarme nicht erlaubt", android.widget.Toast.LENGTH_LONG).show()
-                finish()
-                return
-            }
             alarmManager.setAlarmClock(
                 AlarmManager.AlarmClockInfo(
                     System.currentTimeMillis() + 5 * 60 * 1000,
@@ -217,7 +211,6 @@ class AlarmActivity : ComponentActivity() {
         }
         finish()
     }
-
     override fun onDestroy() {
         autoDismissHandler.removeCallbacks(autoDismissRunnable)
         stopAlarm()

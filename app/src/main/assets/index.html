@@ -860,7 +860,6 @@ window.onerror=function(msg,src,line,col,err){
     };
   }
   var S = createDefaultState();
-  var hasSavedState = false;
   var viewDate = new Date();
   viewDate.setDate(1); viewDate.setHours(12,0,0,0);
 
@@ -891,6 +890,8 @@ window.onerror=function(msg,src,line,col,err){
   function getDateFromSelects(){
     var y=Number($('sdYear').value),m=Number($('sdMon').value),d=Number($('sdDay').value);
     if(!y||!m||!d)return '';
+    var dt=new Date(y,m-1,d);
+    if(dt.getDate()!==d||dt.getMonth()!==m-1||dt.getFullYear()!==y) return '';
     return y+'-'+pad(m)+'-'+pad(d);
   }
   function parseYmd(s){
@@ -939,7 +940,16 @@ window.onerror=function(msg,src,line,col,err){
   }
   function getAllActiveAlarmsSorted(){
     if(!S.activeAlarms)return[];
-    return S.activeAlarms.slice().sort(function(a,b){return a.ds.localeCompare(b.ds)||a.alarmKey.localeCompare(b.alarmKey);});
+    var today=todayYmd();
+    return S.activeAlarms.filter(function(a){return a.ds>=today;})
+      .sort(function(a,b){return a.ds.localeCompare(b.ds)||a.alarmKey.localeCompare(b.alarmKey);});
+  }
+  function purgeExpiredAlarms(){
+    if(!S.activeAlarms)return;
+    var today=todayYmd();
+    var before=S.activeAlarms.length;
+    S.activeAlarms=S.activeAlarms.filter(function(a){return a.ds>=today;});
+    if(S.activeAlarms.length!==before) save();
   }
 
   /* ── THEME ──────────────────────────────── */
@@ -980,7 +990,9 @@ window.onerror=function(msg,src,line,col,err){
     if(bl==='TH') a(9,20,'Weltkindertag');
     if(['BB','MV','SN','ST','TH'].includes(bl)) a(10,31,'Reformationstag');
     if(bl==='SN'){
-      var x=new Date(year,10,23,12,0,0);
+      /* Buß- und Bettag: Mittwoch vor Totensonntag (letzter So vor 1. Advent) → 16.–22.11.
+         Startpunkt 22.11. = spätestes mögliches Datum, rückwärts zum Mittwoch. */
+      var x=new Date(year,10,22,12,0,0);
       while(x.getDay()!==3) x.setDate(x.getDate()-1);
       a(x.getMonth()+1,x.getDate(),'Bu\u00DF-u.Bettag');
     }
@@ -1364,7 +1376,6 @@ window.onerror=function(msg,src,line,col,err){
         var hol=hols[ds];
         var isTod=ds===today;
         var aa=getActiveAlarmsForDate(ds);
-        var acfg=sh.type>=1&&sh.type<=4&&S.alarmEnabled[sh.type]&&S.alarmTimes[sh.type];
         var cell=document.createElement('div');
         cell.className='cday'+(sh.cls?' '+sh.cls:'')+(hol&&sh.type!==-1?' holid':'')+(isTod?' today':'');
         var cd=parseYmd(ds); cd.setHours(0,0,0,0);
@@ -1549,11 +1560,13 @@ window.onerror=function(msg,src,line,col,err){
   }
 
   /* ── PERSISTENZ ─────────────────────────── */
-  function save(){try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}}
+  function save(){
+    try{localStorage.setItem(LS,JSON.stringify(S));}
+    catch(e){toast('Speichern fehlgeschlagen! \u00C4nderungen gehen m\u00F6glicherweise beim n\u00E4chsten Start verloren.',true);}
+  }
   function load(){
     try{
       var raw=localStorage.getItem(LS); if(!raw){ S=createDefaultState(); return; }
-      hasSavedState = true;
       var s=JSON.parse(raw); if(!s||typeof s!=='object')return;
       if(typeof s.startDate==='string')   S.startDate=s.startDate;
       if(typeof s.weeksCount==='number')  S.weeksCount=Math.max(1,Math.min(6,s.weeksCount));
@@ -1581,7 +1594,7 @@ window.onerror=function(msg,src,line,col,err){
           Object.keys(s.activeAlarms).forEach(function(ds){
             var info=s.activeAlarms[ds];
             if(info&&typeof info==='object'&&info.alarmKey){
-              migrated.push({ds:ds,alarmKey:info.alarmKey,time:info.time||'',shiftName:info.shiftName||info.shiftName||''});
+              migrated.push({ds:ds,alarmKey:info.alarmKey,time:info.time||'',shiftName:info.shiftName||''});
             }
           });
           S.activeAlarms=migrated;
@@ -1679,7 +1692,9 @@ window.onerror=function(msg,src,line,col,err){
   };
   ['sdDay','sdMon','sdYear'].forEach(function(id){
     $(id).addEventListener('change',function(){
-      S.startDate=getDateFromSelects();
+      var nd=getDateFromSelects();
+      if(!nd){toast('Ung\u00FCltiges Datum gew\u00E4hlt!',true);return;}
+      S.startDate=nd;
       var d=parseYmd(S.startDate);
       if(!isNaN(d)) viewDate=new Date(d.getFullYear(),d.getMonth(),1,12,0,0);
       renderCal(); save();
@@ -1709,7 +1724,7 @@ window.onerror=function(msg,src,line,col,err){
       setDateSelects(S.startDate);
       $('weeksVal').textContent=S.weeksCount;
       $('bundesland').value=S.bundesland;
-   renderAlarmSettings(); renderFreeAlarmSettings(); renderPat(); renderEx(); renderCal();
+  renderAlarmSettings(); renderFreeAlarmSettings(); renderPat(); renderEx(); renderCal(); updateRingtoneUI();
   updateRingtoneUI();
       $('settingsOverlay').classList.remove('open');
       toast('Alles zur\u00fcckgesetzt. Alle Wecker sind jetzt deaktiviert.');
@@ -1787,7 +1802,7 @@ window.onerror=function(msg,src,line,col,err){
 
   /* ── INIT ───────────────────────────────── */
   S.startDate=todayYmd();
-  load(); initPat();
+  load(); initPat(); purgeExpiredAlarms();
   // Migration: Frei-Defaults setzen falls leer (alte Versionen hatten '' / false)
   if(!S.alarmTimes[1]) S.alarmTimes[1]='07:00';
   initDateSelects();

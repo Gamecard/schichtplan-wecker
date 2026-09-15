@@ -6,7 +6,6 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.media.AudioAttributes
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.PowerManager
@@ -17,7 +16,7 @@ class AlarmReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "SchichtplanAlarm"
-        private const val CHANNEL_ID = "schichtplan_alarm_v3"
+        private const val CHANNEL_ID = "schichtplan_alarm_v4"
         private const val CHANNEL_ID_CUSTOM = "schichtplan_alarm_custom"
         private val wakeLocks = mutableMapOf<String, PowerManager.WakeLock>()
 
@@ -94,22 +93,16 @@ class AlarmReceiver : BroadcastReceiver() {
         if (usesCustom) nm.deleteNotificationChannel(CHANNEL_ID_CUSTOM)
         nm.deleteNotificationChannel("alarm_channel")
         nm.deleteNotificationChannel("schichtplan_alarm_v2")
+        nm.deleteNotificationChannel("schichtplan_alarm_v3")
 
-        val alarmSound = getAlarmSoundUri(context)
-        val audioAttrs = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_ALARM)
-            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-            .build()
-
+        // KEIN Sound/Vibration am Channel: AlarmActivity spielt den Ton selbst
+        // (looping MediaPlayer) – sonst doppelter Alarm-Ton.
         val channel = NotificationChannel(
             channelId,
             "Schichtplan Wecker",
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
             description = "Alarmton und Vibration bei Schichtbeginn"
-            enableVibration(true)
-            vibrationPattern = longArrayOf(0, 800, 400, 800, 400, 800)
-            setSound(alarmSound, audioAttrs)
             setBypassDnd(true)
             lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
         }

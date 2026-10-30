@@ -660,35 +660,84 @@ label {
 .cdlg-btns { display:flex;gap:8px;justify-content:flex-end; }
 
 /* ═══════════════════════════════════════════════════════
-   ONBOARDING WIZARD
+   EINRICHTUNG – Vollbild-Ebene nach dem Overlay-Muster
+   (Ebene selbst scrollt, Umschalten per .open, Inhalt normaler Block)
    ═══════════════════════════════════════════════════════ */
-.wiz-bg {
-  position:fixed;top:0;left:0;right:0;bottom:0;
-  background:rgba(47,48,54,.55);
-  z-index:400; display:flex;align-items:center;justify-content:center;padding:20px;
-  overflow-y:auto;-webkit-overflow-scrolling:touch;
-  backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+.wiz-ov {
+  position:fixed; top:0; right:0; bottom:0; left:0;
+  background:var(--bg); color:var(--fg);
+  z-index:150; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  transform:translateY(100%);
+  transition:transform var(--motion-duration-medium) var(--motion-easing-emphasized);
+  pointer-events:none;
 }
-.wiz {
-  background:var(--md-surface-container-high);
-  border-radius:var(--shape-xl);
-  padding:28px 24px 20px;max-width:420px;width:100%;
-  box-shadow:var(--elev-4); margin:auto;
+.wiz-ov.open { transform:translateY(0); pointer-events:auto; }
+.wiz-inner {
+  max-width:560px; margin:0 auto; min-height:100%;
+  padding:12px 16px 0; display:flex; flex-direction:column;
 }
-.wiz-icon { font-size:3rem;text-align:center;margin-bottom:12px; }
-.wiz-title { font-weight:500;font-size:var(--t-headline-sm);text-align:center;margin-bottom:12px;letter-spacing:0; }
-.wiz-body { font-size:var(--t-body-lg);line-height:1.65;color:var(--fg);margin-bottom:20px; }
-.wiz-body ul { padding-left:1.2rem;margin:.4rem 0; }
-.wiz-body li { margin-bottom:.3rem; }
-.wiz-dots { display:flex;justify-content:center;margin-bottom:20px; }
-/* Abstand per margin statt gap – gap in Flexbox fehlt in alten WebViews (Android 8) */
-.wiz-dots > .wiz-dot { margin:0 4px; }
-.wiz-dot {
-  width:8px;height:8px;border-radius:50%;
-  background:var(--md-surface-container-highest);
-  border:2px solid var(--md-outline-variant);
-  transition:all var(--motion-duration-medium) var(--motion-easing-standard);
+.wiz-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.wiz-steptxt { font-size:var(--t-label-lg); font-weight:500; color:var(--muted); }
+.wiz-bar { display:flex; gap:4px; margin:6px 0 20px; }
+.wiz-bar span { flex:1; height:4px; border-radius:2px; background:var(--md-surface-container-highest); }
+.wiz-bar span.on { background:var(--md-primary); }
+.wiz-title { font-weight:500; font-size:var(--t-headline-sm); line-height:1.3; margin:0 0 6px; letter-spacing:0; }
+.wiz-sub { font-size:var(--t-body-md); color:var(--muted); margin-bottom:20px; }
+.wiz-body { font-size:var(--t-body-lg); line-height:1.5; padding-bottom:16px; }
+.wiz-row { display:flex; gap:8px; align-items:flex-end; }
+.wiz-info {
+  margin:12px 0 8px; padding:12px 14px; border-radius:var(--shape-md);
+  background:var(--md-primary-container); color:var(--md-on-primary-container);
+  font-weight:500;
 }
-.wiz-dot.active { background:var(--md-primary);border-color:var(--md-primary);transform:scale(1.3); }
-.wiz-nav { display:flex;gap:8px;justify-content:space-between; }
-.wiz-nav button { flex:1; }
+.wiz-sec {
+  font-size:var(--t-label-md); font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--muted); margin:4px 0 8px;
+}
+.wiz-tpls { margin-bottom:16px; }
+button.wiz-tpl {
+  display:block; width:100%; text-align:left; margin:0 0 8px;
+  padding:12px 16px; border-radius:var(--shape-md);
+  border:1.5px solid var(--border); background:var(--card); color:var(--fg);
+}
+.wiz-tpl b { display:block; font-weight:600; font-size:var(--t-body-lg); }
+.wiz-tpl span { display:block; font-weight:400; font-size:var(--t-body-sm); color:var(--muted); margin-top:2px; }
+button.wiz-tpl.active { border-color:var(--md-primary); background:var(--md-secondary-container, var(--chip)); }
+.wiz-weeks { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+.wiz-weeks span { font-weight:700; font-size:1.1rem; min-width:1.8ch; text-align:center; }
+#wizPat .pday { padding:10px 2px; }   /* größere Tippfläche als im Bereich Schichtplan */
+.wiz-shift {
+  display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px;
+  padding:12px 14px; margin-bottom:10px; border-radius:var(--shape-md);
+  border:1px solid var(--border); background:var(--card);
+}
+.wiz-sname { display:flex; align-items:center; gap:8px; font-weight:600; min-width:4.5rem; }
+.wiz-shift input[type="time"] { width:7.5rem; flex:none; padding:8px 10px; font-size:1.1rem; }
+.wiz-chk {
+  display:flex; align-items:center; gap:8px; margin:0;
+  font-size:var(--t-body-md); font-weight:400; color:var(--fg); letter-spacing:0;
+}
+.wiz-chk input { width:20px; height:20px; padding:0; accent-color:var(--md-primary); }
+.wiz-stat {
+  padding:16px; border-radius:var(--shape-lg); margin-bottom:16px;
+  background:var(--md-primary-container); color:var(--md-on-primary-container);
+  font-weight:600; font-size:var(--t-title-md); line-height:1.4;
+}
+.wiz-sum { border:1px solid var(--border); border-radius:var(--shape-md); background:var(--card); padding:4px 14px; margin-bottom:16px; }
+.wiz-sumrow {
+  display:flex; justify-content:space-between; gap:12px; padding:10px 0;
+  font-size:var(--t-body-md); border-bottom:1px solid var(--border);
+}
+.wiz-sumrow:last-child { border-bottom:none; }
+.wiz-sumrow span:last-child { text-align:right; font-weight:500; }
+.wiz-tip {
+  padding:12px 14px; border-radius:var(--shape-md); font-size:var(--t-body-md);
+  background:var(--md-surface-container-high); border:1px solid var(--border);
+}
+.wiz-nav {
+  position:sticky; bottom:0; margin-top:auto;
+  display:flex; gap:8px; background:var(--bg); border-top:1px solid var(--border);
+  padding:12px 0 calc(16px + env(safe-area-inset-bottom));
+}
+.wiz-nav button { flex:1; padding:14px 16px; font-size:var(--t-title-sm); }
+#wizPrev { border:1px solid var(--md-outline); }

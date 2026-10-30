@@ -987,7 +987,7 @@ window.onerror=function(msg,src,line,col,err){
   window.handleBack=function(){
     var vis=function(id){ var e=$(id); return e&&getComputedStyle(e).display!=='none'; };
     if(vis('cdlgBg')){ $('cdlgCancel').click(); return true; }
-    if(vis('wizBg')){ closeWiz(); return true; }
+    if(isWizOpen()){ wizBack(); return true; }
     if($('overlay').classList.contains('open')){ closeSheet(); return true; }
     if(isAlarmsOpen()){ closeAllAlarms(); return true; }
     if(currentTab!=='plan'){ showTab('plan'); return true; }
@@ -1256,68 +1256,219 @@ window.onerror=function(msg,src,line,col,err){
     renderAlarmSettings(); renderFreeAlarmSettings(); renderPat(); renderEx(); renderCal(); updateRingtoneUI();
   }
 
-  /* ── EINRICHTUNGSASSISTENT ────────────── */
+  /* ── EINRICHTUNG (geführt) ────────────────
+     Vier Schritte (Startwoche, Rhythmus, Weckzeiten, Feiertage) + Abschluss.
+     Alle Eingaben landen zuerst im Entwurf W und werden erst mit „Einrichten“
+     (Schritt 4) übernommen – „Überspringen“ und Zurück-Geste ändern also nichts.
+     Übernommen wird nur, was sich gegenüber dem aktuellen Stand geändert hat. */
   var WIZ_KEY='schichtplan-wizard-done';
-  var wizSteps=[
-    { icon:'\uD83D\uDC4B', title:'Willkommen!',
-      body:'<b>Mein Schichtplan</b> hilft dir, deinen Schichtrhythmus im Blick zu behalten und automatisch Wecker zu stellen.'
-        +'<br><br>Diese kurze Anleitung zeigt dir die wichtigsten Funktionen.' },
-    { icon:'\uD83D\uDCC5', title:'Startwoche & Rhythmus',
-      body:'<ul>'
-        +'<li><b>Startwoche</b> \u2013 W\u00E4hle die Kalenderwoche, in der Woche 1 deines Rhythmus liegt (oder stattdessen ein Datum).</li>'
-        +'<li><b>Wochen im Rhythmus</b> \u2013 Wie viele Wochen umfasst ein kompletter Durchlauf? (1\u20136)</li>'
-        +'<li><b>Bundesland</b> \u2013 Damit Feiertage automatisch angezeigt werden.</li>'
-        +'</ul>'
-        +'Alles findest du unter <b>\u2699\uFE0F Einstellungen</b>.' },
-    { icon:'\uD83D\uDD04', title:'Schichtmuster anlegen',
-      body:'Im Bereich <b>Wochenrhythmus</b> legst du das Muster fest:'
-        +'<ul>'
-        +'<li>Tippe auf einen Tag, um zwischen <b>Frei</b>, <b>Fr\u00FCh</b>, <b>Sp\u00E4t</b> und <b>Nacht</b> zu wechseln.</li>'
-        +'<li>Das Muster wiederholt sich automatisch ab dem Startdatum.</li>'
-        +'</ul>' },
-    { icon:'\u23F0', title:'Wecker einstellen',
-      body:'<ul>'
-        +'<li>Unter <b>Weckerzeit pro Schicht</b> stellst du die Standard-Weckzeiten ein und aktivierst sie per Schalter.</li>'
-        +'<li>Tippe im Kalender auf einen Tag \u2192 <b>Wecker stellen</b> f\u00FCr genau dieses Datum.</li>'
-        +'<li><b>\u201EAlle stellen\u201C</b> setzt Wecker f\u00FCr die n\u00E4chsten 12 Monate auf einmal.</li>'
-        +'</ul>' },
-    { icon:'\uD83D\uDCCC', title:'Ausnahmen & Extras',
-      body:'<ul>'
-        +'<li><b>Ausnahmen</b> \u2013 Urlaub, Krank oder Schulung f\u00FCr einzelne Tage oder Zeitr\u00E4ume eintragen.</li>'
-        +'<li><b>Unbelegte-Tage-Wecker</b> \u2013 Wecker f\u00FCr freie Tage, nur an gew\u00E4hlten Wochentagen.</li>'
-        +'<li><b>Schicht tauschen</b> \u2013 Tag im Kalender antippen und die Schicht nur f\u00FCr diesen Tag \u00E4ndern.</li>'
-        +'<li><b>Weck-Verhalten</b> \u2013 Schlummerzeit, Vorwecker, ansteigende Lautst\u00E4rke, nur Vibration.</li>'
-        +'<li><b>Profil sichern</b> \u2013 ganz unten in den Einstellungen; dort auch der Kalender-Export.</li>'
-        +'<li><b>Gesetzte Wecker</b> \u2013 Unter dem Kalender siehst du alle aktiven Wecker.</li>'
-        +'</ul>' },
-    { icon:'\uD83D\uDE80', title:'Los geht\u2019s!',
-      body:'Du kannst diese Anleitung jederzeit \u00FCber <b>\u2699\uFE0F Einstellungen \u2192 \u2753 Anleitung</b> erneut starten.'
-        +'<br><br>Viel Spa\u00DF mit deinem Schichtplan! \uD83C\uDF89' }
+  var WIZ_STEPS=4;
+  var WIZ_COLORS={1:'var(--accent)',2:'var(--frueh)',3:'var(--spaet)',4:'var(--nacht)'};
+  /* Vorlagen: je Woche die Schicht für Mo–Fr, Sa/So = Frei; null = alles leeren */
+  var WIZ_TPLS=[
+    {id:'fs',  name:'Früh/Spät im Wochenwechsel', desc:'2 Wochen: Mo–Fr Früh, dann Mo–Fr Spät', weeks:[2,3]},
+    {id:'fsn', name:'Früh/Spät/Nacht', desc:'3 Wochen: Mo–Fr Früh, Spät, Nacht', weeks:[2,3,4]},
+    {id:'leer',name:'Leer – selbst eintragen', desc:'Alle Tage leeren und unten antippen', weeks:null}
   ];
-  var wizStep=0;
-  function renderWiz(){
-    var s=wizSteps[wizStep];
-    $('wizIcon').textContent=s.icon;
-    $('wizTitle').textContent=s.title;
-    $('wizBody').innerHTML=s.body;
-    var dots=$('wizDots'); dots.innerHTML='';
-    for(var i=0;i<wizSteps.length;i++){
-      var d=document.createElement('div');d.className='wiz-dot'+(i===wizStep?' active':'');
-      dots.appendChild(d);
-    }
-    $('wizPrev').style.visibility=wizStep===0?'hidden':'visible';
-    $('wizNext').textContent=wizStep===wizSteps.length-1?'Fertig':'Weiter';
+  var W=null;   // Entwurf, solange die Einrichtung offen ist
+  function isWizOpen(){ return $('wizBg').classList.contains('open'); }
+  /* Ist die automatische Wecker-Art t aktuell an? */
+  function wizAutoNow(t){ return !!(S.autoSchedule[t]&&S.alarmEnabled[t]); }
+  /* Schichtarten im Entwurfs-Muster (Früh, Spät, Nacht, dann Frei) */
+  function wizTypes(){ return [2,3,4,1].filter(function(t){ return W.pattern.indexOf(t)!==-1; }); }
+  function wizMonday(){ return mondayOfIsoWeek(W.kwYear,W.kwNum); }
+  function openWiz(){
+    var d=parseYmd(S.startDate); if(isNaN(d)) d=parseYmd(todayYmd());
+    var mo=mondayOf(d), times={}, auto={};
+    [1,2,3,4].forEach(function(t){
+      times[t]=S.alarmTimes[t]||'';
+      // schon im Muster → aktuellen Stand zeigen; neue Arten: Schichten an, Frei aus
+      auto[t]=S.pattern.indexOf(t)!==-1?wizAutoNow(t):t!==1;
+    });
+    W={step:0, kwYear:isoWeekYear(mo), kwNum:getISOWeek(mo), weeks:S.weeksCount,
+       pattern:S.pattern.slice(0,S.weeksCount*7), tpl:null, times:times, auto:auto, bl:S.bundesland};
+    while(W.pattern.length<W.weeks*7) W.pattern.push(0);
+    renderWiz();
+    $('wizBg').classList.add('open'); $('wizBg').setAttribute('aria-hidden','false'); $('wizBg').scrollTop=0;
+    document.body.style.overflow='hidden';
   }
-  function openWiz(){wizStep=0;renderWiz();$('wizBg').style.display='flex';}
-  function closeWiz(){$('wizBg').style.display='none';S.wizardDone=true;save();try{localStorage.setItem(WIZ_KEY,'1');}catch(e){}}
-  $('wizNext').onclick=function(){
-    if(wizStep<wizSteps.length-1){wizStep++;renderWiz();}
+  function closeWiz(){
+    $('wizBg').classList.remove('open'); $('wizBg').setAttribute('aria-hidden','true');
+    document.body.style.overflow='';
+    W=null;
+    S.wizardDone=true; save();
+    try{localStorage.setItem(WIZ_KEY,'1');}catch(e){}
+  }
+  /* Abschluss: zum Plan, Kalender auf den Monat der Startwoche */
+  function finishWiz(){
+    closeWiz(); showTab('plan');
+    var d=parseYmd(S.startDate);
+    if(!isNaN(d)){ viewDate=new Date(d.getFullYear(),d.getMonth(),1,12,0,0); renderCal(); }
+  }
+  /* Zurück (Knopf und Geste): einen Schritt zurück, auf Schritt 1 schließen */
+  function wizBack(){
+    if(W.step>=WIZ_STEPS) finishWiz();
+    else if(W.step>0){ W.step--; renderWiz(); }
     else closeWiz();
-  };
-  $('wizPrev').onclick=function(){
-    if(wizStep>0){wizStep--;renderWiz();}
-  };
-  $('wizBg').addEventListener('click',function(e){if(e.target===this)closeWiz();});
+  }
+  function wizNext(){
+    if(W.step>=WIZ_STEPS){ finishWiz(); return; }
+    if(W.step===WIZ_STEPS-1) wizApply();
+    W.step++; renderWiz();
+  }
+  function wizResize(n){
+    n=Math.max(1,Math.min(6,n)); W.weeks=n;
+    var p=new Array(n*7).fill(0);
+    for(var i=0;i<Math.min(W.pattern.length,p.length);i++) p[i]=W.pattern[i];
+    W.pattern=p;
+  }
+  function wizApplyTpl(id){
+    var tpl=WIZ_TPLS.filter(function(x){return x.id===id;})[0]; if(!tpl) return;
+    W.tpl=id;
+    if(!tpl.weeks){ W.pattern=new Array(W.weeks*7).fill(0); return; }
+    W.weeks=tpl.weeks.length; W.pattern=[];
+    tpl.weeks.forEach(function(t){ W.pattern.push(t,t,t,t,t,1,1); });
+  }
+  /* Entwurf übernehmen – ausschließlich über die Schnittstellen-Setter */
+  function wizApply(){
+    var mo=toYmd(wizMonday()), cur=parseYmd(S.startDate);
+    if(isNaN(cur)||toYmd(mondayOf(cur))!==mo){ S.startMode='kw'; applyStartDate(mo); }
+    if(W.weeks!==S.weeksCount) setWeeksCount(W.weeks);
+    for(var i=0;i<W.pattern.length;i++) if(S.pattern[i]!==W.pattern[i]) setPatternDay(i,W.pattern[i]);
+    if(W.bl!==S.bundesland){ S.bundesland=W.bl; save(); }
+    var types=wizTypes();
+    types.forEach(function(t){ if(/^\d{2}:\d{2}$/.test(W.times[t])&&W.times[t]!==S.alarmTimes[t]) setShiftTime(t,W.times[t]); });
+    // nur umschalten, was sich ändert – setShiftAuto(t,true) holt sonst gelöschte Wecker zurück
+    types.forEach(function(t){ if(W.auto[t]!==wizAutoNow(t)) setShiftAuto(t,W.auto[t]); });
+    // Setter haben einen gebündelten Abgleich angestoßen → jetzt sofort und still erledigen
+    clearTimeout(_resyncTid); _resyncTid=null;
+    resyncAlarms({quiet:true});
+    S.wizardDone=true; save();
+    try{localStorage.setItem(WIZ_KEY,'1');}catch(e){}
+    refreshAllUi();
+  }
+  function wizRange(mo){
+    var su=new Date(mo.getTime()); su.setDate(su.getDate()+6);
+    return 'Mo '+fmtDe(toYmd(mo)).slice(0,6)+' – So '+fmtDe(toYmd(su)).slice(0,6);
+  }
+  function wizFillKw(){
+    var kn=$('wizKwNum'), n=isoWeeksInYear(W.kwYear); kn.innerHTML='';
+    if(W.kwNum>n) W.kwNum=n;
+    for(var w=1;w<=n;w++){ var o=document.createElement('option'); o.value=w; o.textContent='KW '+w; kn.appendChild(o); }
+    kn.value=W.kwNum;
+    $('wizKwInfo').textContent=wizRange(wizMonday())+' '+W.kwYear;
+  }
+  function renderWizPat(){
+    var h='<div class="wrow whead"><span class="wlbl"></span><div class="pdays">'
+      +DAYS.map(function(dn){return '<div class="pdh">'+dn+'</div>';}).join('')+'</div></div>';
+    for(var w=0;w<W.weeks;w++){
+      h+='<div class="wrow"><span class="wlbl">Woche '+(w+1)+'</span><div class="pdays">';
+      for(var d=0;d<7;d++){
+        var i=w*7+d, t=W.pattern[i];
+        h+='<div class="pday '+(SCLS[t]||'')+'" data-wi="'+i+'">'+(t===0?DAYS[d]:SNAMES[t])+'</div>';
+      }
+      h+='</div></div>';
+    }
+    $('wizPat').innerHTML=h;
+    $('wizWeeksVal').textContent=W.weeks;
+  }
+  function wizSummary(){
+    var up=upcomingAlarms(), mo=parseYmd(S.startDate);
+    var head=up.length
+      ?up.length+' Wecker gestellt · nächster: '+alarmDayLabel(up[0].ds)+' '+up[0].time
+      :'Keine Wecker gestellt';
+    var times=wizTypes().filter(function(t){return t!==1||W.auto[t];}).map(function(t){
+      return esc(SNAMES[t])+' '+esc(S.alarmTimes[t])+(wizAutoNow(t)?'':' (aus)');
+    }).join(' · ')||'keine';
+    var bl=$('bundesland').querySelector('option[value="'+S.bundesland+'"]');
+    var row=function(k,v){ return '<div class="wiz-sumrow"><span class="muted">'+k+'</span><span>'+v+'</span></div>'; };
+    return '<div class="wiz-stat" id="wizSummary">'+esc(head)+'</div>'
+      +'<div class="wiz-sum">'
+      +row('Startwoche','KW '+getISOWeek(mo)+' · '+esc(wizRange(mondayOf(mo))))
+      +row('Rhythmus',S.weeksCount+(S.weeksCount===1?' Woche':' Wochen'))
+      +row('Wecker',times)
+      +row('Feiertage',esc(bl?bl.textContent:S.bundesland))
+      +'</div>'
+      +'<div class="wiz-tip">🔔 <b>Tipp:</b> Im Bereich <b>⏰ Wecker</b> kannst du einen <b>Test-Alarm</b> auslösen – so hörst du gleich, wie dein Wecker klingt.</div>'
+      +'<div class="small muted" style="margin-top:12px;">Ändern kannst du alles später in den Bereichen Wecker und Schichtplan – oder dort über „Einrichtung starten“.</div>';
+  }
+  function renderWiz(){
+    var st=W.step, done=st>=WIZ_STEPS, b=$('wizBody'), h='';
+    $('wizStepTxt').textContent=done?'Fertig':'Schritt '+(st+1)+' von '+WIZ_STEPS;
+    $('wizBar').innerHTML=[0,1,2,3].map(function(i){return '<span'+(done||i<=st?' class="on"':'')+'></span>';}).join('');
+    $('wizSkip').style.visibility=done?'hidden':'visible';
+    $('wizPrev').style.display=done?'none':'';
+    $('wizPrev').style.visibility=st===0?'hidden':'visible';   // Schritt 1: Schließen geht über „Überspringen“
+    $('wizNext').textContent=done?'Zum Plan':(st===WIZ_STEPS-1?'Einrichten':'Weiter');
+    if(st===0){
+      $('wizTitle').textContent='In welcher Woche beginnt dein Rhythmus?';
+      $('wizSub').textContent='Wähle die Kalenderwoche, die Woche 1 deines Schichtmusters ist.';
+      var curY=new Date().getFullYear(), yrs='';
+      for(var y=Math.min(curY-1,W.kwYear);y<=Math.max(curY+2,W.kwYear);y++) yrs+='<option value="'+y+'">'+y+'</option>';
+      h='<div class="wiz-row"><div class="f1"><label for="wizKwNum">Kalenderwoche</label><select id="wizKwNum"></select></div>'
+        +'<div style="width:6.5rem;"><label for="wizKwYear">Jahr</label><select id="wizKwYear">'+yrs+'</select></div></div>'
+        +'<div class="wiz-info" id="wizKwInfo"></div>'
+        +'<div class="small muted">Aktuelle Woche: KW '+getISOWeek(new Date())+' '+isoWeekYear(new Date())+'</div>';
+      b.innerHTML=h; $('wizKwYear').value=W.kwYear; wizFillKw();
+    } else if(st===1){
+      $('wizTitle').textContent='Wie sieht dein Rhythmus aus?';
+      $('wizSub').textContent='Nimm eine Vorlage als Schnellstart und passe sie unten an.';
+      h='<div class="wiz-sec">Schnellstart</div><div class="wiz-tpls">'
+        +WIZ_TPLS.map(function(x){
+          return '<button type="button" class="wiz-tpl'+(W.tpl===x.id?' active':'')+'" data-tpl="'+x.id+'"><b>'+x.name+'</b><span>'+x.desc+'</span></button>';
+        }).join('')+'</div>'
+        +'<div class="wiz-sec">Anpassen</div>'
+        +'<div class="wiz-weeks"><label style="margin:0;">Wochen im Rhythmus</label>'
+        +'<button type="button" class="icon" data-wweeks="-1" aria-label="Weniger Wochen">&#x2212;</button>'
+        +'<span id="wizWeeksVal"></span>'
+        +'<button type="button" class="icon" data-wweeks="1" aria-label="Mehr Wochen">+</button></div>'
+        +'<div id="wizPat"></div>'
+        +'<div class="small muted" style="margin-top:4px;">Tag antippen wechselt: leer → Frei → Früh → Spät → Nacht</div>';
+      b.innerHTML=h; renderWizPat();
+    } else if(st===2){
+      $('wizTitle').textContent='Wann soll der Wecker klingeln?';
+      $('wizSub').textContent='Für jede Schicht in deinem Rhythmus eine Weckzeit.';
+      var types=wizTypes();
+      h=types.length?types.map(function(t){
+        return '<div class="wiz-shift"><div class="wiz-sname"><span class="ld" style="background:'+WIZ_COLORS[t]+'"></span>'+SNAMES[t]+'</div>'
+          +'<input type="time" id="wizTime'+t+'" data-wt="'+t+'" value="'+esc(W.times[t])+'">'
+          +'<label class="wiz-chk"><input type="checkbox" id="wizAuto'+t+'" data-wa="'+t+'"'+(W.auto[t]?' checked':'')+'>automatisch wecken</label></div>';
+      }).join('')+'<div class="small muted">„automatisch wecken“ stellt die Wecker für alle passenden Tage der nächsten 12 Monate und hält sie aktuell.</div>'
+        :'<div class="wiz-info">Dein Muster ist noch leer. Wecker kannst du später im Bereich ⏰ Wecker stellen.</div>';
+      b.innerHTML=h;
+    } else if(st===3){
+      $('wizTitle').textContent='In welchem Bundesland arbeitest du?';
+      $('wizSub').textContent='Damit Feiertage im Kalender erscheinen.';
+      b.innerHTML='<label for="wizBl">Bundesland</label><select id="wizBl">'+$('bundesland').innerHTML+'</select>'
+        +'<div class="small muted" style="margin-top:8px;">Mit „Einrichten“ werden Plan und Wecker übernommen.</div>';
+      $('wizBl').value=W.bl;
+    } else {
+      $('wizTitle').textContent='Fertig!';
+      $('wizSub').textContent='Dein Schichtplan ist eingerichtet.';
+      b.innerHTML=wizSummary();
+    }
+    $('wizBg').scrollTop=0;
+  }
+  $('wizNext').onclick=wizNext;
+  $('wizPrev').onclick=wizBack;
+  $('wizSkip').onclick=closeWiz;
+  $('wizBody').addEventListener('click',function(e){
+    var t=e.target.closest('[data-tpl]');
+    if(t){ wizApplyTpl(t.dataset.tpl); renderWiz(); return; }
+    var wk=e.target.closest('[data-wweeks]');
+    if(wk){ wizResize(W.weeks+Number(wk.dataset.wweeks)); W.tpl=null; renderWizPat(); return; }
+    var p=e.target.closest('.pday[data-wi]');
+    if(p){ var i=Number(p.dataset.wi); W.pattern[i]=(W.pattern[i]+1)%5; W.tpl=null; renderWizPat();
+      var a=document.querySelector('.wiz-tpl.active'); if(a) a.classList.remove('active'); }
+  });
+  $('wizBody').addEventListener('change',function(e){
+    var el=e.target, id=el.id||'';
+    if(id==='wizKwYear'){ W.kwYear=Number(el.value); wizFillKw(); }
+    else if(id==='wizKwNum'){ W.kwNum=Number(el.value); $('wizKwInfo').textContent=wizRange(wizMonday())+' '+W.kwYear; }
+    else if(id==='wizBl'){ W.bl=el.value; }
+    else if(el.dataset.wt){ if(/^\d{2}:\d{2}$/.test(el.value)) W.times[el.dataset.wt]=el.value; }
+    else if(el.dataset.wa){ W.auto[el.dataset.wa]=el.checked; }
+  });
 
   /* ── EVENTS ─────────────────────────────── */
   $('themeBtn').onclick=cycleTheme;

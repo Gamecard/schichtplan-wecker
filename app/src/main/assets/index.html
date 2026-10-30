@@ -1608,7 +1608,7 @@ window.onerror=function(msg,src,line,col,err){
   }
   function load(){
     try{
-      var raw=localStorage.getItem(LS); if(!raw){ S=createDefaultState(); return; }
+      var raw=localStorage.getItem(LS); if(!raw){ S=createDefaultState(); S.startDate=todayYmd(); return; }
       var s=JSON.parse(raw); if(!s||typeof s!=='object')return;
       if(typeof s.startDate==='string')   S.startDate=s.startDate;
       if(typeof s.weeksCount==='number')  S.weeksCount=Math.max(1,Math.min(6,s.weeksCount));
@@ -1848,7 +1848,7 @@ window.onerror=function(msg,src,line,col,err){
 
   /* ── INIT ───────────────────────────────── */
   S.startDate=todayYmd();
-  load(); initPat(); purgeExpiredAlarms();
+  load(); if(!S.startDate) S.startDate=todayYmd(); initPat(); purgeExpiredAlarms();
   // Migration: Frei-Defaults setzen falls leer (alte Versionen hatten '' / false)
   if(!S.alarmTimes[1]) S.alarmTimes[1]='07:00';
   initDateSelects();

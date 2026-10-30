@@ -63,21 +63,29 @@
   <section class="tab" id="tabWecker" hidden>
     <h2 class="tabtitle">&#x23F0; Wecker</h2>
     <div class="card">
-      <div class="ctitle">&#x23F0;&nbsp;Weckerzeit pro Schicht</div>
+      <div class="ctitle">&#x23F0;&nbsp;Wecker pro Schicht</div>
+      <p class="small muted wkintro">
+        Schalter an = <b>automatisch wecken</b>: Die App stellt f&uuml;r jeden passenden Tag der n&auml;chsten 12&nbsp;Monate
+        einen Wecker zur eingestellten Uhrzeit und h&auml;lt ihn aktuell &ndash; bei Urlaub, Schichttausch oder ge&auml;ndertem
+        Rhythmus passt sie sich von selbst an. Schalter aus = diese automatischen Wecker werden entfernt.
+      </p>
       <div class="stack" id="alarmBox"></div>
       <p class="small muted" style="margin:.55rem 0 0;">
-        Einen einzelnen Wecker f&uuml;r genau einen Tag stellst du im Plan: Tag antippen.
+        Uhrzeit mit &#x25B2;&#x25BC; &auml;ndern oder auf die Ziffern tippen. Einen Wecker nur f&uuml;r einen Tag stellst du im Plan:
+        Tag antippen &ndash; solche Wecker bleiben, bis du sie l&ouml;schst.
       </p>
       <div style="margin-top:.7rem;display:flex;gap:.6rem;align-items:center;">
-        <label class="sw" title="Schicht-Wecker an Feiertagen auslassen"><input type="checkbox" id="skipHolShift"><span class="sl"></span></label>
+        <label class="sw" title="Schicht-Wecker an Feiertagen auslassen"><input type="checkbox" id="skipHolShift" aria-label="Schicht-Wecker an Feiertagen auslassen"><span class="sl"></span></label>
         <span class="small">Schicht-Wecker an Feiertagen auslassen</span>
       </div>
-      
     </div>
 
     <div class="card">
       <div class="ctitle">&#x1F4C5;&nbsp;Wecker f&uuml;r unbelegte Tage</div>
-      <div class="small muted" style="margin-bottom:.6rem;">Setzt einen Wecker an Tagen ohne Schichteintrag – w&auml;hle Uhrzeit und Wochentage.</div>
+      <p class="small muted wkintro">
+        F&uuml;r Tage ohne Eintrag im Rhythmus (z.&nbsp;B. freie Wochenenden), nur an den gew&auml;hlten Wochentagen und nie an Feiertagen.
+        Der Schalter wirkt wie oben: an = automatisch f&uuml;r die n&auml;chsten 12&nbsp;Monate.
+      </p>
       <div id="freeAlarmBox"></div>
     </div>
 
@@ -100,11 +108,11 @@
           </select>
         </div>
         <div style="display:flex;gap:.6rem;align-items:center;">
-          <label class="sw" title="Lautst&auml;rke langsam steigern"><input type="checkbox" id="risingVol"><span class="sl"></span></label>
+          <label class="sw" title="Lautst&auml;rke langsam steigern"><input type="checkbox" id="risingVol" aria-label="Lautst&auml;rke langsam steigern"><span class="sl"></span></label>
           <span class="small">Lautst&auml;rke langsam steigern (1&nbsp;Minute)</span>
         </div>
         <div style="display:flex;gap:.6rem;align-items:center;">
-          <label class="sw" title="Nur vibrieren"><input type="checkbox" id="vibOnly"><span class="sl"></span></label>
+          <label class="sw" title="Nur vibrieren"><input type="checkbox" id="vibOnly" aria-label="Nur vibrieren"><span class="sl"></span></label>
           <span class="small">Nur vibrieren (kein Ton)</span>
         </div>
       </div>

@@ -697,6 +697,10 @@
         Diese vier Zeiten sind Standardzeiten f&uuml;r Frei, Fr&uuml;h, Sp&auml;t und Nacht.
         Auf einen Kalendertag tippen &rarr; Wecker f&uuml;r genau dieses Datum stellen.
       </p>
+      <div style="margin-top:.7rem;display:flex;gap:.6rem;align-items:center;">
+        <label class="sw" title="Schicht-Wecker an Feiertagen auslassen"><input type="checkbox" id="skipHolShift"><span class="sl"></span></label>
+        <span class="small">Schicht-Wecker an Feiertagen auslassen</span>
+      </div>
       <div style="margin-top:.7rem;display:flex;gap:.5rem;align-items:center;">
         <button class="sm" id="testAlarmBtn" style="background:#f59e0b;color:#fff;border-color:transparent;">&#x1F514; Test-Alarm (15 Sek.)</button>
         <span class="small muted">Testet ob der Wecker funktioniert</span>
@@ -856,7 +860,12 @@ window.onerror=function(msg,src,line,col,err){
       alarmTimes:{1:'07:00',2:'05:30',3:'13:00',4:'21:00'},
       alarmEnabled:{1:false,2:false,3:false,4:false},
       activeAlarms:[],
-      freeAlarm:{enabled:false,time:'07:00',days:[0,1,2,3,4]}
+      freeAlarm:{enabled:false,time:'07:00',days:[0,1,2,3,4]},
+      /* „Alle stellen“ aktiv → neue passende Tage bekommen automatisch einen Wecker */
+      autoSchedule:{1:false,2:false,3:false,4:false,free:false},
+      skipHolidaysShift:false,
+      /* vom Nutzer gelöschte Auto-Wecker – werden nicht wieder angelegt */
+      suppressed:[]
     };
   }
   var S = createDefaultState();
@@ -924,11 +933,11 @@ window.onerror=function(msg,src,line,col,err){
 
   function $(id){ return document.getElementById(id); }
 
-  function addActiveAlarm(ds,alarmKey,time,shiftName){
+  function addActiveAlarm(ds,alarmKey,time,shiftName,auto){
     if(!S.activeAlarms) S.activeAlarms=[];
     var existing=S.activeAlarms.find(function(a){return a.ds===ds&&a.alarmKey===alarmKey;});
-    if(existing){existing.time=time;existing.shiftName=shiftName;return;}
-    S.activeAlarms.push({ds:ds,alarmKey:alarmKey,time:time,shiftName:shiftName});
+    if(existing){existing.time=time;existing.shiftName=shiftName;existing.auto=!!auto;return;}
+    S.activeAlarms.push({ds:ds,alarmKey:alarmKey,time:time,shiftName:shiftName,auto:!!auto});
   }
   function removeActiveAlarm(ds,alarmKey){
     if(!S.activeAlarms)return;
@@ -949,7 +958,9 @@ window.onerror=function(msg,src,line,col,err){
     var today=todayYmd();
     var before=S.activeAlarms.length;
     S.activeAlarms=S.activeAlarms.filter(function(a){return a.ds>=today;});
-    if(S.activeAlarms.length!==before) save();
+    var supBefore=S.suppressed.length;
+    S.suppressed=S.suppressed.filter(function(k){var m=k.match(/\d{4}-\d{2}-\d{2}/);return !m||m[0]>=today;});
+    if(S.activeAlarms.length!==before||S.suppressed.length!==supBefore) save();
   }
 
   /* ── THEME ──────────────────────────────── */
@@ -988,7 +999,8 @@ window.onerror=function(msg,src,line,col,err){
     if(['BW','BY','HE','NW','RP','SL'].includes(bl)) rel(60,'Fronleichnam');
     if(['BW','BY','NW','RP','SL'].includes(bl)) a(11,1,'Allerheiligen');
     if(bl==='TH') a(9,20,'Weltkindertag');
-    if(['BB','MV','SN','ST','TH'].includes(bl)) a(10,31,'Reformationstag');
+    if(bl==='SL') a(8,15,'Mari\u00E4 Himmelf.');
+    if(['BB','HB','HH','MV','NI','SN','SH','ST','TH'].includes(bl)) a(10,31,'Reformationstag');
     if(bl==='SN'){
       /* Buß- und Bettag: Mittwoch vor Totensonntag (letzter So vor 1. Advent) → 16.–22.11.
          Startpunkt 22.11. = spätestes mögliches Datum, rückwärts zum Mittwoch. */
@@ -1017,29 +1029,106 @@ window.onerror=function(msg,src,line,col,err){
     var t=S.pattern[idx]!=null?S.pattern[idx]:0;
     return {type:t,name:SNAMES[t]||'',cls:SCLS[t]||''};
   }
-  function findAllShiftDates(shiftType){
-    var time=S.alarmTimes[shiftType]||'';
-    var now=new Date();
-    var start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),12,0,0,0);
-    var hols=holidays(now.getFullYear(),S.bundesland||'NW');
-    var nextYearHols=holidays(now.getFullYear()+1,S.bundesland||'NW');
-    var results=[];
-    for(var i=0;i<370;i++){
-      var d=new Date(start.getTime()+i*864e5);
-      var ds=toYmd(d);
-      var sh=getShift(ds);
-      if(sh.type!==shiftType) continue;
-      var hol=hols[ds]||nextYearHols[ds];
-      if(hol) continue;
-      if(time){
-        var pts=time.split(':').map(Number);
-        var alarmMs=new Date(d.getFullYear(),d.getMonth(),d.getDate(),pts[0]||0,pts[1]||0,0,0).getTime();
-        if(alarmMs<=Date.now()) continue;
-      }
-      results.push({date:ds,shift:sh});
-    }
-    return results;
+  /* ── WECKER-ABGLEICH ─────────────────────
+     Soll-Liste aus Plan + Einstellungen berechnen und mit den gesetzten Weckern
+     vergleichen. Nur automatisch gesetzte Wecker (auto:true) werden angepasst;
+     von Hand gestellte Wecker bleiben unberührt. */
+  var HORIZON_DAYS=370;
+  var _holCache={};
+  function holidayName(ds){
+    var bl=S.bundesland||'NW', y=Number(ds.slice(0,4)), ck=y+bl;
+    if(!_holCache[ck]) _holCache[ck]=holidays(y,bl);
+    return _holCache[ck][ds];
   }
+  function isFuture(ds,time){
+    var p=ds.split('-').map(Number), t=String(time||'').split(':').map(Number);
+    return new Date(p[0],p[1]-1,p[2],t[0]||0,t[1]||0,0,0).getTime()>Date.now();
+  }
+  function hasBridge(fn){ return !!(window.Android&&typeof window.Android[fn]==='function'); }
+  /* Wecker, die an diesem Tag laut Plan fällig wären (unabhängig von „Alle stellen“) */
+  function expectedAlarmsFor(ds){
+    var out=[], sh=getShift(ds), hol=holidayName(ds);
+    if(sh.type>=1&&sh.type<=4&&S.alarmEnabled[sh.type]&&S.alarmTimes[sh.type]&&!(hol&&S.skipHolidaysShift)){
+      out.push({key:'shift-'+ds+'-t'+sh.type,kind:sh.type,time:S.alarmTimes[sh.type],name:sh.name,msg:sh.name+' ('+fmtDe(ds)+')'});
+    }
+    var dow=(parseYmd(ds).getDay()+6)%7;
+    if(sh.type===0&&!hol&&S.freeAlarm.enabled&&S.freeAlarm.time&&S.freeAlarm.days.indexOf(dow)!==-1){
+      out.push({key:'free-day-'+ds,kind:'free',time:S.freeAlarm.time,name:'Freier Tag',msg:'Freier Tag ('+fmtDe(ds)+')'});
+    }
+    return out.filter(function(e){return isFuture(ds,e.time);});
+  }
+  function expectedAlarms(){
+    var res={}, start=parseYmd(todayYmd());
+    for(var i=0;i<HORIZON_DAYS;i++){
+      var ds=toYmd(new Date(start.getTime()+i*864e5));
+      expectedAlarmsFor(ds).forEach(function(e){res[e.key]={ds:ds,e:e};});
+    }
+    return res;
+  }
+  function bridgeSet(ds,e){
+    var p=ds.split('-').map(Number), t=e.time.split(':').map(Number);
+    try{ return window.Android.setAlarmForDateSilent(p[0],p[1],p[2],t[0],t[1],e.key,e.msg)!==false; }
+    catch(x){ return false; }
+  }
+  function bridgeCancel(key){ try{ if(hasBridge('cancelAlarm')) window.Android.cancelAlarm(key); }catch(x){} }
+  function resyncAlarms(opts){
+    opts=opts||{};
+    var r={added:0,removed:0,updated:0,errors:0};
+    if(!hasBridge('setAlarmForDateSilent')) return r;
+    var expected=expectedAlarms();
+    // 1) automatisch gesetzte Wecker prüfen (abgelaufene/heute schon klingelnde nicht anfassen – evtl. Schlummern aktiv)
+    (S.activeAlarms||[]).slice().forEach(function(a){
+      if(!a.auto||!isFuture(a.ds,a.time)) return;
+      var x=expected[a.alarmKey];
+      if(!x){ bridgeCancel(a.alarmKey); removeActiveAlarm(a.ds,a.alarmKey); r.removed++; return; }
+      if(x.e.time!==a.time){ if(bridgeSet(a.ds,x.e)){ a.time=x.e.time; r.updated++; } else r.errors++; }
+    });
+    // 2) fehlende ergänzen, wenn für diese Art „Alle stellen“ aktiv ist
+    Object.keys(expected).forEach(function(k){
+      var x=expected[k];
+      if(!S.autoSchedule[x.e.kind]||S.suppressed.indexOf(k)!==-1) return;
+      if(S.activeAlarms.some(function(a){return a.alarmKey===k;})) return;
+      if(bridgeSet(x.ds,x.e)){ addActiveAlarm(x.ds,k,x.e.time,x.e.name,true); r.added++; } else r.errors++;
+    });
+    if(r.added||r.removed||r.updated){ save(); renderCal(); }
+    if(!opts.quiet&&(r.added||r.removed||r.updated||r.errors)){
+      var parts=[];
+      if(r.added) parts.push(r.added+' neu');
+      if(r.updated) parts.push(r.updated+' geändert');
+      if(r.removed) parts.push(r.removed+' entfernt');
+      if(r.errors) parts.push(r.errors+' fehlgeschlagen');
+      toast('⏰ Wecker angepasst: '+parts.join(', '),r.errors>0);
+    }
+    return r;
+  }
+  var _resyncTid=null;
+  /* Nach Planänderungen gebündelt abgleichen (z. B. mehrere Taps im Schichtmuster) */
+  function scheduleResync(){
+    clearTimeout(_resyncTid);
+    _resyncTid=setTimeout(function(){ resyncAlarms(); },800);
+  }
+  /* Beim Start: Wecker älterer Versionen in den nativen Speicher übernehmen und die
+     Liste mit den tatsächlich geplanten Android-Weckern abgleichen. */
+  function syncWithNative(){
+    if(!hasBridge('getScheduledKeys')) return;
+    if(!window.Android.isStoreMigrated()){
+      S.activeAlarms.forEach(function(a){
+        if(!isFuture(a.ds,a.time)) return;
+        bridgeSet(a.ds,{key:a.alarmKey,time:a.time,msg:(a.shiftName||'Wecker')+' ('+fmtDe(a.ds)+')'});
+        if(a.auto===undefined){
+          var m=a.alarmKey.match(/^shift-\d{4}-\d{2}-\d{2}-t(\d)$/);
+          a.auto=!!((m&&a.time===S.alarmTimes[m[1]])||(/^free-day-/.test(a.alarmKey)&&a.time===S.freeAlarm.time));
+        }
+      });
+      window.Android.setStoreMigrated();
+    }
+    var keys; try{ keys=JSON.parse(window.Android.getScheduledKeys()); }catch(e){ return; }
+    var known={}; keys.forEach(function(k){known[k]=1;});
+    // Nicht mehr geplant = ausgelöst oder verloren → aus der Liste nehmen
+    S.activeAlarms=S.activeAlarms.filter(function(a){return known[a.alarmKey];});
+    save();
+  }
+
   function scheduleAllShiftAlarms(shiftType){
     if(!S.startDate){
       toast('Bitte zuerst das Startdatum festlegen.',true);
@@ -1053,50 +1142,38 @@ window.onerror=function(msg,src,line,col,err){
       toast('Keine Weckerzeit für '+SNAMES[shiftType]+' gesetzt.',true);
       return;
     }
-    if(!window.Android||typeof window.Android.setAlarmForDate!=='function'){
+    if(!hasBridge('setAlarmForDateSilent')){
       toast('Android-Bridge nicht verfügbar.',true);
       return;
     }
-    var all=findAllShiftDates(shiftType);
-    if(!all.length){
-      var todSh=getShift(todayYmd());
-      var reason='';
-      if(todSh.type===shiftType){
-        reason='\n\nHeute ist '+SNAMES[shiftType]+', aber die Weckzeit ('+S.alarmTimes[shiftType]+') ist schon vorbei.\nStelle die Zeit auf die Zukunft und versuche es nochmal.';
-      }
-      toast('Keine kommenden '+SNAMES[shiftType]+'-Tage gefunden.'+reason,true);
-      return;
-    }
-    // Bestätigungsdialog – Hinweis wenn heute übersprungen wird
-    var todSh2=getShift(todayYmd());
-    var todayNote='';
-    if(todSh2.type===shiftType&&all[0].date!==todayYmd()){
-      todayNote='\n\n⚠️ Heute ('+fmtDe(todayYmd())+') übersprungen – Weckzeit '+S.alarmTimes[shiftType]+' ist schon vorbei.';
-    }
-    var confirmMsg=all.length+' '+SNAMES[shiftType]+'-Wecker setzen?\n\nErster: '+fmtDe(all[0].date)+'\nLetzter: '+fmtDe(all[all.length-1].date)+todayNote;
-    customConfirm(confirmMsg,function(){
-      var count=0, errors=0;
-      var hasSilent=typeof window.Android.setAlarmForDateSilent==='function';
-      for(var i=0;i<all.length;i++){
-        var ds=all[i].date, sh=all[i].shift;
-        var time=S.alarmTimes[sh.type]||'';
-        if(!time) continue;
-        var pts=time.split(':').map(Number),h=pts[0],m=pts[1];
-        var p=ds.split('-').map(Number);
-        var key='shift-'+ds+'-t'+sh.type;
-        try{
-          var ok=false;
-          if(hasSilent) ok=window.Android.setAlarmForDateSilent(p[0],p[1],p[2],h,m,key,sh.name+' ('+fmtDe(ds)+')');
-          else ok=window.Android.setAlarmForDate(p[0],p[1],p[2],h,m,key,sh.name+' ('+fmtDe(ds)+')');
-          if(ok===false){ errors++; continue; }
-          addActiveAlarm(ds,key,time,sh.name);
-          count++;
-        }catch(e){ errors++; }
-      }
+    scheduleAllOfKind(shiftType,SNAMES[shiftType]+'-Wecker');
+  }
+  /* „Alle stellen“: schaltet den Dauer-Modus für diese Wecker-Art ein. Danach ergänzt und
+     korrigiert resyncAlarms() die Wecker bei jeder Planänderung und bei jedem App-Start. */
+  function scheduleAllOfKind(kind,label){
+    var exp=expectedAlarms();
+    var all=Object.keys(exp).map(function(k){return exp[k];})
+      .filter(function(x){return x.e.kind===kind;})
+      .sort(function(a,b){return a.ds.localeCompare(b.ds);});
+    if(!all.length){ toast('Keine kommenden Tage für '+label+' gefunden.',true); return; }
+    var msg=all.length+' '+label+' setzen?\n\nErster: '+fmtDe(all[0].ds)+'\nLetzter: '+fmtDe(all[all.length-1].ds)
+      +'\n\nWenn du den Plan änderst (Muster, Ausnahmen, Urlaub, Weckzeit), werden diese Wecker automatisch angepasst.';
+    customConfirm(msg,function(){
+      S.autoSchedule[kind]=true;
+      // eigene Löschungen dieser Art nicht mehr unterdrücken – der Nutzer will jetzt alle
+      S.suppressed=S.suppressed.filter(function(k){return !exp[k]||exp[k].e.kind!==kind;});
+      // bereits gesetzte Wecker mit Standardzeit übernehmen den Dauer-Modus
+      all.forEach(function(x){
+        var a=S.activeAlarms.find(function(a){return a.alarmKey===x.e.key;});
+        if(a&&a.time===x.e.time) a.auto=true;
+      });
+      var r=resyncAlarms({quiet:true});
+      var count=S.activeAlarms.filter(function(a){
+        return a.auto&&exp[a.alarmKey]&&exp[a.alarmKey].e.kind===kind;}).length;
       save(); renderCal();
-      var r='\u2705 '+count+' '+SNAMES[shiftType]+'-Wecker gesetzt';
-      if(errors>0) r+=' ('+errors+' fehlgeschlagen)';
-      toast(r,errors>0);
+      var t='✅ '+count+' '+label+' aktiv';
+      if(r.errors) t+=' ('+r.errors+' fehlgeschlagen)';
+      toast(t,r.errors>0);
     });
   }
 
@@ -1114,7 +1191,7 @@ window.onerror=function(msg,src,line,col,err){
       var mEl=document.getElementById('tpm'+t);
       if(hEl&&mEl){
         S.alarmTimes[t]=pad(Number(hEl.textContent))+':'+pad(Number(mEl.textContent));
-        save(); renderCal();
+        save(); renderCal(); scheduleResync();
       }
     }
   }
@@ -1226,7 +1303,7 @@ window.onerror=function(msg,src,line,col,err){
         if(idx===-1) S.freeAlarm.days.push(i);
         else S.freeAlarm.days.splice(idx,1);
         S.freeAlarm.days.sort();
-        save(); renderFreeAlarmSettings(); renderCal();
+        save(); renderFreeAlarmSettings(); renderCal(); scheduleResync();
       };
       dayRow.appendChild(btn);
     });
@@ -1237,57 +1314,19 @@ window.onerror=function(msg,src,line,col,err){
     allBtn.onclick=scheduleAllFreeAlarms;
     c.appendChild(allBtn);
     // Toggle-Event
-    cb.onchange=function(){ S.freeAlarm.enabled=cb.checked; save(); renderCal(); toast('Freie-Tage-Wecker '+(cb.checked?'aktiviert':'deaktiviert')+'.');  };
+    cb.onchange=function(){ S.freeAlarm.enabled=cb.checked; save(); renderCal(); toast('Freie-Tage-Wecker '+(cb.checked?'aktiviert':'deaktiviert')+'.'); scheduleResync(); };
   }
   function saveFreeAlarmTime(){
     var h=$('fatph'),m=$('fatpm');
-    if(h&&m){ S.freeAlarm.time=pad(Number(h.textContent))+':'+pad(Number(m.textContent)); save(); renderCal(); }
+    if(h&&m){ S.freeAlarm.time=pad(Number(h.textContent))+':'+pad(Number(m.textContent)); save(); renderCal(); scheduleResync(); }
   }
   function scheduleAllFreeAlarms(){
     if(!S.startDate){ toast('Bitte zuerst das Startdatum festlegen.',true); return; }
     if(!S.freeAlarm.enabled){ toast('Freie-Tage-Wecker ist deaktiviert.',true); return; }
     if(!S.freeAlarm.time){ toast('Keine Weckzeit gesetzt.',true); return; }
-    if(!S.freeAlarm.days.length){ toast('Keine Wochentage ausgewählt.',true); return; }
-    if(!window.Android||typeof window.Android.setAlarmForDate!=='function'){ toast('Android-Bridge nicht verfügbar.',true); return; }
-    var hasSilent=typeof window.Android.setAlarmForDateSilent==='function';
-    var now=new Date(); var start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),12,0,0,0);
-    var hols=holidays(now.getFullYear(),S.bundesland||'NW');
-    var nextYearHols=holidays(now.getFullYear()+1,S.bundesland||'NW');
-    var pts=S.freeAlarm.time.split(':').map(Number),h=pts[0],m=pts[1];
-    var all=[];
-    for(var i=0;i<370;i++){
-      var d=new Date(start.getTime()+i*864e5);
-      var ds=toYmd(d);
-      var hol=hols[ds]||nextYearHols[ds];
-      if(hol) continue;
-      var dow=(d.getDay()+6)%7;
-      if(S.freeAlarm.days.indexOf(dow)===-1) continue;
-      var sh=getShift(ds);
-      if(sh.type!==0) continue;
-      var alarmMs=new Date(d.getFullYear(),d.getMonth(),d.getDate(),h,m,0,0).getTime();
-      if(alarmMs<=Date.now()) continue;
-      all.push(ds);
-    }
-    if(!all.length){ toast('Keine passenden unbelegten Tage gefunden.',true); return; }
-    customConfirm(all.length+' Wecker f\u00fcr unbelegte Tage setzen?\n\nErster: '+fmtDe(all[0])+'\nLetzter: '+fmtDe(all[all.length-1]),function(){
-      var count=0,errors=0;
-      for(var i=0;i<all.length;i++){
-        var ds=all[i]; var p=ds.split('-').map(Number);
-        var key='free-day-'+ds;
-        try{
-          var ok=false;
-          if(hasSilent) ok=window.Android.setAlarmForDateSilent(p[0],p[1],p[2],h,m,key,'Freier Tag ('+fmtDe(ds)+')');
-          else ok=window.Android.setAlarmForDate(p[0],p[1],p[2],h,m,key,'Freier Tag ('+fmtDe(ds)+')');
-          if(ok===false){ errors++; continue; }
-          addActiveAlarm(ds,key,S.freeAlarm.time,'Freier Tag');
-          count++;
-        }catch(e){ errors++; }
-      }
-      save(); renderCal();
-      var r='\u2705 '+count+' Wecker f\u00fcr freie Tage gesetzt';
-      if(errors) r+=' ('+errors+' fehlgeschlagen)';
-      toast(r,errors>0);
-    });
+    if(!S.freeAlarm.days.length){ toast('Keine Wochentage ausgew\u00E4hlt.',true); return; }
+    if(!hasBridge('setAlarmForDateSilent')){ toast('Android-Bridge nicht verf\u00FCgbar.',true); return; }
+    scheduleAllOfKind('free','Wecker f\u00FCr unbelegte Tage');
   }
 
   /* ── MUSTER ─────────────────────────────── */
@@ -1318,7 +1357,7 @@ window.onerror=function(msg,src,line,col,err){
   }
   function cycleShift(idx){
     S.pattern[idx]=(S.pattern[idx]+1)%5;
-    renderPat(); renderCal(); save();
+    renderPat(); renderCal(); save(); scheduleResync();
   }
 
   /* ── AUSNAHMEN ──────────────────────────── */
@@ -1337,7 +1376,7 @@ window.onerror=function(msg,src,line,col,err){
   }
   function delEx(id){
     S.exceptions=S.exceptions.filter(function(e){return e.id!==id;});
-    renderEx(); renderCal(); save();
+    renderEx(); renderCal(); save(); scheduleResync();
   }
 
   /* ── KALENDER ───────────────────────────── */
@@ -1545,7 +1584,8 @@ window.onerror=function(msg,src,line,col,err){
       }
       var result=window.Android.setAlarmForDate(p[0],p[1],p[2],h,m,key,label);
       if(result===false){toast('Wecker konnte nicht gesetzt werden (Berechtigung?).',true);return;}
-      addActiveAlarm(ds,key,time,shiftName);
+      addActiveAlarm(ds,key,time,shiftName,false);
+      S.suppressed=S.suppressed.filter(function(k){return k!==key;});
       save(); renderCal(); closeSheet();
       toast('\u2705 Wecker gesetzt f\u00FCr '+pad(h)+':'+pad(m)+' Uhr am '+fmtDe(ds));
     }catch(ex){
@@ -1553,8 +1593,10 @@ window.onerror=function(msg,src,line,col,err){
     }
   }
   function cancelAlarm(ds,key){
-    if(window.Android&&typeof window.Android.cancelAlarm==='function')
-      window.Android.cancelAlarm(key);
+    bridgeCancel(key);
+    var a=S.activeAlarms.find(function(x){return x.ds===ds&&x.alarmKey===key;});
+    // gelöschten Auto-Wecker nicht beim nächsten Abgleich wieder anlegen
+    if(a&&a.auto&&S.suppressed.indexOf(key)===-1) S.suppressed.push(key);
     removeActiveAlarm(ds,key);
     save(); renderCal(); closeSheet(); toast('Wecker gel\u00F6scht.');
   }
@@ -1610,6 +1652,10 @@ window.onerror=function(msg,src,line,col,err){
         }
         if(Array.isArray(s.freeAlarm.days)) S.freeAlarm.days=s.freeAlarm.days.filter(function(d){return d>=0&&d<=6;});
       }
+      if(s.autoSchedule&&typeof s.autoSchedule==='object')
+        [1,2,3,4,'free'].forEach(function(k){if(typeof s.autoSchedule[k]==='boolean')S.autoSchedule[k]=s.autoSchedule[k];});
+      if(typeof s.skipHolidaysShift==='boolean') S.skipHolidaysShift=s.skipHolidaysShift;
+      if(Array.isArray(s.suppressed)) S.suppressed=s.suppressed.filter(function(k){return typeof k==='string';});
     }catch(e){}
   }
 
@@ -1697,26 +1743,23 @@ window.onerror=function(msg,src,line,col,err){
       S.startDate=nd;
       var d=parseYmd(S.startDate);
       if(!isNaN(d)) viewDate=new Date(d.getFullYear(),d.getMonth(),1,12,0,0);
-      renderCal(); save();
+      renderCal(); save(); scheduleResync();
     });
   });
-  $('bundesland').addEventListener('change',function(e){S.bundesland=e.target.value;renderCal();save();});
+  $('bundesland').addEventListener('change',function(e){S.bundesland=e.target.value;renderCal();save();scheduleResync();});
   $('decWeeks').onclick=function(){
     if(S.weeksCount<=1)return; S.weeksCount--;
-    $('weeksVal').textContent=S.weeksCount; initPat();renderPat();renderCal();save();
+    $('weeksVal').textContent=S.weeksCount; initPat();renderPat();renderCal();save();scheduleResync();
   };
   $('incWeeks').onclick=function(){
     if(S.weeksCount>=6)return; S.weeksCount++;
-    $('weeksVal').textContent=S.weeksCount; initPat();renderPat();renderCal();save();
+    $('weeksVal').textContent=S.weeksCount; initPat();renderPat();renderCal();save();scheduleResync();
   };
   $('resetAll').onclick=function(){
     customConfirm('Wirklich alles l\u00f6schen?\nAlle Einstellungen und Wecker werden zur\u00fcckgesetzt.',function(){
       // Cancel all Android alarms first
-      if(S.activeAlarms&&window.Android&&typeof window.Android.cancelAlarm==='function'){
-        S.activeAlarms.forEach(function(a){
-          try{window.Android.cancelAlarm(a.alarmKey);}catch(e){}
-        });
-      }
+      if(S.activeAlarms) S.activeAlarms.forEach(function(a){ bridgeCancel(a.alarmKey); });
+      if(hasBridge('cancelAllAlarms')){ try{ window.Android.cancelAllAlarms(); }catch(e){} }
       S=createDefaultState();
       S.startDate=todayYmd();
       initPat();
@@ -1724,8 +1767,8 @@ window.onerror=function(msg,src,line,col,err){
       setDateSelects(S.startDate);
       $('weeksVal').textContent=S.weeksCount;
       $('bundesland').value=S.bundesland;
-  renderAlarmSettings(); renderFreeAlarmSettings(); renderPat(); renderEx(); renderCal(); updateRingtoneUI();
-  updateRingtoneUI();
+      $('skipHolShift').checked=S.skipHolidaysShift;
+      renderAlarmSettings(); renderFreeAlarmSettings(); renderPat(); renderEx(); renderCal(); updateRingtoneUI();
       $('settingsOverlay').classList.remove('open');
       toast('Alles zur\u00fcckgesetzt. Alle Wecker sind jetzt deaktiviert.');
     });
@@ -1736,20 +1779,23 @@ window.onerror=function(msg,src,line,col,err){
     var mt=id.match(/^ae(\d)$/);
     if(mt){
       var t=Number(mt[1]); if(t<1||t>4)return;
-      S.alarmEnabled[t]=e.target.checked;save();renderCal();
+      S.alarmEnabled[t]=e.target.checked;save();renderCal();scheduleResync();
       toast(SNAMES[t]+'-Wecker '+(e.target.checked?'aktiviert':'deaktiviert')+'.');
     }
+  });
+  $('skipHolShift').addEventListener('change',function(e){
+    S.skipHolidaysShift=e.target.checked; save(); scheduleResync();
   });
   $('patGrid').addEventListener('click',function(e){
     var b=e.target.closest('.pday'); if(b) cycleShift(Number(b.dataset.idx));
   });
-  $('clearPat').onclick=function(){S.pattern=new Array(S.weeksCount*7).fill(0);renderPat();renderCal();save();};
+  $('clearPat').onclick=function(){S.pattern=new Array(S.weeksCount*7).fill(0);renderPat();renderCal();save();scheduleResync();};
   $('addEx').onclick=function(){
     var s=$('exS').value, e=$('exE').value||s, t=$('exT').value;
     if(!s){toast('Startdatum fehlt!',true);return;}
     if(e<s){toast('Bis-Datum vor Von-Datum!',true);return;}
     S.exceptions.push({id:uid(),start:s,end:e,type:t});
-    renderEx();renderCal();save();
+    renderEx();renderCal();save();scheduleResync();
     $('exS').value='';$('exE').value='';toast(t+' eingetragen!');
   };
   $('exList').addEventListener('click',function(e){var b=e.target.closest('.xdel');if(b)delEx(b.dataset.id);});
@@ -1809,6 +1855,8 @@ window.onerror=function(msg,src,line,col,err){
   setDateSelects(S.startDate);
   $('weeksVal').textContent=S.weeksCount;
   $('bundesland').value=S.bundesland;
+  $('skipHolShift').checked=S.skipHolidaysShift;
+  syncWithNative(); resyncAlarms({quiet:true});
   renderAlarmSettings(); renderFreeAlarmSettings(); renderPat(); renderEx(); renderCal();
   /* Wizard beim allerersten Start anzeigen */
   try{if(!localStorage.getItem(WIZ_KEY))openWiz();}catch(e){}

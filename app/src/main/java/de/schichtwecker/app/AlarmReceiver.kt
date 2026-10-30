@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.media.RingtoneManager
 import android.net.Uri
-import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 
@@ -16,22 +15,7 @@ class AlarmReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "SchichtplanAlarm"
-        private const val CHANNEL_ID = "schichtplan_alarm_v4"
-        private const val CHANNEL_ID_CUSTOM = "schichtplan_alarm_custom"
-        private val wakeLocks = mutableMapOf<String, PowerManager.WakeLock>()
-
-        fun releaseWakeLock() {
-            synchronized(wakeLocks) {
-                wakeLocks.values.forEach { if (it.isHeld) it.release() }
-                wakeLocks.clear()
-            }
-        }
-
-        fun releaseWakeLock(tag: String) {
-            synchronized(wakeLocks) {
-                wakeLocks.remove(tag)?.let { if (it.isHeld) it.release() }
-            }
-        }
+        const val CHANNEL_ID = "schichtplan_alarm_v4"
 
         fun getAlarmSoundUri(context: Context): Uri {
             if (MainActivity.usesCustomRingtone(context)) {
@@ -49,96 +33,74 @@ class AlarmReceiver : BroadcastReceiver() {
             return RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
                 ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         }
+
+        /**
+         * Ein einziger Kanal OHNE Sound/Vibration: den Ton spielt [AlarmService] selbst
+         * (looping MediaPlayer) – sonst doppelter Alarm-Ton.
+         */
+        fun ensureNotificationChannel(context: Context) {
+            val nm = context.getSystemService(NotificationManager::class.java)
+            listOf("alarm_channel", "schichtplan_alarm_v2", "schichtplan_alarm_v3", "schichtplan_alarm_custom")
+                .forEach { nm.deleteNotificationChannel(it) }
+            if (nm.getNotificationChannel(CHANNEL_ID) != null) return
+            val channel = NotificationChannel(
+                CHANNEL_ID, "Schichtplan Wecker", NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Wecker bei Schichtbeginn"
+                setSound(null, null)
+                enableVibration(false)
+                lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
+            }
+            nm.createNotificationChannel(channel)
+        }
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        Log.d(TAG, "AlarmReceiver.onReceive() aufgerufen")
+        val key = intent.getStringExtra(AlarmScheduler.EXTRA_KEY)
+        val message = intent.getStringExtra(AlarmScheduler.EXTRA_MESSAGE) ?: "Zeit aufzustehen!"
+        val requestCode = intent.getIntExtra(AlarmScheduler.EXTRA_REQUEST_CODE, 0)
+        Log.d(TAG, "AlarmReceiver.onReceive() key=$key rc=$requestCode")
 
-        val requestCode = intent.getIntExtra("requestCode", 0)
-        val wakeLockTag = "schichtplan:alarm-$requestCode"
+        AlarmScheduler.onFired(context, key)
 
-        val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-        val wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, wakeLockTag).apply { acquire(60_000L) }
-        synchronized(wakeLocks) { wakeLocks[wakeLockTag] = wl }
-        Log.d(TAG, "WakeLock erworben: $wakeLockTag")
+        // Der Ton läuft im Foreground-Service: unabhängig davon, ob die Activity sichtbar ist,
+        // ob Android den Activity-Start aus dem Hintergrund zulässt oder ob der Nutzer die
+        // Ein/Aus-Taste drückt. setAlarmClock()-Wecker dürfen einen FGS aus dem Hintergrund starten.
+        try {
+            context.startForegroundService(
+                AlarmService.startIntent(context, key ?: "legacy-$requestCode", message, requestCode)
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "AlarmService konnte nicht gestartet werden – Fallback auf Activity", e)
+            fallback(context, message, requestCode)
+        }
+    }
 
-        val message = intent.getStringExtra("message") ?: "Zeit aufzustehen!"
-
+    /** Notlösung ohne Service: Vollbild-Benachrichtigung + direkter Activity-Start. */
+    private fun fallback(context: Context, message: String, requestCode: Int) {
+        ensureNotificationChannel(context)
         val alarmIntent = Intent(context, AlarmActivity::class.java).apply {
-            putExtra("message", message)
-            putExtra("requestCode", requestCode)
+            putExtra(AlarmScheduler.EXTRA_MESSAGE, message)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         }
-
-        ensureNotificationChannel(context)
-
-        showFullScreenNotification(context, message, alarmIntent, requestCode)
-        Log.d(TAG, "Fullscreen-Notification gepostet (requestCode=$requestCode)")
-
-        try {
-            context.startActivity(alarmIntent)
-            Log.d(TAG, "AlarmActivity gestartet via startActivity()")
-        } catch (e: Exception) {
-            Log.e(TAG, "startActivity fehlgeschlagen: ${e.message}")
-        }
-    }
-
-    private fun ensureNotificationChannel(context: Context) {
-        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val usesCustom = MainActivity.usesCustomRingtone(context)
-        val channelId = if (usesCustom) CHANNEL_ID_CUSTOM else CHANNEL_ID
-
-        if (nm.getNotificationChannel(channelId) != null && !usesCustom) return
-
-        if (usesCustom) nm.deleteNotificationChannel(CHANNEL_ID_CUSTOM)
-        nm.deleteNotificationChannel("alarm_channel")
-        nm.deleteNotificationChannel("schichtplan_alarm_v2")
-        nm.deleteNotificationChannel("schichtplan_alarm_v3")
-
-        // KEIN Sound/Vibration am Channel: AlarmActivity spielt den Ton selbst
-        // (looping MediaPlayer) – sonst doppelter Alarm-Ton.
-        val channel = NotificationChannel(
-            channelId,
-            "Schichtplan Wecker",
-            NotificationManager.IMPORTANCE_HIGH
-        ).apply {
-            description = "Alarmton und Vibration bei Schichtbeginn"
-            setBypassDnd(true)
-            lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
-        }
-        nm.createNotificationChannel(channel)
-        Log.d(TAG, "Notification-Channel '$channelId' erstellt (custom=$usesCustom)")
-    }
-
-    private fun showFullScreenNotification(
-        context: Context,
-        message: String,
-        alarmIntent: Intent,
-        notificationId: Int
-    ) {
-        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val usesCustom = MainActivity.usesCustomRingtone(context)
-        val channelId = if (usesCustom) CHANNEL_ID_CUSTOM else CHANNEL_ID
-
-        val fullScreenPi = PendingIntent.getActivity(
-            context,
-            notificationId,
-            alarmIntent,
+        val pi = PendingIntent.getActivity(
+            context, requestCode, alarmIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-
-        val notification = NotificationCompat.Builder(context, channelId)
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle("⏰ Schicht-Wecker")
             .setContentText(message)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setFullScreenIntent(fullScreenPi, true)
-            .setOngoing(true)
-            .setAutoCancel(false)
+            .setFullScreenIntent(pi, true)
+            .setContentIntent(pi)
+            .setAutoCancel(true)
             .build()
-
-        nm.notify(notificationId, notification)
+        context.getSystemService(NotificationManager::class.java).notify(requestCode, notification)
+        try { context.startActivity(alarmIntent) } catch (e: Exception) {
+            Log.e(TAG, "startActivity fehlgeschlagen: ${e.message}")
+        }
     }
 }

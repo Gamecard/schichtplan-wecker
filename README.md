@@ -7,7 +7,7 @@ Eine Android-App zur Verwaltung von Schichtplänen mit Wecker-Funktion.
 - **Schichtkalender** – Monatsansicht mit Kalenderwochen, Feiertagen und Schichtfarben (Frei, Früh, Spät, Nacht)
 - **Wochenrhythmus** – Flexibles Schichtmuster mit 1–6 Wochen Rhythmus und frei wählbarem Startdatum
 - **Wecker pro Schicht** – Individuelle Weckzeiten für jede Schichtart, direkt aus dem Kalender stellbar
-- **Alle stellen** – Setzt automatisch alle Wecker für die nächsten 12 Monate
+- **Alle stellen** – Setzt alle Wecker für die nächsten 12 Monate und hält sie danach automatisch aktuell (Muster, Ausnahmen, Weckzeit, Feiertage)
 - **Wecker für unbelegte Tage** – Wecker für freie Tage mit wählbaren Wochentagen
 - **Ausnahmen** – Einzelne Tage oder Zeiträume abweichend belegen
 - **Feiertage** – Automatische Anzeige für alle deutschen Bundesländer
@@ -18,7 +18,9 @@ Eine Android-App zur Verwaltung von Schichtplänen mit Wecker-Funktion.
 
 - Kotlin + Jetpack Compose (Android-Wrapper)
 - HTML/CSS/JavaScript (App-Logik in WebView)
-- AlarmManager mit `setAlarmClock()` für zuverlässige Wecker (`setAlarmClock()` gilt als AlarmClock-App-Nutzung und benötigt keine exakte-Alarm-Sonderberechtigung)
+- AlarmManager mit `setAlarmClock()` für zuverlässige Wecker (Berechtigung `USE_EXACT_ALARM`, wird Wecker-Apps automatisch erteilt)
+- Weckton im Foreground-Service (`AlarmService`) – klingelt weiter, auch wenn der Bildschirm ausgeschaltet wird
+- Wecker werden nativ gespeichert (`AlarmStore`) und nach Neustart, App-Update und Zeitzonenwechsel neu eingeplant (`BootReceiver`)
 - LocalStorage für persistente Datenspeicherung
 
 ## Mindestanforderung
@@ -36,8 +38,11 @@ schichtplan-wecker/
 │           │   └── index.html          # Gesamte App-Logik (HTML/CSS/JS)
 │           ├── java/de/schichtwecker/app/
 │           │   ├── MainActivity.kt     # WebView-Host + JavaScript-Bridge
-│           │   ├── AlarmReceiver.kt    # BroadcastReceiver für Wecker
-│           │   └── AlarmActivity.kt    # Vollbild-Alarm-Anzeige
+│           │   ├── AlarmScheduler.kt   # Wecker setzen/löschen + AlarmStore (nativer Speicher)
+│           │   ├── AlarmReceiver.kt    # BroadcastReceiver für Wecker → startet AlarmService
+│           │   ├── AlarmService.kt     # Foreground-Service: Ton, Vibration, Benachrichtigung
+│           │   ├── AlarmActivity.kt    # Vollbild-Alarm-Anzeige (nur Oberfläche)
+│           │   └── BootReceiver.kt     # Neu-Einplanen nach Neustart/Update/Zeitwechsel
 │           ├── res/
 │           │   ├── drawable/           # App-Icon (Vektorgrafiken)
 │           │   └── mipmap-*/           # App-Icon in verschiedenen Auflösungen

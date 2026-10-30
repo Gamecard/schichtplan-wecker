@@ -29,6 +29,9 @@ function makeBridge(native) {
     getScheduledAlarms() { return JSON.stringify(Object.entries(this.store).map(([key, v]) => ({ key, y: v.y, mo: v.mo, d: v.d, h: v.h, mi: v.mi }))); },
     getAppVersion() { return '1.3'; },
     updateWidget(j) { this.widget = JSON.parse(j); },
+    permIssue: '', getAlarmPermissionIssue() { return this.permIssue; },
+    openAlarmPermissionSettings(i) { this.openedSettings = i; },
+    syncAlarmWindow() { this.windowSyncs = (this.windowSyncs || 0) + 1; return 0; },
     opts: { snoozeMinutes: 5, risingVolume: false, vibrateOnly: false },
     getAlarmOptions() { return JSON.stringify(this.opts); },
     setAlarmOptions(j) { Object.assign(this.opts, JSON.parse(j)); return true; },
@@ -271,6 +274,27 @@ function openDay(w, ds) {
   ok(Object.keys(wd).length === 60 && tk in wd, 'Widget erhält 60 Tage ab heute');
   ok(wd['2026-11-16'] === 'Früh' && wd['2026-11-18'] === 'Spät' && wd['2026-11-21'] === 'Frei', 'Widget-Daten berücksichtigen Muster und Tausch');
   w8.close();
+
+  // ── Zurück-Geste und Berechtigungs-Warnung
+  const n9 = {}; const br9 = makeBridge(n9); br9.permIssue = 'fullscreen';
+  const w9 = open({ [LS]: JSON.stringify(base) }, br9); await sleep(50);
+  const pw = w9.document.getElementById('permWarn');
+  ok(pw.style.display !== 'none' && /Vollbild-Wecker nicht erlaubt/.test(pw.textContent), 'Warnung bei fehlender Vollbild-Berechtigung');
+  click(w9, 'permFixBtn');
+  ok(br9.openedSettings === 'fullscreen', '„Erlauben“ öffnet die passende Einstellung');
+  br9.permIssue = '';
+  Object.defineProperty(w9.document, 'hidden', { value: false, configurable: true });
+  w9.document.dispatchEvent(new w9.Event('visibilitychange'));
+  ok(pw.style.display === 'none', 'Warnung verschwindet nach Rückkehr mit Berechtigung');
+  click(w9, 'settingsBtn');
+  ok(w9.handleBack() === true && !w9.document.getElementById('settingsOverlay').classList.contains('open'), 'Zurück schließt Einstellungen');
+  openDay(w9, '2026-11-16');
+  ok(w9.handleBack() === true && !w9.document.getElementById('overlay').classList.contains('open'), 'Zurück schließt Tages-Sheet');
+  ok(w9.handleBack() === false, 'Zurück ohne offene Ebene verlässt die App');
+  [...w9.document.querySelectorAll('#alarmBox button')].filter(b => b.textContent === 'Alle stellen')[1].click();
+  click(w9, 'cdlgOk');
+  ok(br9.windowSyncs > 0, 'Nach Sammel-Abgleich wird das Scharf-Fenster nativ geprüft');
+  w9.close();
 
   console.log(fails ? `\n${fails} FEHLER` : '\nalle Tests bestanden');
   process.exit(fails ? 1 : 0);

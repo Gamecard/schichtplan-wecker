@@ -10,4 +10,5 @@
     android:widgetCategory="home_screen"
     android:updatePeriodMillis="0"
     android:initialLayout="@layout/widget_shift"
+    android:previewLayout="@layout/widget_shift_preview"
     android:description="@string/widget_description" />

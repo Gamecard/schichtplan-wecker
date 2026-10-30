@@ -305,7 +305,7 @@ label {
 .sw { position:relative; width:52px; height:32px; display:inline-block; flex-shrink:0; }
 .sw input { opacity:0; width:0; height:0; }
 .sl {
-  position:absolute; inset:0;
+  position:absolute; top:0; right:0; bottom:0; left:0; inset:0;
   background:var(--chip); border:2px solid var(--md-outline);
   border-radius:16px;
   transition:background var(--motion-duration-medium) var(--motion-easing-standard),
@@ -517,6 +517,12 @@ label {
    ═══════════════════════════════════════════════════════ */
 .shandle { width:32px; height:4px; background:var(--md-outline); border-radius:2px; margin:0 auto 16px; opacity:.4; }
 .sdate { font-weight:500; font-size:var(--t-title-lg); margin-bottom:8px; }
+.permwarn {
+  margin:0 0 8px; padding:10px 14px; border-radius:var(--shape-md);
+  background:var(--md-error-container, #ffdad6); color:var(--md-on-error-container, #410002);
+  font-size:var(--t-body-md); display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+}
+.permwarn span { flex:1; min-width:12rem; }
 .nextalarm {
   margin:0 0 8px; padding:10px 14px; border-radius:var(--shape-md);
   background:var(--md-secondary-container, var(--chip)); color:var(--md-on-secondary-container, var(--fg));
@@ -574,7 +580,7 @@ label {
    M3 DIALOG
    ═══════════════════════════════════════════════════════ */
 .cdlg-bg {
-  position:fixed;inset:0;
+  position:fixed;top:0;right:0;bottom:0;left:0;inset:0;
   background:rgba(47,48,54,.5);
   z-index:300;display:flex;
   align-items:center;justify-content:center;padding:24px;
@@ -610,7 +616,9 @@ label {
 .wiz-body { font-size:var(--t-body-lg);line-height:1.65;color:var(--fg);margin-bottom:20px; }
 .wiz-body ul { padding-left:1.2rem;margin:.4rem 0; }
 .wiz-body li { margin-bottom:.3rem; }
-.wiz-dots { display:flex;justify-content:center;gap:8px;margin-bottom:20px; }
+.wiz-dots { display:flex;justify-content:center;margin-bottom:20px; }
+/* Abstand per margin statt gap – gap in Flexbox fehlt in alten WebViews (Android 8) */
+.wiz-dots > .wiz-dot { margin:0 4px; }
 .wiz-dot {
   width:8px;height:8px;border-radius:50%;
   background:var(--md-surface-container-highest);

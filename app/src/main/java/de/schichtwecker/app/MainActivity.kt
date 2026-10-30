@@ -23,6 +23,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -203,8 +204,28 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Zurück-Geste: zuerst offene Dialoge/Sheets/Einstellungen der Web-Oberfläche schließen,
+     * erst danach die App verlassen.
+     */
+    private val backCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            val wv = pendingWebView ?: return leaveViaBack()
+            wv.evaluateJavascript("(window.handleBack&&window.handleBack())?'1':'0'") { result ->
+                if (result?.contains("1") != true) leaveViaBack()
+            }
+        }
+    }
+
+    private fun leaveViaBack() {
+        backCallback.isEnabled = false
+        onBackPressedDispatcher.onBackPressed()
+        backCallback.isEnabled = true
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        onBackPressedDispatcher.addCallback(this, backCallback)
         enableEdgeToEdge()
         requestPermissions()
         setContent {
@@ -389,6 +410,47 @@ class WebAppInterface(private val mContext: Context, private val activity: MainA
     @Keep
     fun loadState(): String =
         mContext.getSharedPreferences(STATE_PREFS, Context.MODE_PRIVATE).getString(STATE_KEY, "") ?: ""
+
+    /**
+     * Fehlende Berechtigung, die den Wecker beeinträchtigt: "exact" (Android 12/12L: kein
+     * Wecker möglich), "fullscreen" (Android 14+: kein Vollbild über dem Sperrbildschirm) oder "".
+     */
+    @JavascriptInterface
+    @Keep
+    fun getAlarmPermissionIssue(): String {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            !mContext.getSystemService(android.app.AlarmManager::class.java).canScheduleExactAlarms()
+        ) return "exact"
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+            !mContext.getSystemService(NotificationManager::class.java).canUseFullScreenIntent()
+        ) return "fullscreen"
+        return ""
+    }
+
+    /** Öffnet die passende Systemeinstellung zu [getAlarmPermissionIssue]. */
+    @JavascriptInterface
+    @Keep
+    fun openAlarmPermissionSettings(issue: String) {
+        val action = when {
+            issue == "exact" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+                Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM
+            issue == "fullscreen" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE ->
+                Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT
+            else -> return
+        }
+        mainHandler.post {
+            try {
+                activity.startActivity(Intent(action).apply { data = "package:${mContext.packageName}".toUri() })
+            } catch (e: Exception) {
+                Log.e("SchichtplanAlarm", "Einstellungen nicht verfügbar", e)
+            }
+        }
+    }
+
+    /** Nach einem Sammel-Abgleich: frühesten Wecker scharf stellen, spätere zurückhalten. */
+    @JavascriptInterface
+    @Keep
+    fun syncAlarmWindow(): Int = AlarmScheduler.ensureWindow(mContext)
 
     /** JSON-Array aller geplanten Wanduhr-Wecker mit Datum/Uhrzeit. */
     @JavascriptInterface

@@ -40,7 +40,7 @@ object AlarmScheduler {
             year = year, month = month, day = day, hour = hour, minute = minute,
             requestCode = AlarmStore.requestCodeFor(context, key)
         )
-        return arm(context, entry)
+        return place(context, entry)
     }
 
     /** Wecker zu einem festen Zeitpunkt (Schlummern, Test-Alarm). */
@@ -49,22 +49,49 @@ object AlarmScheduler {
             key = key, message = message, millis = millis,
             requestCode = AlarmStore.requestCodeFor(context, key)
         )
-        return arm(context, entry)
+        return place(context, entry)
     }
 
-    /** Plant [entry] beim AlarmManager ein; mit [persist] = false wird der Store nicht geschrieben. */
-    private fun arm(context: Context, entry: AlarmStore.Entry, persist: Boolean = true): Boolean {
+    /**
+     * Android erlaubt höchstens 500 gleichzeitige Wecker pro App. Gespeichert werden alle,
+     * beim AlarmManager „scharf“ sind nur die frühesten [MAX_ARMED]. Das Fenster rückt nach,
+     * wenn ein Wecker auslöst, gelöscht wird, nach Neustart und nach Änderungen ([ensureWindow]).
+     */
+    const val MAX_ARMED = 350
+
+    private fun futureSorted(context: Context, exceptKey: String? = null): List<AlarmStore.Entry> {
+        val now = System.currentTimeMillis()
+        return AlarmStore.all(context).filter { it.millis > now && it.key != exceptKey }.sortedBy { it.millis }
+    }
+
+    /** Speichert [entry] und stellt ihn scharf, wenn er zu den frühesten [MAX_ARMED] gehört. */
+    private fun place(context: Context, entry: AlarmStore.Entry): Boolean {
         if (entry.millis <= System.currentTimeMillis()) {
             Log.w(TAG, "Zeit vorbei, Alarm nicht gesetzt: ${entry.key}")
             return false
         }
+        val others = futureSorted(context, exceptKey = entry.key)
+        val cutoff = others.getOrNull(MAX_ARMED - 1)
+        val wasArmed = isArmed(context, entry.requestCode)
+        if (cutoff == null || entry.millis < cutoff.millis) {
+            if (!setSystemAlarm(context, entry)) return false
+            // neu im Fenster → der bisher letzte scharfe Wecker fällt heraus
+            if (cutoff != null && !wasArmed) cancelRequestCode(context, cutoff.requestCode)
+        } else if (wasArmed && cancelRequestCode(context, entry.requestCode)) {
+            // war scharf, liegt jetzt außerhalb → der nächste rückt ins Fenster
+            setSystemAlarm(context, others[MAX_ARMED - 1])
+        }
+        AlarmStore.put(context, entry)
+        return true
+    }
+
+    private fun setSystemAlarm(context: Context, entry: AlarmStore.Entry): Boolean {
         val alarmManager = context.getSystemService(AlarmManager::class.java)
         return try {
             alarmManager.setAlarmClock(
                 AlarmClockInfo(entry.millis, showIntent(context, entry.requestCode)),
                 firePendingIntent(context, entry)
             )
-            if (persist) AlarmStore.put(context, entry)
             Log.d(TAG, "Alarm geplant: ${entry.key} (rc=${entry.requestCode}) um ${java.util.Date(entry.millis)}")
             true
         } catch (e: Exception) {
@@ -72,6 +99,30 @@ object AlarmScheduler {
             Log.e(TAG, "setAlarmClock fehlgeschlagen für ${entry.key}", e)
             false
         }
+    }
+
+    private fun isArmed(context: Context, requestCode: Int): Boolean = PendingIntent.getBroadcast(
+        context, requestCode, Intent(context, AlarmReceiver::class.java),
+        PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+    ) != null
+
+    /** Stellt den Sollzustand her: die frühesten [MAX_ARMED] scharf, alle späteren nicht. */
+    fun ensureWindow(context: Context): Int {
+        var armed = 0
+        futureSorted(context).forEachIndexed { i, e ->
+            if (i < MAX_ARMED) {
+                if (isArmed(context, e.requestCode) || setSystemAlarm(context, e)) armed++
+            } else {
+                cancelRequestCode(context, e.requestCode)
+            }
+        }
+        return armed
+    }
+
+    /** Nach dem Entfernen eines scharfen Weckers den nächsten ins Fenster holen. */
+    private fun refillWindow(context: Context) {
+        val next = futureSorted(context).getOrNull(MAX_ARMED - 1) ?: return
+        if (!isArmed(context, next.requestCode)) setSystemAlarm(context, next)
     }
 
     /** Löscht den Wecker und einen evtl. laufenden Schlummer-Wecker. true = es gab etwas zu löschen. */
@@ -96,6 +147,7 @@ object AlarmScheduler {
         val rc = stored?.requestCode ?: legacyRequestCode(key)
         val found = cancelRequestCode(context, rc)
         AlarmStore.remove(context, key)
+        if (found) refillWindow(context)
         return found || stored != null
     }
 
@@ -111,7 +163,10 @@ object AlarmScheduler {
 
     /** Wecker hat ausgelöst – aus dem Speicher entfernen (einmalige Wecker). */
     fun onFired(context: Context, key: String?) {
-        if (key != null) AlarmStore.remove(context, key)
+        if (key != null) {
+            AlarmStore.remove(context, key)
+            refillWindow(context)
+        }
     }
 
     /**
@@ -123,18 +178,18 @@ object AlarmScheduler {
         val started = System.currentTimeMillis()
         // Store nur einmal am Ende schreiben – bei Hunderten Weckern läuft das im
         // BootReceiver, der nur wenige Sekunden Zeit hat.
+        val now = System.currentTimeMillis()
         val kept = AlarmStore.all(context).mapNotNull { e ->
             val millis = if (e.isWallClock)
                 wallClockMillis(e.year, e.month, e.day, e.hour, e.minute) else e.millis
-            val updated = e.copy(millis = millis)
-            when {
-                millis <= System.currentTimeMillis() -> {
-                    Log.w(TAG, "Verpasster Wecker verworfen: ${e.key}")
-                    null
-                }
-                arm(context, updated, persist = false) -> updated
-                else -> null
-            }
+            if (millis <= now) {
+                Log.w(TAG, "Verpasster Wecker verworfen: ${e.key}")
+                null
+            } else e.copy(millis = millis)
+        }.sortedBy { it.millis }
+        // Zeiten können sich geändert haben (Zeitzone) → Fenster immer neu setzen
+        kept.forEachIndexed { i, e ->
+            if (i < MAX_ARMED) setSystemAlarm(context, e) else cancelRequestCode(context, e.requestCode)
         }
         AlarmStore.replaceAll(context, kept)
         Log.d(TAG, "rescheduleAll: ${kept.size} Wecker neu eingeplant in ${System.currentTimeMillis() - started} ms")

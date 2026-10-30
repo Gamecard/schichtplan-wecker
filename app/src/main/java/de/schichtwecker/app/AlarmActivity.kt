@@ -128,7 +128,8 @@ fun AlarmScreen(message: String, snoozeMinutes: Int, onDismiss: () -> Unit, onSn
     val scope = rememberCoroutineScope()
     androidx.compose.runtime.LaunchedEffect(Unit) {
         while (true) {
-            delay(30_000L)
+            // genau zum Minutenwechsel aktualisieren
+            delay(60_000L - System.currentTimeMillis() % 60_000L + 50L)
             currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
         }
     }

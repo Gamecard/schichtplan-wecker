@@ -134,6 +134,22 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 - `S.preAlarmMin` (0/5/10/15/30/45/60): Vorwecker-Schlüssel `pre-<shift-Schlüssel>`, gehört zur selben Art wie der Hauptwecker (folgt „Alle stellen“). Kann über Mitternacht auf den Vortag fallen → eigenes `ds` im Soll-Eintrag. Löschen eines Schicht-Weckers löscht seinen Vorwecker mit
 - Schlummerzeit / ansteigende Lautstärke / nur Vibration liegen NATIV in `AlarmOptions` (gerätegeschützter Speicher, Direct Boot), Bridge `getAlarmOptions`/`setAlarmOptions`. Im Profil als `alarmOptions`
 
+### Wecker-Limit (WICHTIG)
+- Android erlaubt max. 500 gleichzeitige Wecker pro App (`IllegalStateException`). Mit Vorwecker kommen schnell >500 zusammen (im Test: 526)
+- Deshalb: `AlarmStore` speichert ALLE, scharf beim AlarmManager sind nur die frühesten `AlarmScheduler.MAX_ARMED` (350). `place()` hält das Fenster beim Setzen ein, `refillWindow()` nach Löschen/Auslösen, `ensureWindow()` (Bridge `syncAlarmWindow`) nach Sammel-Abgleichen, `rescheduleAll()` nach Neustart
+- `setAlarmForDate*` gibt `true` zurück, sobald gespeichert – auch wenn der Wecker erst später scharf wird
+
+### Klingeln
+- Jeder Wecker bekommt eine NEUE Benachrichtigungs-ID (`notificationId` im `AlarmService`). Bei gleicher ID behandelt SystemUI einen zweiten Wecker (z. B. Hauptwecker während der Vorwecker noch klingelt) als Update und zeigt KEIN Vollbild
+- Vibration mit `VibrationAttributes.USAGE_ALARM` (ab 13) bzw. `AudioAttributes.USAGE_ALARM` – sonst unterdrückt Android sie bei „Bitte nicht stören“/Lautlos. Im DND-Modus „Totale Stille“ blockiert Android Wecker absichtlich komplett
+- Fehlt die Vollbild- (14+) oder Exact-Alarm-Berechtigung (12/12L), zeigt die App oben einen roten Hinweis mit „Erlauben“ (`getAlarmPermissionIssue`/`openAlarmPermissionSettings`), Prüfung bei jeder Rückkehr in die App
+
+### Zurück-Geste
+- `MainActivity.backCallback` fragt `window.handleBack()`: schließt Dialog → Anleitung → Tages-Sheet → Einstellungen; erst wenn nichts offen ist, verlässt die App
+
+### WebView-Kompatibilität (Android 8)
+- Android-8-Geräte ohne WebView-Update haben Chrome 69: kein `inset` (immer `top/right/bottom/left` davor), kein `gap` in Flexbox (wo der Abstand wichtig ist, `margin` an den Kindern)
+
 ### Widget
 - `ShiftWidget` zeigt heute/morgen + nächsten Wecker. `app.js` schickt bei jedem `save()` 60 Tage Schichtnamen (`Android.updateWidget`), der nächste Wecker kommt aus dem `AlarmStore`
 - KEIN `updatePeriodMillis` (Strom): Aktualisierung bei Änderungen, nach Wecker/Schlummern/Neustart und per nicht weckendem `AlarmManager.RTC`-Alarm kurz nach Mitternacht

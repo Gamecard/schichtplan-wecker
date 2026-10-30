@@ -1,5 +1,6 @@
 package de.schichtwecker.app
 
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
@@ -13,6 +14,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.PowerManager
+import android.os.VibrationAttributes
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -36,7 +38,8 @@ class AlarmService : Service() {
         private const val ACTION_START = "de.schichtwecker.app.action.START"
         const val ACTION_DISMISS = "de.schichtwecker.app.action.DISMISS"
         const val ACTION_SNOOZE = "de.schichtwecker.app.action.SNOOZE"
-        private const val NOTIFICATION_ID = 4711
+        private const val NOTIFICATION_ID_BASE = 4711
+        private var notificationCounter = 0
         private const val AUTO_DISMISS_MS = 15 * 60 * 1000L
         private const val RISING_START = 0.05f
 
@@ -80,22 +83,32 @@ class AlarmService : Service() {
         return START_NOT_STICKY
     }
 
+    /** ID der aktuellen Wecker-Benachrichtigung. Jeder Wecker bekommt eine neue, damit
+     *  SystemUI ihn als NEUE Benachrichtigung behandelt und den Vollbild-Wecker zeigt –
+     *  auch wenn der vorige (z. B. Vorwecker) noch klingelt. */
+    private var notificationId = NOTIFICATION_ID_BASE
+
     private fun start(key: String, message: String) {
         AlarmReceiver.ensureNotificationChannel(this)
+        val previousId = notificationId
+        notificationCounter = (notificationCounter + 1) % 1000
+        notificationId = NOTIFICATION_ID_BASE + notificationCounter
         // startForeground muss nach startForegroundService() sofort erfolgen
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 startForeground(
-                    NOTIFICATION_ID, buildNotification(message),
+                    notificationId, buildNotification(message),
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
                 )
             } else {
-                startForeground(NOTIFICATION_ID, buildNotification(message))
+                startForeground(notificationId, buildNotification(message))
             }
         } catch (e: Exception) {
             // Lieber ohne Vordergrund-Status klingeln als gar nicht
             Log.e(TAG, "startForeground fehlgeschlagen", e)
         }
+        // Benachrichtigung eines noch laufenden Weckers entfernen (die neue hat eine neue ID)
+        if (previousId != notificationId) getSystemService(NotificationManager::class.java)?.cancel(previousId)
         // Ein neuer Wecker ersetzt einen noch laufenden
         stopSound()
         _ringing.value = Ringing(key, message, AlarmOptions.snoozeMinutes(this))
@@ -156,7 +169,7 @@ class AlarmService : Service() {
 
     private fun buildNotification(message: String): android.app.Notification {
         val fullScreen = PendingIntent.getActivity(
-            this, NOTIFICATION_ID, alarmActivityIntent(),
+            this, NOTIFICATION_ID_BASE, alarmActivityIntent(),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         fun servicePi(action: String, rc: Int) = PendingIntent.getService(
@@ -235,7 +248,19 @@ class AlarmService : Service() {
             @Suppress("DEPRECATION")
             getSystemService(Vibrator::class.java)
         }
-        vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 800, 400, 800, 400, 800), 0))
+        val effect = VibrationEffect.createWaveform(longArrayOf(0, 800, 400, 800, 400, 800), 0)
+        // Als Wecker-Vibration kennzeichnen – sonst kann Android sie im Lautlos-/„Bitte nicht
+        // stören“-Modus oder bei reduzierter Vibration unterdrücken (wichtig bei „Nur vibrieren“)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            vibrator?.vibrate(effect, VibrationAttributes.createForUsage(VibrationAttributes.USAGE_ALARM))
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator?.vibrate(
+                effect,
+                AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
+            )
+        }
     }
 
     private fun stopSound() {

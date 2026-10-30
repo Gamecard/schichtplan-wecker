@@ -281,7 +281,11 @@ window.onerror=function(msg,src,line,col,err){
       if(S.activeAlarms.some(function(a){return a.alarmKey===k;})) return;
       if(bridgeSet(x.ds,x.e)){ addActiveAlarm(x.ds,k,x.e.time,x.e.name,true); r.added++; } else r.errors++;
     });
-    if(r.added||r.removed||r.updated){ save(); renderCal(); }
+    if(r.added||r.removed||r.updated){
+      // Android hält nur die nächsten Wecker scharf (Limit 500) – Fenster nach Sammeländerung prüfen
+      if(hasBridge('syncAlarmWindow')){ try{ window.Android.syncAlarmWindow(); }catch(e){} }
+      save(); renderCal();
+    }
     if(!opts.quiet&&(r.added||r.removed||r.updated||r.errors)){
       var parts=[];
       if(r.added) parts.push(r.added+' neu');
@@ -675,6 +679,19 @@ window.onerror=function(msg,src,line,col,err){
     }
   }
 
+  /* Warnung bei fehlender Wecker-Berechtigung (z. B. Dialog mit „Später“ weggeklickt) */
+  function renderPermWarn(){
+    var el=$('permWarn'); if(!el) return;
+    var issue=''; try{ if(hasBridge('getAlarmPermissionIssue')) issue=window.Android.getAlarmPermissionIssue(); }catch(e){}
+    if(!issue){ el.style.display='none'; return; }
+    var txt=issue==='exact'
+      ?'\u26A0\uFE0F Wecker sind nicht erlaubt \u2013 ohne die Berechtigung \u201EWecker und Erinnerungen\u201C klingelt nichts.'
+      :'\u26A0\uFE0F Vollbild-Wecker nicht erlaubt \u2013 der Wecker klingelt, erscheint aber nicht \u00FCber dem Sperrbildschirm.';
+    el.innerHTML='<span>'+txt+'</span><button class="sm primary" id="permFixBtn">Erlauben</button>';
+    $('permFixBtn').onclick=function(){ window.Android.openAlarmPermissionSettings(issue); };
+    el.style.display='';
+  }
+
   /* „Nächster Wecker“ über dem Kalender */
   function renderNextAlarm(){
     var el=$('nextAlarm'); if(!el) return;
@@ -684,7 +701,8 @@ window.onerror=function(msg,src,line,col,err){
     var d=parseYmd(next.ds), wd=['So','Mo','Di','Mi','Do','Fr','Sa'][d.getDay()];
     var rel=next.ds===todayYmd()?'heute':(next.ds===toYmd(new Date(Date.now()+864e5))?'morgen':wd+' '+fmtDe(next.ds).slice(0,6));
     el.className='nextalarm';
-    el.innerHTML='\u23F0 N\u00E4chster Wecker: <b>'+esc(rel)+' \u00B7 '+esc(next.time)+' Uhr</b> \u2013 '+esc(next.shiftName||'Wecker');
+    // ein einziges Kind-Element, sonst verteilt Flexbox die Textteile auf Spalten
+    el.innerHTML='<span>\u23F0 N\u00E4chster Wecker: <b>'+esc(rel)+' \u00B7 '+esc(next.time)+' Uhr</b> \u2013 '+esc(next.shiftName||'Wecker')+'</span>';
   }
 
   /* Schichttausch im Tages-Sheet: Schicht nur für diesen Tag ändern */
@@ -858,6 +876,16 @@ window.onerror=function(msg,src,line,col,err){
     try{ window.Android.updateWidget(JSON.stringify(out)); }catch(e){}
   }
 
+  /* Zurück-Geste (aus MainActivity): oberste offene Ebene schließen. true = erledigt */
+  window.handleBack=function(){
+    var vis=function(id){ var e=$(id); return e&&getComputedStyle(e).display!=='none'; };
+    if(vis('cdlgBg')){ $('cdlgCancel').click(); return true; }
+    if(vis('wizBg')){ closeWiz(); return true; }
+    if($('overlay').classList.contains('open')){ closeSheet(); return true; }
+    if($('settingsOverlay').classList.contains('open')){ $('settingsOverlay').classList.remove('open'); save(); return true; }
+    return false;
+  };
+
   /* ── PERSISTENZ ─────────────────────────── */
   function save(){
     var json=JSON.stringify(S);
@@ -1026,6 +1054,7 @@ window.onerror=function(msg,src,line,col,err){
     });
     save();
     var r=resyncAlarms({quiet:true});
+    if(hasBridge('syncAlarmWindow')){ try{ window.Android.syncAlarmWindow(); }catch(e){} }
     if(typeof p.theme==='string') applyTheme(p.theme);
     if(p.alarmOptions&&typeof p.alarmOptions==='object'&&hasBridge('setAlarmOptions')){
       try{ window.Android.setAlarmOptions(JSON.stringify(p.alarmOptions)); }catch(e){}
@@ -1198,6 +1227,7 @@ window.onerror=function(msg,src,line,col,err){
   $('importProfileBtn').onclick=importProfileFile;
   /* App geht in den Hintergrund: ausstehenden Abgleich sofort ausführen */
   document.addEventListener('visibilitychange',function(){
+    if(!document.hidden) renderPermWarn();   // zurück aus den Systemeinstellungen
     if(document.hidden&&_resyncTid){ clearTimeout(_resyncTid); _resyncTid=null; resyncAlarms(); }
   });
   $('skipHolShift').addEventListener('change',function(e){
@@ -1279,7 +1309,7 @@ window.onerror=function(msg,src,line,col,err){
   $('weeksVal').textContent=S.weeksCount;
   $('bundesland').value=S.bundesland;
   $('skipHolShift').checked=S.skipHolidaysShift;
-  syncWithNative(); resyncAlarms({quiet:true}); showAppVersion(); updateAlarmOptionsUi();
+  syncWithNative(); resyncAlarms({quiet:true}); showAppVersion(); updateAlarmOptionsUi(); renderPermWarn();
   renderAlarmSettings(); renderFreeAlarmSettings(); renderPat(); renderEx(); renderCal();
   /* Wizard beim allerersten Start anzeigen */
   try{if(!localStorage.getItem(WIZ_KEY))openWiz();}catch(e){}

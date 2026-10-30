@@ -101,17 +101,29 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 - Alle Planungsfehler (auch `IllegalStateException` beim 500-Wecker-Limit) → `false`, kein Absturz
 
 ### activeAlarms (Datenstruktur, JS)
-- Format: **Array** von `{ds, alarmKey, time, shiftName, auto}`; `auto:true` = per „Alle stellen“/Abgleich gesetzt, `false` = von Hand
+- Format: **Array** von `{ds, alarmKey, time, shiftName, auto}`; `auto:true` = vom Abgleich gesetzt (Schalter „automatisch wecken“), `false` = von Hand (Tages-Sheet)
 - älteres Objekt-Format wird in `load()` migriert
 - Start: `purgeExpiredAlarms()` → `syncWithNative()` (übernimmt einmalig Alt-Wecker in den Store, `Android.isStoreMigrated()`; danach fliegt aus der Liste, was nativ nicht mehr geplant ist) → `resyncAlarms({quiet:true})`
 
 ### Automatischer Abgleich (`resyncAlarms`)
 - Soll-Liste = `expectedAlarmsFor(ds)` für 370 Tage (Schicht passt, Wecker-Art aktiviert, Ausnahmen, Feiertage, Wochentage, Zukunft)
 - Auto-Wecker, die nicht mehr passen → gelöscht; geänderte Weckzeit → neu gesetzt. Manuelle Wecker (`auto:false`) werden NIE angefasst; heute schon fällige auch nicht (evtl. läuft Schlummern)
-- Fehlende Wecker werden nur ergänzt, wenn `S.autoSchedule[art]` an ist (durch „Alle stellen“; Arten 1–4 und `free`)
+- Fehlende Wecker werden nur ergänzt, wenn `S.autoSchedule[art]` an ist (Arten 1–4 und `free`)
 - `S.suppressed`: vom Nutzer gelöschte Auto-Wecker, werden nicht wieder angelegt
 - Auslöser: jede Planänderung ruft `scheduleResync()` (800 ms gebündelt)
 - `S.skipHolidaysShift` (Standard `false`): Schicht-Wecker an Feiertagen auslassen. Freie-Tage-Wecker lassen Feiertage immer aus
+
+### Wecker-Bereich: EIN Schalter je Wecker-Art (WICHTIG)
+- Pro Schicht (1–4) und für unbelegte Tage gibt es nur Uhrzeit + Schalter „automatisch wecken“ (`#ae1`–`#ae4`, `#freeAlarmEnabled`). KEIN „Alle stellen“ und kein Bestätigungsdialog mehr
+- Die Merker `S.alarmEnabled[t]`/`S.autoSchedule[t]` bzw. `S.freeAlarm.enabled`/`S.autoSchedule.free` sind IMMER gleich. Ändern nur über die Setter `setShiftAuto(t,on)` / `setFreeAuto(on)` (setzen beide, heben `suppressed` der Art beim Einschalten auf, `resyncAlarms`, Rückgabe = Anzahl kommender Auto-Hauptwecker) und `setShiftTime(t,'HH:MM')` / `setFreeTime('HH:MM')` (gebündelter Abgleich). Die Einrichtung nutzt dieselben Setter – Namen/Parameter/Rückgaben nicht ändern
+- Aus = automatische Wecker der Art werden entfernt, von Hand gestellte bleiben. An ohne passende Tage → ehrlicher Hinweis („Im Rhythmus gibt es keine Früh-Tage – erst unter Schichtplan eintragen“), der Schalter bleibt an; die Wecker kommen beim nächsten Abgleich von selbst. Unter jeder Zeile steht der Stand (`renderWeckerStatus`, „An – n Wecker gestellt“ / „Aus – …“)
+- Migration (`normalizeAutoFlags` am Ende von `applyState`, also beim Laden UND beim Profil-Import): an = `alarmEnabled && autoSchedule`, beide Merker danach gleich. Ausnahme: `alarmEnabled` an, `autoSchedule` aus, aber kommende automatische Wecker der Art vorhanden (Versionen vor `autoSchedule`) → bleibt an, damit gestellte Wecker nicht verschwinden. Manuelle Wecker werden nie angefasst
+- Bedienelemente nach Setter-Aufrufen per `syncWeckerUi()` angleichen (kein Neuaufbau → Fokus bleibt); `renderAlarmSettings`/`renderFreeAlarmSettings` nur beim Start und in `refreshAllUi`
+
+### Zeitauswahl (`buildTimePicker`)
+- EINE Komponente für alle Weckzeiten: Schicht-Zeilen, unbelegte Tage, Einzelwecker im Tages-Sheet. `buildTimePicker(hhmm, onChange, {label, hId, mId})` → Element mit `getTime()`/`setTime()`; `onChange` nur bei Nutzeränderung
+- Pfeile ▲▼ je Stunde/Minute (ohne Übertrag: Minute 59 ▲ → 00, Stunde bleibt). Die Ziffern sind Knöpfe und öffnen die System-Zeitauswahl über ein verstecktes `<input type="time" class="tnative">` (`showPicker()`, sonst `focus()`); NICHT `display:none`, sonst geht `showPicker` nicht
+- Ziffern-IDs bleiben `tph<t>`/`tpm<t>` (Schichten), `fatph`/`fatpm` (unbelegte Tage), `sqh`/`sqm` (Sheet). Auswahl-Chips (Wochentage, Art im Sheet) = `.chiprow` mit `.sftbtn`/`.sftbtn-active` + `aria-pressed`, keine Inline-Styles
 
 ### Persistenz (WICHTIG)
 - `save()` schreibt den Zustand ZUERST synchron nativ (`Android.saveState`, SharedPreferences `app_state`, `commit()`), danach in `localStorage`. `load()` bevorzugt `Android.loadState()`
@@ -147,7 +159,7 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 
 ### Schichttausch, Vorwecker, Weck-Verhalten
 - `S.overrides` = `{"YYYY-MM-DD": 0..4}`: Schicht für einen Tag. `getShift()`: Ausnahme > Tausch > Muster. Vergangene Einträge löscht `purgeExpiredAlarms()`
-- `S.preAlarmMin` (0/5/10/15/30/45/60): Vorwecker-Schlüssel `pre-<shift-Schlüssel>`, gehört zur selben Art wie der Hauptwecker (folgt „Alle stellen“). Kann über Mitternacht auf den Vortag fallen → eigenes `ds` im Soll-Eintrag. Löschen eines Schicht-Weckers löscht seinen Vorwecker mit
+- `S.preAlarmMin` (0/5/10/15/30/45/60): Vorwecker-Schlüssel `pre-<shift-Schlüssel>`, gehört zur selben Art wie der Hauptwecker (folgt deren Schalter „automatisch wecken“). Kann über Mitternacht auf den Vortag fallen → eigenes `ds` im Soll-Eintrag. Löschen eines Schicht-Weckers löscht seinen Vorwecker mit
 - Schlummerzeit / ansteigende Lautstärke / nur Vibration liegen NATIV in `AlarmOptions` (gerätegeschützter Speicher, Direct Boot), Bridge `getAlarmOptions`/`setAlarmOptions`. Im Profil als `alarmOptions`
 
 ### Wecker-Limit (WICHTIG)
@@ -195,7 +207,7 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 - ~~Snooze-Key-Trunkierung~~ → (inzwischen ersetzt durch `<key>#snooze`)
 - ~~color-mix() inkompatibel~~ → harte Fallback-Werte
 - ~~activeAlarms erlaubt nur 1 Wecker/Tag~~ → Array-Struktur
-- ~~Feiertage nicht ausgeschlossen~~ → prüfen in findAllShiftDates/scheduleAllFreeAlarms
+- ~~Feiertage nicht ausgeschlossen~~ → prüfen in `expectedAlarmsFor`
 - ~~DST off-by-one~~ → Uhrzeit 12:00 statt 0:00 in mondayOf/getShift
 - ~~"Wecker stellbar"-Icons überall~~ → entfernt, nur noch echte Wecker-Icons
 - ~~pendingWebView Memory Leak~~ → onDestroy() setzt auf null
@@ -218,7 +230,7 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 
 ## Tests
 
-- Web-Logik: `cd tests && npm install && npm test` (jsdom, nachgebaute Android-Bridge; deckt Alle stellen, Urlaub, Weckzeit, Löschen, Feiertage, Profil-Export/-Import inkl. manipulierter Dateien, Waisen-Übernahme, Persistenz, Reset ab)
+- Web-Logik: `cd tests && npm install && npm test` (führt alle `tests/*.test.js` aus; jsdom, nachgebaute Android-Bridge; `wecker.test.js` deckt Schalter „automatisch wecken“, Migration, Meldungen, Zeitauswahl und Einzelwecker ab; `webapp.test.js` Urlaub, Weckzeit, Löschen, Feiertage, Profil-Export/-Import inkl. manipulierter Dateien, Waisen-Übernahme, Persistenz, Reset ab)
 - Vor jedem Release zusätzlich auf Gerät/Emulator: frische Installation, Dark Mode an/aus, Test-Alarm bei gesperrtem Bildschirm, Neustart MIT PIN ohne Entsperren
 - `./gradlew lintDebug` muss ohne Fehler durchlaufen
 - CI: `.github/workflows/build.yml` (Tests, Lint, Debug-APK bei jedem Push; signiertes GitHub-Release bei Tag `v<versionName>`)

@@ -368,16 +368,27 @@ label {
   background:var(--md-surface-container-low);
   transition:background var(--motion-duration-short) var(--motion-easing-standard);
 }
-.arow.free  { background:var(--free-bg); border-left:4px solid var(--accent); }
-.arow.frueh { background:var(--frueh-bg); border-left:4px solid var(--frueh); }
-.arow.spaet { background:var(--spaet-bg); border-left:4px solid var(--spaet); }
-.arow.nacht { background:var(--nacht-bg); border-left:4px solid var(--nacht); }
-.arow .slbl { font-weight:500; min-width:48px; font-size:var(--t-label-lg); }
+/* Wecker-Bereich: eine Zeile je Schicht (Name · Uhrzeit · Schalter, darunter der Stand) */
+.wkrow {
+  display:flex; flex-wrap:wrap; align-items:center; gap:4px 12px;
+  padding:10px 14px; border-radius:var(--shape-md);
+  background:var(--md-surface-container-low);
+}
+.wkrow.free  { background:var(--free-bg); border-left:4px solid var(--accent); }
+.wkrow.frueh { background:var(--frueh-bg); border-left:4px solid var(--frueh); }
+.wkrow.spaet { background:var(--spaet-bg); border-left:4px solid var(--spaet); }
+.wkrow.nacht { background:var(--nacht-bg); border-left:4px solid var(--nacht); }
+.wkrow .slbl { font-weight:500; min-width:48px; font-size:var(--t-label-lg); }
+.wkrow .wkstate { flex-basis:100%; }
+.wkintro { margin:0 0 12px; }
+.wkcap { margin:12px 0 6px; }
+/* Auswahl-Chips (Wochentage, Art des Einzelweckers) */
+.chiprow { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:.7rem; }
 
 /* ═══════════════════════════════════════════════════════
    TIME PICKER — M3 Stepper
    ═══════════════════════════════════════════════════════ */
-.tpick { display:flex; align-items:center; gap:0; flex:1; justify-content:center; }
+.tpick { display:flex; align-items:center; gap:0; flex:1; justify-content:center; position:relative; }
 .tunit { display:flex; flex-direction:column; align-items:center; gap:2px; }
 .tunit .tbtn {
   width:40px; height:36px; display:flex; align-items:center; justify-content:center;
@@ -391,6 +402,15 @@ label {
 .tunit .tval {
   font-size:2rem; font-weight:500; min-width:36px; text-align:center;
   font-variant-numeric:tabular-nums; line-height:1.2;
+  /* Ziffern sind Knöpfe (öffnen die System-Zeitauswahl) – wie Text aussehen */
+  background:none; border:0; padding:0 2px; color:inherit; border-radius:var(--shape-sm);
+  -webkit-tap-highlight-color:transparent;
+}
+.tunit .tval:active { background:var(--chip); }
+/* verstecktes Systemfeld für die Zeitauswahl (nicht display:none, sonst kein showPicker) */
+.tnative {
+  position:absolute; left:50%; top:50%; width:1px; height:1px;
+  opacity:0; pointer-events:none; border:0; padding:0; margin:0;
 }
 .tcolon { font-weight:300; font-size:2rem; margin:0 4px; padding-top:4px; color:var(--muted); }
 .tuhr { font-size:var(--t-body-sm); color:var(--muted); margin-left:8px; font-weight:500; }

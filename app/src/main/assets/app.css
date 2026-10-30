@@ -732,12 +732,10 @@ button.wiz-tpl.active { border-color:var(--md-primary); background:var(--md-seco
   border:1px solid var(--border); background:var(--card);
 }
 .wiz-sname { display:flex; align-items:center; gap:8px; font-weight:600; min-width:4.5rem; }
-.wiz-shift input[type="time"] { width:7.5rem; flex:none; padding:8px 10px; font-size:1.1rem; }
 .wiz-chk {
   display:flex; align-items:center; gap:8px; margin:0;
   font-size:var(--t-body-md); font-weight:400; color:var(--fg); letter-spacing:0;
 }
-.wiz-chk input { width:20px; height:20px; padding:0; accent-color:var(--md-primary); }
 .wiz-stat {
   padding:16px; border-radius:var(--shape-lg); margin-bottom:16px;
   background:var(--md-primary-container); color:var(--md-on-primary-container);

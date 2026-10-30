@@ -141,6 +141,13 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 - Import läuft durch `applyState()` (dieselben Prüfungen wie beim Laden, plus Bereinigung von Muster, Bundesland, Ausnahmen). Eigener Klingelton ist nicht übertragbar (Dateizugriff gilt nur auf dem Gerät)
 - `format` erhöhen, wenn sich die Struktur inkompatibel ändert; neuere Formate werden abgelehnt
 
+### Aufbau der Oberfläche (seit 1.9)
+- Drei Bereiche mit unterer Navigation (`#bottomNav`, `showTab('plan'|'wecker'|'schicht')`): **Plan** (`#tabPlan`: Kalender, nächste Wecker, Tages-Sheet), **Wecker** (`#tabWecker`: Schalter pro Schicht, freie Tage, Weck-Verhalten, Klingelton, Test-Alarm), **Schichtplan** (`#tabSchicht`: 1 Startwoche, 2 Rhythmus, 3 Feiertage, 4 Urlaub & Ausnahmen, Sichern & Exportieren, App)
+- KEIN Einstellungs-Overlay mehr. Neue Funktionen gehören in den passenden Bereich, nicht in eine neue lose Karte
+- Zurück-Geste: Dialog → Einrichtung (Schritt zurück) → Tages-Sheet → „Alle Wecker“ → anderer Bereich → Plan → App verlassen
+- Urlaub/Krank/Schulung für einen Tag direkt im Tages-Sheet; dort auch „Ausnahme entfernen“
+- Schnittstelle für Oberfläche/Einrichtung: `setShiftAuto`, `setShiftTime`, `setFreeAuto`, `setFreeTime`, `setPatternDay`, `setWeeksCount`, `applyStartDate`
+
 ### Startseite: Wecker-Übersicht
 - Unter dem Kalender nur die nächsten 3 Wecker (`A_PREVIEW`) + Zusammenfassung „n Wecker bis …“; Tippen öffnet den Tag. KEINE Löschknöpfe auf der Startseite
 - „Alle Wecker ›“ öffnet `#alarmsOverlay` (gleiches Overlay-Muster wie die Einstellungen): nach Monaten gruppierte `<details>`, erster Monat offen, auf-/zugeklappte Monate bleiben beim Löschen erhalten (`openMonths`). Zurück-Geste schließt es

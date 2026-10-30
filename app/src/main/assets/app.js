@@ -1417,11 +1417,18 @@ window.onerror=function(msg,src,line,col,err){
       var types=wizTypes();
       h=types.length?types.map(function(t){
         return '<div class="wiz-shift"><div class="wiz-sname"><span class="ld" style="background:'+WIZ_COLORS[t]+'"></span>'+SNAMES[t]+'</div>'
-          +'<input type="time" id="wizTime'+t+'" data-wt="'+t+'" value="'+esc(W.times[t])+'">'
-          +'<label class="wiz-chk"><input type="checkbox" id="wizAuto'+t+'" data-wa="'+t+'"'+(W.auto[t]?' checked':'')+'>automatisch wecken</label></div>';
+          +'<div class="wiz-time" data-wtbox="'+t+'"></div>'
+          +'<div class="wiz-chk"><label class="sw" title="automatisch wecken"><input type="checkbox" id="wizAuto'+t+'" data-wa="'+t+'"'+(W.auto[t]?' checked':'')
+          +' aria-label="'+SNAMES[t]+' automatisch wecken"><span class="sl"></span></label><span>automatisch wecken</span></div></div>';
       }).join('')+'<div class="small muted">„automatisch wecken“ stellt die Wecker für alle passenden Tage der nächsten 12 Monate und hält sie aktuell.</div>'
         :'<div class="wiz-info">Dein Muster ist noch leer. Wecker kannst du später im Bereich ⏰ Wecker stellen.</div>';
       b.innerHTML=h;
+      // dieselbe Uhrzeit-Auswahl wie im Bereich Wecker (Pfeile + System-Zeitauswahl)
+      types.forEach(function(t){
+        var tp=buildTimePicker(W.times[t],function(v){ W.times[t]=v; },{label:SNAMES[t]});
+        var nat=tp.querySelector('input.tnative'); nat.id='wizTime'+t; nat.setAttribute('data-wt',t);
+        b.querySelector('[data-wtbox="'+t+'"]').appendChild(tp);
+      });
     } else if(st===3){
       $('wizTitle').textContent='In welchem Bundesland arbeitest du?';
       $('wizSub').textContent='Damit Feiertage im Kalender erscheinen.';

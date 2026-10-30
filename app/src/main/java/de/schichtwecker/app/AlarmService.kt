@@ -165,7 +165,6 @@ class AlarmService : Service() {
             .setFullScreenIntent(fullScreen, true)
             .setContentIntent(fullScreen)
             .setOngoing(true)
-            .setSilent(true)
             .addAction(0, "Aus", servicePi(ACTION_DISMISS, 1))
             .addAction(0, "Schlummern ${AlarmScheduler.SNOOZE_MINUTES} Min", servicePi(ACTION_SNOOZE, 2))
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)

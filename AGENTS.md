@@ -84,7 +84,8 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 - `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_MEDIA_PLAYBACK`, `RECEIVE_BOOT_COMPLETED`, `USE_FULL_SCREEN_INTENT` (fehlt sie, erklärt ein Dialog beim Start, warum)
 
 ### Ton-Wiedergabe
-- Notification-Kanal `schichtplan_alarm_v4` hat KEIN Sound/Vibration und die Notification ist `setSilent(true)` — sonst doppelter Ton. Es gibt nur noch EINEN Kanal (der alte `schichtplan_alarm_custom` wird gelöscht)
+- Notification-Kanal `schichtplan_alarm_v4` hat KEIN Sound/Vibration — sonst doppelter Ton. NICHT `setSilent(true)` an der Notification setzen (unterdrückt laut Gerätetest ggf. das Heads-up bei entsperrtem Handy; der Kanal ist ohnehin stumm).
+- BAL-Sperre: Aus dem Hintergrund blockiert Android den direkten Start der `AlarmActivity` (Gerätetest Android 16). Bei gesperrtem Bildschirm übernimmt der Full-Screen-Intent (Vollbild), bei entsperrtem Handy erscheint ein Heads-up – der TON läuft in beiden Fällen, weil er im Service spielt. Es gibt nur noch EINEN Kanal (der alte `schichtplan_alarm_custom` wird gelöscht)
 
 ### Notification-Management
 - ❌ NIEMALS `nm.cancelAll()` — löscht alle App-Notifications

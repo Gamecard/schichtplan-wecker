@@ -53,7 +53,8 @@ object AlarmScheduler {
         return arm(context, entry)
     }
 
-    private fun arm(context: Context, entry: AlarmStore.Entry): Boolean {
+    /** Plant [entry] beim AlarmManager ein; mit [persist] = false wird der Store nicht geschrieben. */
+    private fun arm(context: Context, entry: AlarmStore.Entry, persist: Boolean = true): Boolean {
         if (entry.millis <= System.currentTimeMillis()) {
             Log.w(TAG, "Zeit vorbei, Alarm nicht gesetzt: ${entry.key}")
             return false
@@ -64,7 +65,7 @@ object AlarmScheduler {
                 AlarmClockInfo(entry.millis, showIntent(context, entry.requestCode)),
                 firePendingIntent(context, entry)
             )
-            AlarmStore.put(context, entry)
+            if (persist) AlarmStore.put(context, entry)
             Log.d(TAG, "Alarm geplant: ${entry.key} (rc=${entry.requestCode}) um ${java.util.Date(entry.millis)}")
             true
         } catch (e: Exception) {
@@ -120,19 +121,25 @@ object AlarmScheduler {
      * Vergangenheit (Gerät war zur Weckzeit aus) werden verworfen.
      */
     fun rescheduleAll(context: Context): Int {
-        var count = 0
-        AlarmStore.all(context).forEach { e ->
+        val started = System.currentTimeMillis()
+        // Store nur einmal am Ende schreiben – bei Hunderten Weckern läuft das im
+        // BootReceiver, der nur wenige Sekunden Zeit hat.
+        val kept = AlarmStore.all(context).mapNotNull { e ->
             val millis = if (e.isWallClock)
                 wallClockMillis(e.year, e.month, e.day, e.hour, e.minute) else e.millis
-            if (millis <= System.currentTimeMillis()) {
-                Log.w(TAG, "Verpasster Wecker verworfen: ${e.key}")
-                AlarmStore.remove(context, e.key)
-            } else if (arm(context, e.copy(millis = millis))) {
-                count++
+            val updated = e.copy(millis = millis)
+            when {
+                millis <= System.currentTimeMillis() -> {
+                    Log.w(TAG, "Verpasster Wecker verworfen: ${e.key}")
+                    null
+                }
+                arm(context, updated, persist = false) -> updated
+                else -> null
             }
         }
-        Log.d(TAG, "rescheduleAll: $count Wecker neu eingeplant")
-        return count
+        AlarmStore.replaceAll(context, kept)
+        Log.d(TAG, "rescheduleAll: ${kept.size} Wecker neu eingeplant in ${System.currentTimeMillis() - started} ms")
+        return kept.size
     }
 
     fun legacyRequestCode(key: String): Int = key.hashCode() and 0x7fffffff
@@ -204,6 +211,13 @@ object AlarmStore {
     fun put(context: Context, e: Entry) {
         val all = load(context)
         all.put(e.key, e.toJson())
+        prefs(context).edit().putString(KEY_ALARMS, all.toString()).apply()
+    }
+
+    @Synchronized
+    fun replaceAll(context: Context, entries: List<Entry>) {
+        val all = JSONObject()
+        entries.forEach { all.put(it.key, it.toJson()) }
         prefs(context).edit().putString(KEY_ALARMS, all.toString()).apply()
     }
 

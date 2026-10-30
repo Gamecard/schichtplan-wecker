@@ -24,7 +24,6 @@ object AlarmScheduler {
     const val EXTRA_MESSAGE = "message"
     const val EXTRA_REQUEST_CODE = "requestCode"
     const val SNOOZE_SUFFIX = "#snooze"
-    const val SNOOZE_MINUTES = 5
 
     fun snoozeKeyOf(key: String): String =
         if (key.endsWith(SNOOZE_SUFFIX)) key else key + SNOOZE_SUFFIX

@@ -9,7 +9,13 @@ Eine Android-App zur Verwaltung von Schichtplänen mit Wecker-Funktion.
 - **Wecker pro Schicht** – Individuelle Weckzeiten für jede Schichtart, direkt aus dem Kalender stellbar
 - **Alle stellen** – Setzt alle Wecker für die nächsten 12 Monate und hält sie danach automatisch aktuell (Muster, Ausnahmen, Weckzeit, Feiertage)
 - **Wecker für unbelegte Tage** – Wecker für freie Tage mit wählbaren Wochentagen
-- **Ausnahmen** – Einzelne Tage oder Zeiträume abweichend belegen
+- **Ausnahmen** – Urlaub, Krank oder Schulung für einzelne Tage oder Zeiträume
+- **Schichttausch** – Schicht an einem einzelnen Tag ändern (Tag im Kalender antippen); Wecker passen sich an
+- **Nächster Wecker** – über dem Kalender auf einen Blick
+- **Weck-Verhalten** – Schlummerzeit (3–20 Min), Vorwecker, langsam ansteigende Lautstärke, nur Vibration
+- **Widget** – heutige/morgige Schicht und nächster Wecker auf dem Startbildschirm
+- **Profil sichern/laden** – Plan und Einstellungen als Datei (z. B. für ein neues Handy)
+- **Kalender-Export** – Schichten der nächsten 12 Monate als .ics-Datei (z. B. für den Google-Kalender)
 - **Feiertage** – Automatische Anzeige für alle deutschen Bundesländer
 - **Dark Mode** – Unterstützung für helles und dunkles Design
 - **Eigener Klingelton** – Alarmton aus den eigenen Dateien wählbar
@@ -25,7 +31,7 @@ Eine Android-App zur Verwaltung von Schichtplänen mit Wecker-Funktion.
 
 ## Mindestanforderung
 
-Android 15 (API 35)+
+Android 8.0 (API 26)+
 
 ## Projektstruktur
 
@@ -35,23 +41,37 @@ schichtplan-wecker/
 │   └── src/
 │       └── main/
 │           ├── assets/
-│           │   └── index.html          # Gesamte App-Logik (HTML/CSS/JS)
+│           │   ├── index.html          # Oberfläche (HTML)
+│           │   ├── app.css             # Gestaltung
+│           │   └── app.js              # App-Logik (Plan, Wecker-Abgleich, Profil, Export)
 │           ├── java/de/schichtwecker/app/
 │           │   ├── MainActivity.kt     # WebView-Host + JavaScript-Bridge
 │           │   ├── AlarmScheduler.kt   # Wecker setzen/löschen + AlarmStore (nativer Speicher)
 │           │   ├── AlarmReceiver.kt    # BroadcastReceiver für Wecker → startet AlarmService
 │           │   ├── AlarmService.kt     # Foreground-Service: Ton, Vibration, Benachrichtigung
 │           │   ├── AlarmActivity.kt    # Vollbild-Alarm-Anzeige (nur Oberfläche)
-│           │   └── BootReceiver.kt     # Neu-Einplanen nach Neustart/Update/Zeitwechsel
+│           │   ├── AlarmOptions.kt     # Weck-Verhalten (Schlummerzeit, Lautstärke, Vibration)
+│           │   ├── BootReceiver.kt     # Neu-Einplanen nach Neustart/Update/Zeitwechsel
+│           │   └── ShiftWidget.kt      # Startbildschirm-Widget
 │           ├── res/
-│           │   ├── drawable/           # App-Icon (Vektorgrafiken)
+│           │   ├── drawable/           # App-Icon, Widget-Hintergrund
+│           │   ├── layout/             # Widget-Layout
 │           │   └── mipmap-*/           # App-Icon in verschiedenen Auflösungen
 │           └── AndroidManifest.xml
+├── tests/                              # Web-Tests (npm test)
+├── .github/workflows/build.yml         # CI: Tests, Lint, Build, Release bei Tag
 ├── gradle/
 │   └── libs.versions.toml              # Abhängigkeiten & Versionen
 ├── build.gradle.kts
 └── settings.gradle.kts
 ```
+
+## Tests und automatischer Build
+
+- Web-Tests: `cd tests && npm install && npm test`
+- Android-Lint: `./gradlew lintDebug` (muss fehlerfrei sein)
+- GitHub Actions führt beides bei jedem Push aus und baut eine Debug-APK (Artefakt `app-debug`)
+- Release: `versionName` in `app/build.gradle.kts` erhöhen, committen, Tag `v<versionName>` pushen (z. B. `git tag v1.5 && git push origin v1.5`). Der Workflow baut die signierte APK und legt ein GitHub-Release an. Dafür müssen die Secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD` gesetzt sein
 
 ## Installation
 

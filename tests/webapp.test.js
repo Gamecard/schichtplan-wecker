@@ -3,7 +3,11 @@
 const { JSDOM } = require('jsdom');
 const fs = require('fs');
 const path = require('path');
-const html = fs.readFileSync(process.argv[2] || path.join(__dirname, '..', 'app', 'src', 'main', 'assets', 'index.html'), 'utf8');
+const ASSETS = process.argv[2] || path.join(__dirname, '..', 'app', 'src', 'main', 'assets');
+// index.html lädt app.css/app.js – für jsdom direkt einbetten
+const html = fs.readFileSync(path.join(ASSETS, 'index.html'), 'utf8')
+  .replace('<link rel="stylesheet" href="app.css">', () => '<style>' + fs.readFileSync(path.join(ASSETS, 'app.css'), 'utf8') + '</style>')
+  .replace('<script src="app.js"></script>', () => '<script>' + fs.readFileSync(path.join(ASSETS, 'app.js'), 'utf8') + '</script>');
 const LS = 'schichtplan-native-v1';
 let fails = 0;
 const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); if (!c) fails++; };
@@ -24,9 +28,14 @@ function makeBridge(native) {
     getScheduledKeys() { return JSON.stringify(Object.keys(this.store)); },
     getScheduledAlarms() { return JSON.stringify(Object.entries(this.store).map(([key, v]) => ({ key, y: v.y, mo: v.mo, d: v.d, h: v.h, mi: v.mi }))); },
     getAppVersion() { return '1.3'; },
+    updateWidget(j) { this.widget = JSON.parse(j); },
+    opts: { snoozeMinutes: 5, risingVolume: false, vibrateOnly: false },
+    getAlarmOptions() { return JSON.stringify(this.opts); },
+    setAlarmOptions(j) { Object.assign(this.opts, JSON.parse(j)); return true; },
     isStoreMigrated() { return this.migrated; },
     setStoreMigrated() { this.migrated = true; },
     exportProfile(json, name) { this.exported = { json, name }; },
+    exportFile(content, name, mime) { this.file = { content, name, mime }; },
     importProfile() { this.importCalls++; },
     usesCustomRingtone() { return false; }, getCustomRingtoneName() { return ''; },
     testAlarm() {}, pickRingtone() {}, resetRingtone() {}
@@ -47,6 +56,15 @@ const state = w => JSON.parse(w.localStorage.getItem(LS));
 const dump = w => { const o = {}; for (let i = 0; i < w.localStorage.length; i++) { const k = w.localStorage.key(i); o[k] = w.localStorage.getItem(k); } return o; };
 const autoKeys = (w, re) => state(w).activeAlarms.filter(a => a.auto && re.test(a.alarmKey));
 const click = (w, id) => w.document.getElementById(id).click();
+// Tag im Kalender antippen (blättert zum richtigen Monat)
+function openDay(w, ds) {
+  const [y, m, d] = ds.split('-').map(Number);
+  const months = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  for (let i = 0; i < 24 && !w.document.getElementById('mTitle').textContent.includes(months[m - 1] + ' ' + y); i++) click(w, 'nextM');
+  const cell = [...w.document.querySelectorAll('.cday.click')].find(c => c.querySelector('.dnum') && c.querySelector('.dnum').textContent === d + '.');
+  if (!cell) throw new Error('Tag nicht im Kalender: ' + ds);
+  cell.click();
+}
 
 (async () => {
   const base = {
@@ -167,6 +185,92 @@ const click = (w, id) => w.document.getElementById(id).click();
   const w5 = open({ [LS]: JSON.stringify(base) }, br4); await sleep(50);
   ok(state(w5).exceptions.length === 1 && w5.document.getElementById('exList').textContent.includes('03.05.2027'), 'Start lädt nativen Stand statt veraltetem localStorage');
   w5.close();
+
+  // ── Schichttausch, Nächster Wecker, ICS-Export
+  const n6 = {}; const br6 = makeBridge(n6);
+  const w6 = open({ [LS]: JSON.stringify(base) }, br6); await sleep(50);
+  [...w6.document.querySelectorAll('#alarmBox button')].filter(b => b.textContent === 'Alle stellen')[1].click();
+  w6.document.getElementById('cdlgOk').click();
+  const na = w6.document.getElementById('nextAlarm').textContent;
+  ok(/Nächster Wecker: .*05:30 Uhr.*Früh/.test(na), 'Nächster-Wecker-Zeile: ' + na);
+  // Mo 16.11. (Früh) per Sheet auf Spät tauschen
+  openDay(w6, '2026-11-16');
+  ok(w6.document.querySelectorAll('#sSwap [data-swap]').length === 5, 'Sheet zeigt 5 Tausch-Knöpfe');
+  w6.document.querySelector('#sSwap [data-swap="3"]').click();
+  ok(state(w6).overrides['2026-11-16'] === 3, 'Tausch gespeichert');
+  ok(!n6['shift-2026-11-16-t2'], 'Früh-Wecker am getauschten Tag entfernt');
+  ok(w6.document.querySelectorAll('.cday.swapped').length === 1, 'Kalender markiert getauschten Tag');
+  // Spät ist nicht aktiviert → kein Spät-Wecker; Spät aktivieren + Alle stellen → Wecker am 16.11.
+  const c3 = w6.document.getElementById('ae3'); c3.checked = true; c3.dispatchEvent(new w6.Event('change', { bubbles: true }));
+  [...w6.document.querySelectorAll('#alarmBox button')].filter(b => b.textContent === 'Alle stellen')[2].click();
+  w6.document.getElementById('cdlgOk').click();
+  ok(!!n6['shift-2026-11-16-t3'] && !Object.keys(n6).some(k => /-t3$/.test(k) && k !== 'shift-2026-11-16-t3'), 'Spät-Wecker nur am getauschten Tag');
+  // Zurück auf Plan
+  openDay(w6, '2026-11-16');
+  w6.document.querySelector('#sSwap [data-swap=""]').click();
+  ok(!('2026-11-16' in state(w6).overrides) && !!n6['shift-2026-11-16-t2'] && !n6['shift-2026-11-16-t3'], '„Wie Plan“ stellt Früh-Wecker wieder her');
+  // Tausch im Profil
+  openDay(w6, '2026-11-17');
+  w6.document.querySelector('#sSwap [data-swap="1"]').click();
+  w6.document.getElementById('exportProfileBtn').click();
+  ok(JSON.parse(br6.exported.json).data.overrides['2026-11-17'] === 1, 'Tausch im Profil enthalten');
+  // ICS
+  w6.document.getElementById('exportIcsBtn').click();
+  const ics = br6.file && br6.file.content || '';
+  ok(br6.file && br6.file.mime === 'text/calendar' && /^Schichtplan-\d{4}-\d{2}-\d{2}\.ics$/.test(br6.file.name), 'ICS-Export: Dateiname/Typ');
+  ok(ics.startsWith('BEGIN:VCALENDAR\r\n') && ics.trim().endsWith('END:VCALENDAR'), 'ICS-Rahmen korrekt (CRLF)');
+  ok(/DTSTART;VALUE=DATE:20261116\r\nDTEND;VALUE=DATE:20261117\r\nSUMMARY:Frühschicht/.test(ics), 'ICS: Mo 16.11. einzelner Früh-Termin');
+  ok(/DTSTART;VALUE=DATE:20261118\r\nDTEND;VALUE=DATE:20261121\r\nSUMMARY:Frühschicht/.test(ics), 'ICS: Mi–Fr zu einem Termin zusammengefasst');
+  ok(!/DTSTART;VALUE=DATE:20261117/.test(ics), 'ICS: getauschter freier Tag 17.11. ohne Termin');
+  // Ungültiger Tausch aus Profil wird verworfen
+  const ev = JSON.parse(br6.exported.json); ev.data.overrides = { '2026-11-20': 7, 'x': 2, '2026-11-23': '2' };
+  w6.onProfileImported(JSON.stringify(ev)); w6.document.getElementById('cdlgOk').click();
+  ok(JSON.stringify(state(w6).overrides) === '{}', 'ungültige Tausch-Einträge verworfen');
+  w6.close();
+
+  // ── Vorwecker und Weck-Verhalten
+  const n7 = {}; const br7 = makeBridge(n7);
+  const w7 = open({ [LS]: JSON.stringify(base) }, br7); await sleep(50);
+  [...w7.document.querySelectorAll('#alarmBox button')].filter(b => b.textContent === 'Alle stellen')[1].click();
+  w7.document.getElementById('cdlgOk').click();
+  const pre = w7.document.getElementById('preSel'); pre.value = '30'; pre.dispatchEvent(new w7.Event('change')); await sleep(1000);
+  ok(n7['pre-shift-2026-11-16-t2'] && n7['pre-shift-2026-11-16-t2'].time === '05:00', 'Vorwecker 30 Min vor Früh (05:00)');
+  ok(Object.keys(n7).filter(k => k.startsWith('pre-')).length === Object.keys(n7).filter(k => k.startsWith('shift-')).length, 'zu jedem Schicht-Wecker ein Vorwecker');
+  // über Mitternacht: Früh um 00:15 → Vorwecker am Vortag 23:45
+  for (let i = 0; i < 5; i++) w7.document.getElementById('tph2').parentElement.querySelectorAll('.tbtn')[1].click(); // 05→00
+  for (let i = 0; i < 15; i++) w7.document.getElementById('tpm2').parentElement.querySelectorAll('.tbtn')[1].click(); // 30→15
+  await sleep(1000);
+  const pa = state(w7).activeAlarms.find(a => a.alarmKey === 'pre-shift-2026-11-16-t2');
+  ok(pa && pa.ds === '2026-11-15' && pa.time === '23:45' && n7['pre-shift-2026-11-16-t2'].d === 15, 'Vorwecker über Mitternacht am Vortag 23:45');
+  // Schicht-Wecker löschen → Vorwecker weg und bleibt weg
+  openDay(w7, '2026-11-17'); click(w7, 'scnBtn');
+  w7.document.getElementById('bundesland').dispatchEvent(new w7.Event('change')); await sleep(1000);
+  ok(!n7['shift-2026-11-17-t2'] && !n7['pre-shift-2026-11-17-t2'], 'Löschen entfernt auch den Vorwecker dauerhaft');
+  // Vorwecker aus
+  pre.value = '0'; pre.dispatchEvent(new w7.Event('change')); await sleep(1000);
+  ok(!Object.keys(n7).some(k => k.startsWith('pre-')), 'Vorwecker aus entfernt alle Vorwecker');
+  // Weck-Verhalten
+  const sz = w7.document.getElementById('snoozeSel'); sz.value = '10'; sz.dispatchEvent(new w7.Event('change'));
+  const rv = w7.document.getElementById('risingVol'); rv.checked = true; rv.dispatchEvent(new w7.Event('change'));
+  ok(br7.opts.snoozeMinutes === 10 && br7.opts.risingVolume === true && br7.opts.vibrateOnly === false, 'Weck-Verhalten wird nativ gespeichert');
+  w7.document.getElementById('exportProfileBtn').click();
+  const pj = JSON.parse(br7.exported.json);
+  ok(pj.alarmOptions.snoozeMinutes === 10 && pj.data.preAlarmMin === 0, 'Profil enthält Weck-Verhalten');
+  click(w7, 'resetAll'); click(w7, 'cdlgOk');
+  ok(br7.opts.snoozeMinutes === 5 && !br7.opts.risingVolume && w7.document.getElementById('snoozeSel').value === '5', 'Reset setzt Weck-Verhalten zurück');
+  w7.onProfileImported(br7.exported.json); click(w7, 'cdlgOk');
+  ok(br7.opts.snoozeMinutes === 10 && w7.document.getElementById('risingVol').checked, 'Profil-Import stellt Weck-Verhalten wieder her');
+  w7.close();
+
+  // ── Widget-Daten
+  const n8 = {}; const br8 = makeBridge(n8);
+  const w8 = open({ [LS]: JSON.stringify(Object.assign({}, base, { overrides: { '2026-11-18': 3 } })) }, br8); await sleep(50);
+  w8.document.getElementById('bundesland').dispatchEvent(new w8.Event('change'));
+  const wd = br8.widget || {};
+  const today = new Date(); const tk = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+  ok(Object.keys(wd).length === 60 && tk in wd, 'Widget erhält 60 Tage ab heute');
+  ok(wd['2026-11-16'] === 'Früh' && wd['2026-11-18'] === 'Spät' && wd['2026-11-21'] === 'Frei', 'Widget-Daten berücksichtigen Muster und Tausch');
+  w8.close();
 
   console.log(fails ? `\n${fails} FEHLER` : '\nalle Tests bestanden');
   process.exit(fails ? 1 : 0);

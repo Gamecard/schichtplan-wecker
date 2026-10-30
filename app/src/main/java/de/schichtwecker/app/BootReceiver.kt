@@ -19,6 +19,7 @@ class BootReceiver : BroadcastReceiver() {
             Intent.ACTION_TIME_CHANGED,
             Intent.ACTION_TIMEZONE_CHANGED -> {
                 val n = AlarmScheduler.rescheduleAll(context)
+                ShiftWidget.refresh(context)
                 Log.d("SchichtplanAlarm", "BootReceiver (${intent.action}): $n Wecker eingeplant")
             }
         }

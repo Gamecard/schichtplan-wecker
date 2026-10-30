@@ -1,6 +1,7 @@
 package de.schichtwecker.app
 
 import android.app.KeyguardManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.WindowManager
@@ -55,8 +56,16 @@ class AlarmActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         Log.d("SchichtplanAlarm", "AlarmActivity.onCreate()")
 
-        setShowWhenLocked(true)
-        setTurnScreenOn(true)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        } else {
+            @Suppress("DEPRECATION")
+            window.addFlags(
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+            )
+        }
         getSystemService(KeyguardManager::class.java).requestDismissKeyguard(this, null)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
@@ -71,6 +80,7 @@ class AlarmActivity : ComponentActivity() {
             val ringing by AlarmService.ringing.collectAsState()
             AlarmScreen(
                 message = ringing?.message ?: fallbackMessage ?: "Wecker!",
+                snoozeMinutes = ringing?.snoozeMinutes ?: AlarmOptions.snoozeMinutes(this),
                 onDismiss = { sendAction(AlarmService.ACTION_DISMISS) },
                 onSnooze = { sendAction(AlarmService.ACTION_SNOOZE) }
             )
@@ -94,7 +104,7 @@ class AlarmActivity : ComponentActivity() {
 }
 
 @Composable
-fun AlarmScreen(message: String, onDismiss: () -> Unit, onSnooze: () -> Unit) {
+fun AlarmScreen(message: String, snoozeMinutes: Int, onDismiss: () -> Unit, onSnooze: () -> Unit) {
     val pulse = rememberInfiniteTransition(label = "pulse")
     val scale by pulse.animateFloat(
         initialValue = 0.95f,
@@ -191,7 +201,7 @@ fun AlarmScreen(message: String, onDismiss: () -> Unit, onSnooze: () -> Unit) {
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFB8C5FF)),
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF45464F))
             ) {
-                Text("Schlummern  5 Min", fontSize = 14.sp, fontWeight = FontWeight.W500)
+                Text("Schlummern  $snoozeMinutes Min", fontSize = 14.sp, fontWeight = FontWeight.W500)
             }
         }
     }

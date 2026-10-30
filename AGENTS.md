@@ -19,11 +19,12 @@
 
 ## Projektstruktur
 
-- **Kotlin** (6 Dateien): `MainActivity.kt` (WebView + JS-Bridge), `AlarmScheduler.kt` (+ `AlarmStore`), `AlarmReceiver.kt`, `AlarmService.kt`, `AlarmActivity.kt`, `BootReceiver.kt`
-- **JS/CSS/HTML** (1 Datei): `app/src/main/assets/index.html`
+- **Kotlin**: `MainActivity.kt` (WebView + JS-Bridge), `AlarmScheduler.kt` (+ `AlarmStore`), `AlarmReceiver.kt`, `AlarmService.kt`, `AlarmActivity.kt`, `AlarmOptions.kt`, `BootReceiver.kt`, `ShiftWidget.kt`
+- **Web** (`app/src/main/assets/`): `index.html` (Struktur), `app.css` (Gestaltung), `app.js` (Logik, eine IIFE – Funktionen sind NICHT global, Tests bedienen die Oberfläche)
+- **minSdk 26** (Android 8): neuere APIs immer mit `Build.VERSION.SDK_INT`-Abfrage; `./gradlew lintDebug` meldet vergessene Abfragen als `NewApi`-Fehler
 - **Paket**: `de.schichtwecker.app`
 - **App-Name**: Schichtwecker
-- **Theme**: `de/schichtwecker/app/ui/theme/` ( Color.kt, Type.kt, Theme.kt )
+- **Theme**: `Theme.Schichtwecker` (res/values, res/values-night), Compose: `SchichtweckerTheme` in `ui/theme/`
 
 ## Build & Lint
 
@@ -128,6 +129,18 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 - Import läuft durch `applyState()` (dieselben Prüfungen wie beim Laden, plus Bereinigung von Muster, Bundesland, Ausnahmen). Eigener Klingelton ist nicht übertragbar (Dateizugriff gilt nur auf dem Gerät)
 - `format` erhöhen, wenn sich die Struktur inkompatibel ändert; neuere Formate werden abgelehnt
 
+### Schichttausch, Vorwecker, Weck-Verhalten
+- `S.overrides` = `{"YYYY-MM-DD": 0..4}`: Schicht für einen Tag. `getShift()`: Ausnahme > Tausch > Muster. Vergangene Einträge löscht `purgeExpiredAlarms()`
+- `S.preAlarmMin` (0/5/10/15/30/45/60): Vorwecker-Schlüssel `pre-<shift-Schlüssel>`, gehört zur selben Art wie der Hauptwecker (folgt „Alle stellen“). Kann über Mitternacht auf den Vortag fallen → eigenes `ds` im Soll-Eintrag. Löschen eines Schicht-Weckers löscht seinen Vorwecker mit
+- Schlummerzeit / ansteigende Lautstärke / nur Vibration liegen NATIV in `AlarmOptions` (gerätegeschützter Speicher, Direct Boot), Bridge `getAlarmOptions`/`setAlarmOptions`. Im Profil als `alarmOptions`
+
+### Widget
+- `ShiftWidget` zeigt heute/morgen + nächsten Wecker. `app.js` schickt bei jedem `save()` 60 Tage Schichtnamen (`Android.updateWidget`), der nächste Wecker kommt aus dem `AlarmStore`
+- KEIN `updatePeriodMillis` (Strom): Aktualisierung bei Änderungen, nach Wecker/Schlummern/Neustart und per nicht weckendem `AlarmManager.RTC`-Alarm kurz nach Mitternacht
+
+### Kalender-Export
+- `buildIcs()`: Früh/Spät/Nacht + Ausnahmen der nächsten 12 Monate als ganztägige Termine, gleiche Folgetage zusammengefasst, CRLF. Export über `Android.exportFile(text, name, mime)` (eigener `CreateDocument`-Dialog je MIME-Typ)
+
 ### Version
 - `versionCode`/`versionName` NUR in `app/build.gradle.kts` pflegen und bei jeder ausgelieferten APK erhöhen. Die App zeigt die Version unten in den Einstellungen (`Android.getAppVersion()`)
 
@@ -176,6 +189,7 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 - Web-Logik: `cd tests && npm install && npm test` (jsdom, nachgebaute Android-Bridge; deckt Alle stellen, Urlaub, Weckzeit, Löschen, Feiertage, Profil-Export/-Import inkl. manipulierter Dateien, Waisen-Übernahme, Persistenz, Reset ab)
 - Vor jedem Release zusätzlich auf Gerät/Emulator: frische Installation, Dark Mode an/aus, Test-Alarm bei gesperrtem Bildschirm, Neustart MIT PIN ohne Entsperren
 - `./gradlew lintDebug` muss ohne Fehler durchlaufen
+- CI: `.github/workflows/build.yml` (Tests, Lint, Debug-APK bei jedem Push; signiertes GitHub-Release bei Tag `v<versionName>`)
 
 ## Build-Commands
 

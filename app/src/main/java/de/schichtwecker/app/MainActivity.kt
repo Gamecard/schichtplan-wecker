@@ -10,6 +10,7 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -35,7 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
-import de.schichtwecker.app.ui.theme.MyApplicationTheme
+import de.schichtwecker.app.ui.theme.SchichtweckerTheme
 import org.json.JSONObject
 import java.util.Locale
 
@@ -123,23 +124,31 @@ class MainActivity : ComponentActivity() {
     }
 
     /* ── Profil-Sicherung: JSON-Datei über den System-Dateidialog ── */
-    private var pendingProfileJson: String? = null
+    private var pendingExportText: String? = null
 
-    private val profileSaver = registerForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json")
-    ) { uri: Uri? ->
-        val json = pendingProfileJson
-        pendingProfileJson = null
-        if (uri == null || json == null) return@registerForActivityResult
+    /** Schreibt den vorgemerkten Text in die vom Nutzer gewählte Datei. */
+    private fun writePendingExport(uri: Uri?, successText: String) {
+        val text = pendingExportText
+        pendingExportText = null
+        if (uri == null || text == null) return
         try {
-            contentResolver.openOutputStream(uri, "wt")?.use { it.write(json.toByteArray(Charsets.UTF_8)) }
+            contentResolver.openOutputStream(uri, "wt")?.use { it.write(text.toByteArray(Charsets.UTF_8)) }
                 ?: throw IllegalStateException("Kein Ausgabestrom")
-            toast("Profil gespeichert")
+            toast(successText)
         } catch (e: Exception) {
-            Log.e("SchichtplanAlarm", "Profil speichern fehlgeschlagen", e)
-            toast("Profil konnte nicht gespeichert werden")
+            Log.e("SchichtplanAlarm", "Datei speichern fehlgeschlagen", e)
+            toast("Datei konnte nicht gespeichert werden")
         }
     }
+
+    // CreateDocument legt den MIME-Typ bei der Registrierung fest → ein Dialog je Dateiart
+    private val profileSaver = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri: Uri? -> writePendingExport(uri, "Profil gespeichert") }
+
+    private val calendarSaver = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("text/calendar")
+    ) { uri: Uri? -> writePendingExport(uri, "Kalender-Datei gespeichert") }
 
     private val profileOpener = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -148,8 +157,14 @@ class MainActivity : ComponentActivity() {
         val text = try {
             contentResolver.openInputStream(uri)?.use { input ->
                 // Profile sind wenige KB groß – alles über 1 MB ist keine Profil-Datei
-                val bytes = input.readNBytes(1_000_001)
-                if (bytes.size > 1_000_000) null else String(bytes, Charsets.UTF_8)
+                val out = java.io.ByteArrayOutputStream()
+                val buf = ByteArray(8192)
+                while (out.size() <= 1_000_000) {
+                    val n = input.read(buf)
+                    if (n < 0) break
+                    out.write(buf, 0, n)
+                }
+                if (out.size() > 1_000_000) null else out.toString("UTF-8")
             }
         } catch (e: Exception) {
             Log.e("SchichtplanAlarm", "Profil lesen fehlgeschlagen", e)
@@ -169,10 +184,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    fun launchProfileExport(json: String, fileName: String) {
-        pendingProfileJson = json
+    fun launchExport(text: String, fileName: String, mimeType: String) {
+        pendingExportText = text
         try {
-            profileSaver.launch(fileName)
+            (if (mimeType == "text/calendar") calendarSaver else profileSaver).launch(fileName)
         } catch (e: Exception) {
             Log.e("SchichtplanAlarm", "Speichern-Dialog fehlgeschlagen", e)
             toast("Datei-Dialog nicht verfügbar")
@@ -193,7 +208,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         requestPermissions()
         setContent {
-            MyApplicationTheme {
+            SchichtweckerTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     WebViewScreen(
                         modifier = Modifier.padding(innerPadding)
@@ -221,7 +236,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun requestPermissions() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+        // Benachrichtigungen sind erst ab Android 13 eine Laufzeit-Berechtigung
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
             != PackageManager.PERMISSION_GRANTED
         ) {
             notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -231,6 +248,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkFullScreenIntentPermission() {
+        checkExactAlarmPermission()
+        // Vollbild-Benachrichtigungen sind erst ab Android 14 freigabepflichtig
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         if (!nm.canUseFullScreenIntent()) {
             Log.w("SchichtplanAlarm", "USE_FULL_SCREEN_INTENT not granted")
@@ -249,6 +269,29 @@ class MainActivity : ComponentActivity() {
                 .setNegativeButton("Sp\u00E4ter", null)
                 .show()
         }
+    }
+
+    /**
+     * Android 12/12L: exakte Wecker brauchen SCHEDULE_EXACT_ALARM, das der Nutzer abschalten
+     * kann (USE_EXACT_ALARM gibt es erst ab Android 13). Ohne Freigabe kein Wecker → Hinweis.
+     */
+    private fun checkExactAlarmPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+        val am = getSystemService(android.app.AlarmManager::class.java)
+        if (am.canScheduleExactAlarms()) return
+        AlertDialog.Builder(this)
+            .setTitle("Wecker erlauben")
+            .setMessage(
+                "Damit die App Wecker stellen kann, braucht sie die Berechtigung " +
+                "\u201EWecker und Erinnerungen\u201C. Ohne sie klingelt kein Wecker."
+            )
+            .setPositiveButton("Einstellungen \u00F6ffnen") { _, _ ->
+                startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                    data = "package:$packageName".toUri()
+                })
+            }
+            .setNegativeButton("Sp\u00E4ter", null)
+            .show()
     }
 
     fun launchRingtonePicker() {
@@ -352,6 +395,20 @@ class WebAppInterface(private val mContext: Context, private val activity: MainA
     @Keep
     fun getScheduledAlarms(): String = AlarmStore.entriesJson(mContext)
 
+    /** Schichten der nächsten Tage für das Widget: {"YYYY-MM-DD": "Früh", …}. */
+    @JavascriptInterface
+    @Keep
+    fun updateWidget(json: String) = ShiftWidget.saveShiftData(mContext, json)
+
+    /** Weck-Verhalten als JSON: {snoozeMinutes, risingVolume, vibrateOnly}. */
+    @JavascriptInterface
+    @Keep
+    fun getAlarmOptions(): String = AlarmOptions.toJson(mContext)
+
+    @JavascriptInterface
+    @Keep
+    fun setAlarmOptions(json: String): Boolean = AlarmOptions.fromJson(mContext, json)
+
     /** Versionsname der installierten App, z. B. "1.3". */
     @JavascriptInterface
     @Keep
@@ -401,7 +458,14 @@ class WebAppInterface(private val mContext: Context, private val activity: MainA
     @JavascriptInterface
     @Keep
     fun exportProfile(json: String, fileName: String) {
-        mainHandler.post { activity.launchProfileExport(json, fileName) }
+        mainHandler.post { activity.launchExport(json, fileName, "application/json") }
+    }
+
+    /** Speichern-Dialog für eine Textdatei (z. B. .ics-Kalender). */
+    @JavascriptInterface
+    @Keep
+    fun exportFile(content: String, fileName: String, mimeType: String) {
+        mainHandler.post { activity.launchExport(content, fileName, mimeType) }
     }
 
     /** Öffnet den Datei-Dialog; das Ergebnis kommt per onProfileImported(text) zurück. */

@@ -8,6 +8,7 @@ import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.media.RingtoneManager
+import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -28,7 +29,7 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class AlarmService : Service() {
 
-    data class Ringing(val key: String, val message: String)
+    data class Ringing(val key: String, val message: String, val snoozeMinutes: Int)
 
     companion object {
         private const val TAG = "SchichtplanAlarm"
@@ -37,6 +38,7 @@ class AlarmService : Service() {
         const val ACTION_SNOOZE = "de.schichtwecker.app.action.SNOOZE"
         private const val NOTIFICATION_ID = 4711
         private const val AUTO_DISMISS_MS = 15 * 60 * 1000L
+        private const val RISING_START = 0.05f
 
         private val _ringing = MutableStateFlow<Ringing?>(null)
         /** Aktuell klingelnder Wecker (null = Ruhe) – die AlarmActivity beobachtet das. */
@@ -82,24 +84,29 @@ class AlarmService : Service() {
         AlarmReceiver.ensureNotificationChannel(this)
         // startForeground muss nach startForegroundService() sofort erfolgen
         try {
-            startForeground(
-                NOTIFICATION_ID, buildNotification(message),
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    NOTIFICATION_ID, buildNotification(message),
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, buildNotification(message))
+            }
         } catch (e: Exception) {
             // Lieber ohne Vordergrund-Status klingeln als gar nicht
             Log.e(TAG, "startForeground fehlgeschlagen", e)
         }
         // Ein neuer Wecker ersetzt einen noch laufenden
         stopSound()
-        _ringing.value = Ringing(key, message)
+        _ringing.value = Ringing(key, message, AlarmOptions.snoozeMinutes(this))
 
         if (wakeLock?.isHeld != true) {
             wakeLock = getSystemService(PowerManager::class.java)
                 .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "schichtplan:alarm")
                 .apply { acquire(AUTO_DISMISS_MS + 60_000L) }
         }
-        startSound()
+        // „Nur Vibration“: kein Ton (Vibration läuft immer)
+        if (!AlarmOptions.vibrateOnly(this)) startSound()
         startVibration()
         handler.removeCallbacks(autoDismiss)
         handler.postDelayed(autoDismiss, AUTO_DISMISS_MS)
@@ -117,10 +124,11 @@ class AlarmService : Service() {
         if (current != null) {
             val ok = AlarmScheduler.scheduleAt(
                 this, AlarmScheduler.snoozeKeyOf(current.key),
-                System.currentTimeMillis() + AlarmScheduler.SNOOZE_MINUTES * 60_000L,
+                System.currentTimeMillis() + current.snoozeMinutes * 60_000L,
                 current.message
             )
             if (!ok) Log.e(TAG, "Schlummern konnte nicht geplant werden")
+            ShiftWidget.refresh(this)
         }
         stopRinging()
     }
@@ -166,7 +174,7 @@ class AlarmService : Service() {
             .setContentIntent(fullScreen)
             .setOngoing(true)
             .addAction(0, "Aus", servicePi(ACTION_DISMISS, 1))
-            .addAction(0, "Schlummern ${AlarmScheduler.SNOOZE_MINUTES} Min", servicePi(ACTION_SNOOZE, 2))
+            .addAction(0, "Schlummern ${AlarmOptions.snoozeMinutes(this)} Min", servicePi(ACTION_SNOOZE, 2))
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .build()
     }
@@ -180,8 +188,27 @@ class AlarmService : Service() {
         )
         setDataSource(this@AlarmService, uri)
         isLooping = true
-        setOnPreparedListener { it.start() }
+        val rising = AlarmOptions.risingVolume(this@AlarmService)
+        if (rising) setVolume(RISING_START, RISING_START)
+        setOnPreparedListener {
+            it.start()
+            if (rising) startRisingVolume(it)
+        }
         prepareAsync()
+    }
+
+    /** Lautstärke in Schritten von leise auf voll (innerhalb der Alarm-Lautstärke des Systems). */
+    private fun startRisingVolume(player: MediaPlayer) {
+        val steps = 30
+        val stepMs = AlarmOptions.RISING_DURATION_MS / steps
+        for (i in 1..steps) {
+            handler.postDelayed({
+                if (mediaPlayer === player) {
+                    val v = RISING_START + (1f - RISING_START) * i / steps
+                    try { player.setVolume(v, v) } catch (_: Exception) {}
+                }
+            }, stepMs * i)
+        }
     }
 
     private fun startSound() {
@@ -202,11 +229,18 @@ class AlarmService : Service() {
     }
 
     private fun startVibration() {
-        vibrator = getSystemService(VibratorManager::class.java).defaultVibrator
+        vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            getSystemService(VibratorManager::class.java).defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            getSystemService(Vibrator::class.java)
+        }
         vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 800, 400, 800, 400, 800), 0))
     }
 
     private fun stopSound() {
+        // Laufende Lautstärke-Rampe und Auto-Dismiss verwerfen (start() setzt Auto-Dismiss neu)
+        handler.removeCallbacksAndMessages(null)
         try { mediaPlayer?.let { if (it.isPlaying) it.stop(); it.release() } } catch (_: Exception) {}
         mediaPlayer = null
         try { vibrator?.cancel() } catch (_: Exception) {}

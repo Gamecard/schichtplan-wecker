@@ -65,6 +65,7 @@ class AlarmReceiver : BroadcastReceiver() {
         Log.d(TAG, "AlarmReceiver.onReceive() key=$key rc=$requestCode")
 
         AlarmScheduler.onFired(context, key)
+        ShiftWidget.refresh(context)
 
         // Der Ton läuft im Foreground-Service: unabhängig davon, ob die Activity sichtbar ist,
         // ob Android den Activity-Start aus dem Hintergrund zulässt oder ob der Nutzer die

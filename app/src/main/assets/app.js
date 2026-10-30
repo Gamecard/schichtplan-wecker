@@ -1303,7 +1303,11 @@ window.onerror=function(msg,src,line,col,err){
   function finishWiz(){
     closeWiz(); showTab('plan');
     var d=parseYmd(S.startDate);
-    if(!isNaN(d)){ viewDate=new Date(d.getFullYear(),d.getMonth(),1,12,0,0); renderCal(); }
+    // Kalender auf den Monat der Startwoche – liegt sie in der Vergangenheit, auf den aktuellen Monat
+    if(!isNaN(d)){
+      var now=new Date(), show=d<new Date(now.getFullYear(),now.getMonth(),1,12)?now:d;
+      viewDate=new Date(show.getFullYear(),show.getMonth(),1,12,0,0); renderCal();
+    }
   }
   /* Zurück (Knopf und Geste): einen Schritt zurück, auf Schritt 1 schließen */
   function wizBack(){

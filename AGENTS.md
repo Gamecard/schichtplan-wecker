@@ -101,17 +101,29 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 - Alle Planungsfehler (auch `IllegalStateException` beim 500-Wecker-Limit) → `false`, kein Absturz
 
 ### activeAlarms (Datenstruktur, JS)
-- Format: **Array** von `{ds, alarmKey, time, shiftName, auto}`; `auto:true` = per „Alle stellen“/Abgleich gesetzt, `false` = von Hand
+- Format: **Array** von `{ds, alarmKey, time, shiftName, auto}`; `auto:true` = vom Abgleich gesetzt (Schalter „automatisch wecken“), `false` = von Hand (Tages-Sheet)
 - älteres Objekt-Format wird in `load()` migriert
 - Start: `purgeExpiredAlarms()` → `syncWithNative()` (übernimmt einmalig Alt-Wecker in den Store, `Android.isStoreMigrated()`; danach fliegt aus der Liste, was nativ nicht mehr geplant ist) → `resyncAlarms({quiet:true})`
 
 ### Automatischer Abgleich (`resyncAlarms`)
 - Soll-Liste = `expectedAlarmsFor(ds)` für 370 Tage (Schicht passt, Wecker-Art aktiviert, Ausnahmen, Feiertage, Wochentage, Zukunft)
 - Auto-Wecker, die nicht mehr passen → gelöscht; geänderte Weckzeit → neu gesetzt. Manuelle Wecker (`auto:false`) werden NIE angefasst; heute schon fällige auch nicht (evtl. läuft Schlummern)
-- Fehlende Wecker werden nur ergänzt, wenn `S.autoSchedule[art]` an ist (durch „Alle stellen“; Arten 1–4 und `free`)
+- Fehlende Wecker werden nur ergänzt, wenn `S.autoSchedule[art]` an ist (Arten 1–4 und `free`)
 - `S.suppressed`: vom Nutzer gelöschte Auto-Wecker, werden nicht wieder angelegt
 - Auslöser: jede Planänderung ruft `scheduleResync()` (800 ms gebündelt)
 - `S.skipHolidaysShift` (Standard `false`): Schicht-Wecker an Feiertagen auslassen. Freie-Tage-Wecker lassen Feiertage immer aus
+
+### Wecker-Bereich: EIN Schalter je Wecker-Art (WICHTIG)
+- Pro Schicht (1–4) und für unbelegte Tage gibt es nur Uhrzeit + Schalter „automatisch wecken“ (`#ae1`–`#ae4`, `#freeAlarmEnabled`). KEIN „Alle stellen“ und kein Bestätigungsdialog mehr
+- Die Merker `S.alarmEnabled[t]`/`S.autoSchedule[t]` bzw. `S.freeAlarm.enabled`/`S.autoSchedule.free` sind IMMER gleich. Ändern nur über die Setter `setShiftAuto(t,on)` / `setFreeAuto(on)` (setzen beide, heben `suppressed` der Art beim Einschalten auf, `resyncAlarms`, Rückgabe = Anzahl kommender Auto-Hauptwecker) und `setShiftTime(t,'HH:MM')` / `setFreeTime('HH:MM')` (gebündelter Abgleich). Die Einrichtung nutzt dieselben Setter – Namen/Parameter/Rückgaben nicht ändern
+- Aus = automatische Wecker der Art werden entfernt, von Hand gestellte bleiben. An ohne passende Tage → ehrlicher Hinweis („Im Rhythmus gibt es keine Früh-Tage – erst unter Schichtplan eintragen“), der Schalter bleibt an; die Wecker kommen beim nächsten Abgleich von selbst. Unter jeder Zeile steht der Stand (`renderWeckerStatus`, „An – n Wecker gestellt“ / „Aus – …“)
+- Migration (`normalizeAutoFlags` am Ende von `applyState`, also beim Laden UND beim Profil-Import): an = `alarmEnabled && autoSchedule`, beide Merker danach gleich. Ausnahme: `alarmEnabled` an, `autoSchedule` aus, aber kommende automatische Wecker der Art vorhanden (Versionen vor `autoSchedule`) → bleibt an, damit gestellte Wecker nicht verschwinden. Manuelle Wecker werden nie angefasst
+- Bedienelemente nach Setter-Aufrufen per `syncWeckerUi()` angleichen (kein Neuaufbau → Fokus bleibt); `renderAlarmSettings`/`renderFreeAlarmSettings` nur beim Start und in `refreshAllUi`
+
+### Zeitauswahl (`buildTimePicker`)
+- EINE Komponente für alle Weckzeiten: Schicht-Zeilen, unbelegte Tage, Einzelwecker im Tages-Sheet. `buildTimePicker(hhmm, onChange, {label, hId, mId})` → Element mit `getTime()`/`setTime()`; `onChange` nur bei Nutzeränderung
+- Pfeile ▲▼ je Stunde/Minute (ohne Übertrag: Minute 59 ▲ → 00, Stunde bleibt). Die Ziffern sind Knöpfe und öffnen die System-Zeitauswahl über ein verstecktes `<input type="time" class="tnative">` (`showPicker()`, sonst `focus()`); NICHT `display:none`, sonst geht `showPicker` nicht
+- Ziffern-IDs bleiben `tph<t>`/`tpm<t>` (Schichten), `fatph`/`fatpm` (unbelegte Tage), `sqh`/`sqm` (Sheet). Auswahl-Chips (Wochentage, Art im Sheet) = `.chiprow` mit `.sftbtn`/`.sftbtn-active` + `aria-pressed`, keine Inline-Styles
 
 ### Persistenz (WICHTIG)
 - `save()` schreibt den Zustand ZUERST synchron nativ (`Android.saveState`, SharedPreferences `app_state`, `commit()`), danach in `localStorage`. `load()` bevorzugt `Android.loadState()`
@@ -129,12 +141,27 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 - Import läuft durch `applyState()` (dieselben Prüfungen wie beim Laden, plus Bereinigung von Muster, Bundesland, Ausnahmen). Eigener Klingelton ist nicht übertragbar (Dateizugriff gilt nur auf dem Gerät)
 - `format` erhöhen, wenn sich die Struktur inkompatibel ändert; neuere Formate werden abgelehnt
 
+### Aufbau der Oberfläche (seit 1.9)
+- Drei Bereiche mit unterer Navigation (`#bottomNav`, `showTab('plan'|'wecker'|'schicht')`): **Plan** (`#tabPlan`: Kalender, nächste Wecker, Tages-Sheet), **Wecker** (`#tabWecker`: Schalter pro Schicht, freie Tage, Weck-Verhalten, Klingelton, Test-Alarm), **Schichtplan** (`#tabSchicht`: 1 Startwoche, 2 Rhythmus, 3 Feiertage, 4 Urlaub & Ausnahmen, Sichern & Exportieren, App)
+- KEIN Einstellungs-Overlay mehr. Neue Funktionen gehören in den passenden Bereich, nicht in eine neue lose Karte
+- Zurück-Geste: Dialog → Einrichtung (Schritt zurück) → Tages-Sheet → „Alle Wecker“ → anderer Bereich → Plan → App verlassen
+- Urlaub/Krank/Schulung für einen Tag direkt im Tages-Sheet; dort auch „Ausnahme entfernen“
+- Schnittstelle für Oberfläche/Einrichtung: `setShiftAuto`, `setShiftTime`, `setFreeAuto`, `setFreeTime`, `setPatternDay`, `setWeeksCount`, `applyStartDate`
+
 ### Startseite: Wecker-Übersicht
 - Unter dem Kalender nur die nächsten 3 Wecker (`A_PREVIEW`) + Zusammenfassung „n Wecker bis …“; Tippen öffnet den Tag. KEINE Löschknöpfe auf der Startseite
 - „Alle Wecker ›“ öffnet `#alarmsOverlay` (gleiches Overlay-Muster wie die Einstellungen): nach Monaten gruppierte `<details>`, erster Monat offen, auf-/zugeklappte Monate bleiben beim Löschen erhalten (`openMonths`). Zurück-Geste schließt es
 - Im Kalender ein dezenter Punkt (`.aind`) statt 🔔
 
-### Persistenz von Design und Anleitung
+### Geführte Einrichtung (ersetzt die frühere Text-Anleitung)
+- Vollbild-Ebene `#wizBg.wiz-ov` nach dem Overlay-Muster (Ebene scrollt selbst, `.open`-Klasse, `body.overflow`), `z-index:150` (über Navigation/Sheet, unter Toast/Dialog). Navigation unten `position:sticky` innerhalb der Ebene
+- Schritte: 1 Startwoche (KW + Jahr, Anzeige Mo–So) → 2 Rhythmus (Vorlagen `WIZ_TPLS` + Wochenraster, Tippen reihum leer→Frei→Früh→Spät→Nacht, Zellen `.pday[data-wi]` – NICHT `data-idx`, das gehört zu `#patGrid`) → 3 Weckzeiten (nur Schichtarten im Muster, `<input type="time">` + „automatisch wecken“) → 4 Bundesland → Abschluss (Zusammenfassung aus `upcomingAlarms()`, Hinweis Test-Alarm, „Zum Plan“ = Plan + Kalender im Monat der Startwoche)
+- ENTWURF: Alle Eingaben liegen in `W` und werden erst mit „Einrichten“ (Schritt 4) übernommen (`wizApply`). „Überspringen“, Zurück-Geste und Schließen ändern also nichts. Übernommen wird nur, was sich gegenüber `S` geändert hat – ausschließlich über die Setter `applyStartDate`, `setWeeksCount`, `setPatternDay`, `setShiftTime`, `setShiftAuto`. `setShiftAuto` NUR bei geändertem Schalter rufen (`setShiftAuto(t,true)` leert `S.suppressed` dieser Art → gelöschte Wecker kämen zurück). Danach ausstehenden `scheduleResync` verwerfen und einmal still `resyncAlarms({quiet:true})`
+- Vorbelegung beim erneuten Start: aktuelle Werte aus `S`; Vorlagen erst beim Antippen. „automatisch wecken“: Art schon im Muster → aktueller Stand (`autoSchedule && alarmEnabled`), neue Art → Schichten an, Frei aus
+- Start automatisch, solange weder `S.wizardDone` noch der localStorage-Merker `schichtplan-wizard-done` gesetzt ist; sonst über `#startWizBtn` (Bereich Schichtplan → App). Schließen/Einrichten setzt beides
+- Tests: `tests/einrichtung.test.js`
+
+### Persistenz von Design und Einrichtung
 - `S.theme` und `S.wizardDone` werden wie der übrige Zustand nativ gesichert (zusätzlich zu `localStorage`), weil `localStorage` bei Absturz/Stromverlust verloren gehen kann. Bestehende Installationen übernehmen den alten `localStorage`-Merker beim Start
 
 ### Wochenrhythmus-Eingabe
@@ -147,7 +174,7 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 
 ### Schichttausch, Vorwecker, Weck-Verhalten
 - `S.overrides` = `{"YYYY-MM-DD": 0..4}`: Schicht für einen Tag. `getShift()`: Ausnahme > Tausch > Muster. Vergangene Einträge löscht `purgeExpiredAlarms()`
-- `S.preAlarmMin` (0/5/10/15/30/45/60): Vorwecker-Schlüssel `pre-<shift-Schlüssel>`, gehört zur selben Art wie der Hauptwecker (folgt „Alle stellen“). Kann über Mitternacht auf den Vortag fallen → eigenes `ds` im Soll-Eintrag. Löschen eines Schicht-Weckers löscht seinen Vorwecker mit
+- `S.preAlarmMin` (0/5/10/15/30/45/60): Vorwecker-Schlüssel `pre-<shift-Schlüssel>`, gehört zur selben Art wie der Hauptwecker (folgt deren Schalter „automatisch wecken“). Kann über Mitternacht auf den Vortag fallen → eigenes `ds` im Soll-Eintrag. Löschen eines Schicht-Weckers löscht seinen Vorwecker mit
 - Schlummerzeit / ansteigende Lautstärke / nur Vibration liegen NATIV in `AlarmOptions` (gerätegeschützter Speicher, Direct Boot), Bridge `getAlarmOptions`/`setAlarmOptions`. Im Profil als `alarmOptions`
 
 ### Wecker-Limit (WICHTIG)
@@ -161,10 +188,10 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 - Fehlt die Vollbild- (14+) oder Exact-Alarm-Berechtigung (12/12L), zeigt die App oben einen roten Hinweis mit „Erlauben“ (`getAlarmPermissionIssue`/`openAlarmPermissionSettings`), Prüfung bei jeder Rückkehr in die App
 
 ### Zurück-Geste
-- `MainActivity.backCallback` fragt `window.handleBack()`: schließt Dialog → Anleitung → Tages-Sheet → Einstellungen; erst wenn nichts offen ist, verlässt die App
+- `MainActivity.backCallback` fragt `window.handleBack()`: schließt Dialog → Einrichtung (einen Schritt zurück, auf Schritt 1 schließen, auf dem Abschluss „Zum Plan“) → Tages-Sheet → „Alle Wecker“ → anderer Bereich zurück zum Plan; erst wenn nichts offen ist, verlässt die App
 
 ### WebView-Kompatibilität
-- Die WebView wird über den Play Store aktualisiert; die Fallbacks in `app.css` (`top/right/bottom/left` vor `inset`, `margin` statt Flexbox-`gap` bei den Anleitungs-Punkten) stammen aus einem Test mit altem WebView und schaden nicht
+- Die WebView wird über den Play Store aktualisiert; die Fallbacks in `app.css` (`top/right/bottom/left` vor `inset`) stammen aus einem Test mit altem WebView und schaden nicht
 
 ### Widget
 - `ShiftWidget` zeigt heute/morgen + nächsten Wecker. `app.js` schickt bei jedem `save()` 60 Tage Schichtnamen (`Android.updateWidget`), der nächste Wecker kommt aus dem `AlarmStore`
@@ -195,7 +222,7 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 - ~~Snooze-Key-Trunkierung~~ → (inzwischen ersetzt durch `<key>#snooze`)
 - ~~color-mix() inkompatibel~~ → harte Fallback-Werte
 - ~~activeAlarms erlaubt nur 1 Wecker/Tag~~ → Array-Struktur
-- ~~Feiertage nicht ausgeschlossen~~ → prüfen in findAllShiftDates/scheduleAllFreeAlarms
+- ~~Feiertage nicht ausgeschlossen~~ → prüfen in `expectedAlarmsFor`
 - ~~DST off-by-one~~ → Uhrzeit 12:00 statt 0:00 in mondayOf/getShift
 - ~~"Wecker stellbar"-Icons überall~~ → entfernt, nur noch echte Wecker-Icons
 - ~~pendingWebView Memory Leak~~ → onDestroy() setzt auf null
@@ -218,7 +245,7 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 
 ## Tests
 
-- Web-Logik: `cd tests && npm install && npm test` (jsdom, nachgebaute Android-Bridge; deckt Alle stellen, Urlaub, Weckzeit, Löschen, Feiertage, Profil-Export/-Import inkl. manipulierter Dateien, Waisen-Übernahme, Persistenz, Reset ab)
+- Web-Logik: `cd tests && npm install && npm test` (`run-all.js` führt alle `tests/*.test.js` aus; jsdom, nachgebaute Android-Bridge). `einrichtung.test.js`: geführte Einrichtung; `wecker.test.js`: Schalter „automatisch wecken“, Migration, Meldungen, Zeitauswahl, Einzelwecker; `webapp.test.js`: Urlaub, Weckzeit, Löschen, Feiertage, Profil-Export/-Import inkl. manipulierter Dateien, Waisen-Übernahme, Persistenz, Bereiche, Reset
 - Vor jedem Release zusätzlich auf Gerät/Emulator: frische Installation, Dark Mode an/aus, Test-Alarm bei gesperrtem Bildschirm, Neustart MIT PIN ohne Entsperren
 - `./gradlew lintDebug` muss ohne Fehler durchlaufen
 - CI: `.github/workflows/build.yml` (Tests, Lint, Debug-APK bei jedem Push; signiertes GitHub-Release bei Tag `v<versionName>`)

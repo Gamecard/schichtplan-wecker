@@ -59,6 +59,11 @@ const state = w => JSON.parse(w.localStorage.getItem(LS));
 const dump = w => { const o = {}; for (let i = 0; i < w.localStorage.length; i++) { const k = w.localStorage.key(i); o[k] = w.localStorage.getItem(k); } return o; };
 const autoKeys = (w, re) => state(w).activeAlarms.filter(a => a.auto && re.test(a.alarmKey));
 const click = (w, id) => w.document.getElementById(id).click();
+// Schalter „automatisch wecken“ einer Schicht (1–4) bzw. 'free' umlegen (ersetzt „Alle stellen“)
+function setAuto(w, t, on = true) {
+  const cb = w.document.getElementById(t === 'free' ? 'freeAlarmEnabled' : 'ae' + t);
+  if (cb.checked !== on) cb.click();
+}
 // Tag im Kalender antippen (blättert zum richtigen Monat)
 function openDay(w, ds) {
   const [y, m, d] = ds.split('-').map(Number);
@@ -81,11 +86,10 @@ function openDay(w, ds) {
   let br = makeBridge(native);
   let w = open({ [LS]: JSON.stringify(base) }, br); await sleep(50);
 
-  // Alle stellen
-  [...w.document.querySelectorAll('#alarmBox button')].filter(b => b.textContent === 'Alle stellen')[1].click();
-  click(w, 'cdlgOk');
+  // Automatisch wecken (früher „Alle stellen“)
+  setAuto(w, 2);
   const n1 = autoKeys(w, /-t2$/).length;
-  ok(n1 > 250 && n1 < 270 && Object.keys(native).length === n1, `Alle stellen Früh: ${n1} Wecker, nativ synchron`);
+  ok(n1 > 250 && n1 < 270 && Object.keys(native).length === n1, `Automatisch wecken Früh: ${n1} Wecker, nativ synchron`);
 
   // Urlaub
   w.document.getElementById('exS').value = '2026-11-02';
@@ -170,7 +174,7 @@ function openDay(w, ds) {
   br3.setAlarmForDateSilent(2027, 3, 1, 7, 0, 'free-day-2027-03-01', 'x');
   br3.setAlarmForDateSilent(2027, 3, 2, 4, 30, 'custom-2027-03-02', 'x');
   br3.setAlarmForDateSilent(2027, 3, 2, 4, 30, 'test-alarm', 'x');
-  const w3 = open({ [LS]: JSON.stringify(Object.assign({}, base, { pattern: [0, 0, 0, 0, 0, 0, 0], freeAlarm: { enabled: true, time: '07:00', days: [0] } })) }, br3); await sleep(50);
+  const w3 = open({ [LS]: JSON.stringify(Object.assign({}, base, { pattern: [0, 0, 0, 0, 0, 0, 0], freeAlarm: { enabled: true, time: '07:00', days: [0] }, autoSchedule: { free: true } })) }, br3); await sleep(50);
   const s4 = state(w3).activeAlarms;
   ok(s4.some(a => a.alarmKey === 'free-day-2027-03-01' && a.auto && a.time === '07:00'), 'verwaister Freie-Tage-Wecker übernommen (auto)');
   ok(s4.some(a => a.alarmKey === 'custom-2027-03-02' && !a.auto && a.ds === '2027-03-02'), 'verwaister Einzelwecker übernommen (manuell)');
@@ -193,8 +197,7 @@ function openDay(w, ds) {
   // ── Schichttausch, Nächster Wecker, ICS-Export
   const n6 = {}; const br6 = makeBridge(n6);
   const w6 = open({ [LS]: JSON.stringify(base) }, br6); await sleep(50);
-  [...w6.document.querySelectorAll('#alarmBox button')].filter(b => b.textContent === 'Alle stellen')[1].click();
-  w6.document.getElementById('cdlgOk').click();
+  setAuto(w6, 2);
   const na = w6.document.getElementById('nextAlarm').textContent;
   ok(/Nächster Wecker: .*05:30 Uhr.*Früh/.test(na), 'Nächster-Wecker-Zeile: ' + na);
   // Mo 16.11. (Früh) per Sheet auf Spät tauschen
@@ -204,10 +207,8 @@ function openDay(w, ds) {
   ok(state(w6).overrides['2026-11-16'] === 3, 'Tausch gespeichert');
   ok(!n6['shift-2026-11-16-t2'], 'Früh-Wecker am getauschten Tag entfernt');
   ok(w6.document.querySelectorAll('.cday.swapped').length === 1, 'Kalender markiert getauschten Tag');
-  // Spät ist nicht aktiviert → kein Spät-Wecker; Spät aktivieren + Alle stellen → Wecker am 16.11.
-  const c3 = w6.document.getElementById('ae3'); c3.checked = true; c3.dispatchEvent(new w6.Event('change', { bubbles: true }));
-  [...w6.document.querySelectorAll('#alarmBox button')].filter(b => b.textContent === 'Alle stellen')[2].click();
-  w6.document.getElementById('cdlgOk').click();
+  // Spät ist nicht aktiviert → kein Spät-Wecker; Spät automatisch wecken → Wecker am 16.11.
+  setAuto(w6, 3);
   ok(!!n6['shift-2026-11-16-t3'] && !Object.keys(n6).some(k => /-t3$/.test(k) && k !== 'shift-2026-11-16-t3'), 'Spät-Wecker nur am getauschten Tag');
   // Zurück auf Plan
   openDay(w6, '2026-11-16');
@@ -235,8 +236,7 @@ function openDay(w, ds) {
   // ── Vorwecker und Weck-Verhalten
   const n7 = {}; const br7 = makeBridge(n7);
   const w7 = open({ [LS]: JSON.stringify(base) }, br7); await sleep(50);
-  [...w7.document.querySelectorAll('#alarmBox button')].filter(b => b.textContent === 'Alle stellen')[1].click();
-  w7.document.getElementById('cdlgOk').click();
+  setAuto(w7, 2);
   const pre = w7.document.getElementById('preSel'); pre.value = '30'; pre.dispatchEvent(new w7.Event('change')); await sleep(1000);
   ok(n7['pre-shift-2026-11-16-t2'] && n7['pre-shift-2026-11-16-t2'].time === '05:00', 'Vorwecker 30 Min vor Früh (05:00)');
   ok(Object.keys(n7).filter(k => k.startsWith('pre-')).length === Object.keys(n7).filter(k => k.startsWith('shift-')).length, 'zu jedem Schicht-Wecker ein Vorwecker');
@@ -287,13 +287,13 @@ function openDay(w, ds) {
   Object.defineProperty(w9.document, 'hidden', { value: false, configurable: true });
   w9.document.dispatchEvent(new w9.Event('visibilitychange'));
   ok(pw.style.display === 'none', 'Warnung verschwindet nach Rückkehr mit Berechtigung');
-  click(w9, 'settingsBtn');
-  ok(w9.handleBack() === true && !w9.document.getElementById('settingsOverlay').classList.contains('open'), 'Zurück schließt Einstellungen');
+  w9.document.querySelector('#bottomNav [data-tab="wecker"]').click();
+  ok(!w9.document.getElementById('tabWecker').hidden && w9.document.getElementById('tabPlan').hidden, 'Navigation: Bereich Wecker sichtbar');
+  ok(w9.handleBack() === true && !w9.document.getElementById('tabPlan').hidden, 'Zurück aus einem Bereich führt zum Plan');
   openDay(w9, '2026-11-16');
   ok(w9.handleBack() === true && !w9.document.getElementById('overlay').classList.contains('open'), 'Zurück schließt Tages-Sheet');
   ok(w9.handleBack() === false, 'Zurück ohne offene Ebene verlässt die App');
-  [...w9.document.querySelectorAll('#alarmBox button')].filter(b => b.textContent === 'Alle stellen')[1].click();
-  click(w9, 'cdlgOk');
+  setAuto(w9, 2);
   ok(br9.windowSyncs > 0, 'Nach Sammel-Abgleich wird das Scharf-Fenster nativ geprüft');
   w9.close();
 
@@ -347,8 +347,7 @@ function openDay(w, ds) {
   // ── Startseite: nächste Wecker kompakt, alle Wecker auf Abruf
   const n12 = {}; const br12 = makeBridge(n12);
   const w12 = open({ [LS]: JSON.stringify(base) }, br12); await sleep(50);
-  [...w12.document.querySelectorAll('#alarmBox button')].filter(b => b.textContent === 'Alle stellen')[1].click();
-  click(w12, 'cdlgOk');
+  setAuto(w12, 2);
   const rows = [...w12.document.querySelectorAll('#aList .arow')];
   ok(rows.length === 3 && /Mo 02\.11\./.test(rows[0].textContent) && /05:30/.test(rows[0].textContent), 'Startseite zeigt nur die nächsten 3 Wecker: ' + rows.map(r => r.textContent).join(' | '));
   ok(/^\d+ Wecker bis [A-Z][a-zä]{2}\. \d{4}$/.test(w12.document.getElementById('aSummary').textContent), 'Zusammenfassung: ' + w12.document.getElementById('aSummary').textContent);
@@ -369,22 +368,40 @@ function openDay(w, ds) {
   ok(w12.handleBack() === true && !w12.document.getElementById('alarmsOverlay').classList.contains('open'), 'Zurück schließt „Alle Wecker“');
   w12.close();
 
-  // ── Anleitung und Design überleben verlorenen localStorage (nativer Stand)
+  // ── Einrichtung und Design überleben verlorenen localStorage (nativer Stand)
   const n13 = {}; const br13 = makeBridge(n13); let st13 = '';
   br13.saveState = j => { st13 = j; return true; }; br13.loadState = () => st13;
   const w13 = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://localhost/',
     beforeParse(w) { w.Android = br13; w.scrollTo = () => {}; } }).window; await sleep(50);
-  ok(w13.document.getElementById('wizBg').style.display === 'flex', 'Erststart: Anleitung erscheint');
-  for (let i = 0; i < 6; i++) w13.document.getElementById('wizNext').click();
+  ok(w13.document.getElementById('wizBg').classList.contains('open'), 'Erststart: Einrichtung erscheint');
+  w13.document.getElementById('wizSkip').click();
   w13.document.getElementById('themeBtn').click();   // system → light
-  ok(JSON.parse(st13).wizardDone === true && JSON.parse(st13).theme === 'light', 'Anleitung gesehen + Design nativ gespeichert');
+  ok(JSON.parse(st13).wizardDone === true && JSON.parse(st13).theme === 'light', 'Einrichtung erledigt + Design nativ gespeichert');
   w13.close();
   // localStorage „verloren“ (neues Fenster ohne localStorage), nur nativer Stand vorhanden
   const w14 = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://localhost/',
     beforeParse(w) { w.Android = br13; w.scrollTo = () => {}; } }).window; await sleep(50);
-  ok(w14.document.getElementById('wizBg').style.display !== 'flex', 'Anleitung erscheint nicht erneut');
+  ok(!w14.document.getElementById('wizBg').classList.contains('open'), 'Einrichtung erscheint nicht erneut');
   ok(w14.document.documentElement.getAttribute('data-theme') === 'light', 'Design bleibt erhalten');
   w14.close();
+
+  // ── Bereiche und Ausnahme direkt im Tages-Sheet
+  const n15 = {}; const br15 = makeBridge(n15);
+  const w15 = open({ [LS]: JSON.stringify(base) }, br15); await sleep(50);
+  const d15 = w15.document;
+  ok(['tabPlan','tabWecker','tabSchicht'].filter(id => !d15.getElementById(id).hidden).join() === 'tabPlan', 'Start im Plan, andere Bereiche verborgen');
+  ok(d15.getElementById('tabWecker').contains(d15.getElementById('alarmBox')) && d15.getElementById('tabWecker').contains(d15.getElementById('testAlarmBtn'))
+     && d15.getElementById('tabSchicht').contains(d15.getElementById('patGrid')) && d15.getElementById('tabSchicht').contains(d15.getElementById('exList'))
+     && d15.getElementById('tabSchicht').contains(d15.getElementById('kwNum')) && d15.getElementById('tabSchicht').contains(d15.getElementById('resetAll')), 'Karten liegen im richtigen Bereich');
+  ok(!d15.getElementById('settingsOverlay') && !d15.getElementById('settingsBtn'), 'altes Einstellungs-Fenster entfernt');
+  setAuto(w15, 2);
+  openDay(w15, '2026-11-17');
+  d15.querySelector('#sSwap [data-ex="Urlaub"]').click();
+  ok(state(w15).exceptions.some(e => e.start === '2026-11-17' && e.end === '2026-11-17' && e.type === 'Urlaub') && !n15['shift-2026-11-17-t2'], 'Urlaub im Tages-Sheet: Ausnahme gesetzt, Wecker sofort entfernt');
+  ok(/Urlaub \(17\.11\.2026\)/.test(d15.getElementById('sSwap').textContent), 'Sheet zeigt die Ausnahme an');
+  d15.getElementById('exDelBtn').click();
+  ok(!state(w15).exceptions.length && !!n15['shift-2026-11-17-t2'], 'Ausnahme entfernen stellt den Wecker wieder her');
+  w15.close();
 
   console.log(fails ? `\n${fails} FEHLER` : '\nalle Tests bestanden');
   process.exit(fails ? 1 : 0);

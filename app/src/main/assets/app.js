@@ -1016,6 +1016,26 @@ window.onerror=function(msg,src,line,col,err){
     if(!(t>=1&&t<=4)||!/^\d{2}:\d{2}$/.test(hhmm)) return;
     S.alarmTimes[t]=hhmm; save(); renderAlarmSettings(); renderCal(); scheduleResync();
   }
+  /* EIN Schalter pro Wecker-Art: an = Wecker für alle passenden Tage automatisch stellen
+     und aktuell halten, aus = automatische Wecker dieser Art entfernen (manuelle bleiben).
+     Liefert die Anzahl automatischer Wecker dieser Art danach. */
+  function setShiftAuto(t,on){
+    if(!(t>=1&&t<=4)) return 0;
+    S.alarmEnabled[t]=!!on; S.autoSchedule[t]=!!on;
+    if(on) S.suppressed=S.suppressed.filter(function(k){return !new RegExp('^(pre-)?shift-.*-t'+t+'$').test(k);});
+    save(); resyncAlarms({quiet:true}); renderCal();
+    return S.activeAlarms.filter(function(a){return a.auto&&new RegExp('^shift-.*-t'+t+'$').test(a.alarmKey);}).length;
+  }
+  function setFreeAuto(on){
+    S.freeAlarm.enabled=!!on; S.autoSchedule.free=!!on;
+    if(on) S.suppressed=S.suppressed.filter(function(k){return !/^free-day-/.test(k);});
+    save(); resyncAlarms({quiet:true}); renderCal();
+    return S.activeAlarms.filter(function(a){return a.auto&&/^free-day-/.test(a.alarmKey);}).length;
+  }
+  function setFreeTime(hhmm){
+    if(!/^\d{2}:\d{2}$/.test(hhmm)) return;
+    S.freeAlarm.time=hhmm; save(); renderCal(); scheduleResync();
+  }
   function setPatternDay(idx,t){
     if(idx<0||idx>=S.pattern.length||!(t>=0&&t<=4)) return;
     S.pattern[idx]=t; renderPat(); renderCal(); save(); scheduleResync();

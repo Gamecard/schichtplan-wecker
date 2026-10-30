@@ -129,6 +129,14 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 - Import läuft durch `applyState()` (dieselben Prüfungen wie beim Laden, plus Bereinigung von Muster, Bundesland, Ausnahmen). Eigener Klingelton ist nicht übertragbar (Dateizugriff gilt nur auf dem Gerät)
 - `format` erhöhen, wenn sich die Struktur inkompatibel ändert; neuere Formate werden abgelehnt
 
+### Startseite: Wecker-Übersicht
+- Unter dem Kalender nur die nächsten 3 Wecker (`A_PREVIEW`) + Zusammenfassung „n Wecker bis …“; Tippen öffnet den Tag. KEINE Löschknöpfe auf der Startseite
+- „Alle Wecker ›“ öffnet `#alarmsOverlay` (gleiches Overlay-Muster wie die Einstellungen): nach Monaten gruppierte `<details>`, erster Monat offen, auf-/zugeklappte Monate bleiben beim Löschen erhalten (`openMonths`). Zurück-Geste schließt es
+- Im Kalender ein dezenter Punkt (`.aind`) statt 🔔
+
+### Persistenz von Design und Anleitung
+- `S.theme` und `S.wizardDone` werden wie der übrige Zustand nativ gesichert (zusätzlich zu `localStorage`), weil `localStorage` bei Absturz/Stromverlust verloren gehen kann. Bestehende Installationen übernehmen den alten `localStorage`-Merker beim Start
+
 ### Wochenrhythmus-Eingabe
 - Über dem Muster steht eine Kopfzeile Mo–So (`.pdh`), weil belegte Tage den Schichtnamen statt des Wochentags zeigen
 - Schnellauswahl: Legenden-Einträge Frei/Früh/Spät/Nacht sind Buttons (`#patLegend .pick`, `patBrush`). Gewählt → Tag antippen setzt die Schicht, gleicher Tag nochmal → leer. Ohne Auswahl wechselt ein Tipp reihum (leer → Frei → Früh → Spät → Nacht). „Ausnahme“/„Feiertag“ sind NICHT wählbar (nur Erklärung)

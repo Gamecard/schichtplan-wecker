@@ -98,7 +98,8 @@ function openDay(w, ds) {
   ok(native['shift-2026-11-09-t2'].time === '06:30', 'Weckzeit-Änderung übernommen');
 
   // Gelöscht bleibt gelöscht
-  [...w.document.querySelectorAll('.adel')].find(b => b.dataset.key === 'shift-2026-11-09-t2').click();
+  click(w, 'allAlarmsBtn');
+  [...w.document.querySelectorAll('#allAlarmList .adel')].find(b => b.dataset.key === 'shift-2026-11-09-t2').click();
   w.document.getElementById('bundesland').dispatchEvent(new w.Event('change')); await sleep(1000);
   ok(!native['shift-2026-11-09-t2'], 'gelöschter Auto-Wecker bleibt gelöscht');
 
@@ -342,6 +343,48 @@ function openDay(w, ds) {
   q('.pday[data-idx="1"]').click();
   ok(state(w11).pattern[1] === 1, 'danach wieder reihum (leer → Frei)');
   w11.close();
+
+  // ── Startseite: nächste Wecker kompakt, alle Wecker auf Abruf
+  const n12 = {}; const br12 = makeBridge(n12);
+  const w12 = open({ [LS]: JSON.stringify(base) }, br12); await sleep(50);
+  [...w12.document.querySelectorAll('#alarmBox button')].filter(b => b.textContent === 'Alle stellen')[1].click();
+  click(w12, 'cdlgOk');
+  const rows = [...w12.document.querySelectorAll('#aList .arow')];
+  ok(rows.length === 3 && /Mo 02\.11\./.test(rows[0].textContent) && /05:30/.test(rows[0].textContent), 'Startseite zeigt nur die nächsten 3 Wecker: ' + rows.map(r => r.textContent).join(' | '));
+  ok(/^\d+ Wecker bis [A-Z][a-zä]{2}\. \d{4}$/.test(w12.document.getElementById('aSummary').textContent), 'Zusammenfassung: ' + w12.document.getElementById('aSummary').textContent);
+  click(w12, 'nextM');
+  ok(!w12.document.querySelector('#aList .adel') && w12.document.querySelector('.cday .aind') && !w12.document.querySelector('.cday .aind').textContent, 'keine Löschknöpfe auf der Startseite, Kalender zeigt Punkt statt Glocke');
+  w12.document.querySelector('#aList .arow').click();
+  ok(w12.document.getElementById('overlay').classList.contains('open') && /2\. November 2026/.test(w12.document.getElementById('sDate').textContent), 'Tippen auf einen Wecker öffnet den Tag');
+  w12.handleBack();
+  click(w12, 'allAlarmsBtn');
+  const months = [...w12.document.querySelectorAll('#allAlarmList details.amonth')];
+  ok(w12.document.getElementById('alarmsOverlay').classList.contains('open') && months.length >= 12 && months[0].open && !months[1].open, 'Alle Wecker: nach Monaten gruppiert, erster Monat offen (' + months.length + ' Monate)');
+  const total = [...w12.document.querySelectorAll('#allAlarmList .adel')].length;
+  ok(total === Object.keys(n12).length, 'Alle Wecker enthält jeden gestellten Wecker (' + total + ')');
+  months[2].open = true; months[2].dispatchEvent(new w12.Event('toggle'));
+  w12.document.querySelector('#allAlarmList .adel').click();
+  const after = [...w12.document.querySelectorAll('#allAlarmList details.amonth')];
+  ok(w12.document.querySelectorAll('#allAlarmList .adel').length === total - 1 && after[2].open && w12.document.getElementById('alarmsOverlay').classList.contains('open'), 'Löschen in der Liste: Fenster bleibt offen, aufgeklappte Monate bleiben offen');
+  ok(w12.handleBack() === true && !w12.document.getElementById('alarmsOverlay').classList.contains('open'), 'Zurück schließt „Alle Wecker“');
+  w12.close();
+
+  // ── Anleitung und Design überleben verlorenen localStorage (nativer Stand)
+  const n13 = {}; const br13 = makeBridge(n13); let st13 = '';
+  br13.saveState = j => { st13 = j; return true; }; br13.loadState = () => st13;
+  const w13 = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://localhost/',
+    beforeParse(w) { w.Android = br13; w.scrollTo = () => {}; } }).window; await sleep(50);
+  ok(w13.document.getElementById('wizBg').style.display === 'flex', 'Erststart: Anleitung erscheint');
+  for (let i = 0; i < 6; i++) w13.document.getElementById('wizNext').click();
+  w13.document.getElementById('themeBtn').click();   // system → light
+  ok(JSON.parse(st13).wizardDone === true && JSON.parse(st13).theme === 'light', 'Anleitung gesehen + Design nativ gespeichert');
+  w13.close();
+  // localStorage „verloren“ (neues Fenster ohne localStorage), nur nativer Stand vorhanden
+  const w14 = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://localhost/',
+    beforeParse(w) { w.Android = br13; w.scrollTo = () => {}; } }).window; await sleep(50);
+  ok(w14.document.getElementById('wizBg').style.display !== 'flex', 'Anleitung erscheint nicht erneut');
+  ok(w14.document.documentElement.getAttribute('data-theme') === 'light', 'Design bleibt erhalten');
+  w14.close();
 
   console.log(fails ? `\n${fails} FEHLER` : '\nalle Tests bestanden');
   process.exit(fails ? 1 : 0);

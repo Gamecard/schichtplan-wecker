@@ -43,6 +43,9 @@ window.onerror=function(msg,src,line,col,err){
       preAlarmMin:0,
       /* Startwoche als Kalenderwoche ('kw', Standard) oder als Datum ('date') wählen */
       startMode:'kw',
+      /* Design und „Anleitung gesehen“ – zusätzlich zum localStorage nativ gesichert */
+      theme:'',
+      wizardDone:false,
       /* vom Nutzer gelöschte Auto-Wecker – werden nicht wieder angelegt */
       suppressed:[]
     };
@@ -170,7 +173,7 @@ window.onerror=function(msg,src,line,col,err){
     if(!S.activeAlarms)return[];
     var today=todayYmd();
     return S.activeAlarms.filter(function(a){return a.ds>=today;})
-      .sort(function(a,b){return a.ds.localeCompare(b.ds)||a.alarmKey.localeCompare(b.alarmKey);});
+      .sort(function(a,b){return (a.ds+a.time).localeCompare(b.ds+b.time)||a.alarmKey.localeCompare(b.alarmKey);});
   }
   function purgeExpiredAlarms(){
     if(!S.activeAlarms)return;
@@ -191,11 +194,13 @@ window.onerror=function(msg,src,line,col,err){
     var th=THEMES.includes(t)?t:'system';
     document.documentElement.setAttribute('data-theme',th);
     $('themeBtn').textContent=TICOS[th];
+    S.theme=th;   // auch nativ sichern (localStorage kann bei Absturz verloren gehen)
     try{localStorage.setItem(THK,th);}catch(e){}
   }
   function cycleTheme(){
     var cur=document.documentElement.getAttribute('data-theme')||'system';
     applyTheme(THEMES[(THEMES.indexOf(cur)+1)%3]);
+    save();
   }
   (function(){var t='system';try{t=localStorage.getItem(THK)||t;}catch(e){}applyTheme(t);})();
 
@@ -700,43 +705,66 @@ window.onerror=function(msg,src,line,col,err){
         }
         if(aa.length){
           var ind=document.createElement('div');ind.className='aind';
-          ind.textContent='\uD83D\uDD14';ind.title='Wecker: '+aa.map(function(a){return a.time;}).join(', ')+' Uhr';cell.appendChild(ind);
+          ind.title='Wecker: '+aa.map(function(a){return a.time;}).join(', ')+' Uhr';cell.appendChild(ind);
         }
         grid.appendChild(cell);
       }
     }
     var con=$('calGrid'); con.innerHTML=''; con.appendChild(grid);
-    aListLimit=5; renderAList();
+    renderAList();
   }
 
   /* ── WECKER-LISTE ───────────────────────── */
-  var aListLimit=5;
+  /* Startseite: nur die nächsten Wecker kompakt, die ganze Liste auf Abruf */
+  var A_PREVIEW=3;
+  var MONTHS_DE=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  function alarmDayLabel(ds){
+    var d=parseYmd(ds);
+    return ['So','Mo','Di','Mi','Do','Fr','Sa'][d.getDay()]+' '+fmtDe(ds).slice(0,6);
+  }
+  function upcomingAlarms(){
+    return getAllActiveAlarmsSorted().filter(function(a){return isFuture(a.ds,a.time);});
+  }
   function renderAList(){
     var card=$('aCard'), list=$('aList'); list.innerHTML='';
     renderNextAlarm();
-    var entries=getAllActiveAlarmsSorted();
-    if(!entries.length){card.style.display='none';return;}
+    var entries=upcomingAlarms();
+    if(!entries.length){ card.style.display='none'; if(isAlarmsOpen()) renderAllAlarms(); return; }
     card.style.display='';
-    var show=entries.slice(0,aListLimit);
-    show.forEach(function(info){
-      var el=document.createElement('div'); el.className='exitem';
-      el.innerHTML='\uD83D\uDD14 <b>'+esc(fmtDe(info.ds))+'</b> \u2013 '+esc(info.shiftName)+' um '+esc(info.time)+' Uhr'
-        +'<button class="danger sm adel" data-date="'+esc(info.ds)+'" data-key="'+esc(info.alarmKey)+'">L\u00F6schen</button>';
+    entries.slice(0,A_PREVIEW).forEach(function(a){
+      var el=document.createElement('div'); el.className='arow'; el.dataset.date=a.ds;
+      el.innerHTML='<span class="ad">'+esc(alarmDayLabel(a.ds))+'</span><span class="at">'+esc(a.time)+'</span>'
+        +'<span class="an">'+esc(a.shiftName||'Wecker')+'</span>';
       list.appendChild(el);
     });
-    if(entries.length>aListLimit){
-      var more=document.createElement('button');
-      more.className='sm';more.id='aMore';
-      more.textContent='\u25BC Mehr anzeigen ('+(entries.length-aListLimit)+' weitere)';
-      list.appendChild(more);
-    }
-    if(aListLimit>5){
-      var less=document.createElement('button');
-      less.className='sm';less.id='aLess';
-      less.textContent='\u25B2 Weniger anzeigen';
-      list.appendChild(less);
-    }
+    var last=parseYmd(entries[entries.length-1].ds);
+    $('aSummary').textContent=entries.length+' Wecker'+(entries.length>1?' bis '+MONTHS_DE[last.getMonth()].slice(0,3)+'. '+last.getFullYear():'');
+    if(isAlarmsOpen()) renderAllAlarms();
   }
+  /* Alle Wecker: nach Monaten gruppiert, aufklappbar */
+  var openMonths=null;   // null = erster Monat offen
+  function isAlarmsOpen(){ return $('alarmsOverlay').classList.contains('open'); }
+  function renderAllAlarms(){
+    var box=$('allAlarmList'), entries=upcomingAlarms(); box.innerHTML='';
+    $('allSummary').textContent=entries.length?entries.length+' gestellte Wecker':'Keine Wecker gestellt.';
+    var groups={}, order=[];
+    entries.forEach(function(a){ var m=a.ds.slice(0,7); if(!groups[m]){groups[m]=[];order.push(m);} groups[m].push(a); });
+    if(openMonths===null) openMonths=order.length?[order[0]]:[];
+    order.forEach(function(m){
+      var det=document.createElement('details'); det.className='amonth'; det.dataset.m=m;
+      if(openMonths.indexOf(m)!==-1) det.open=true;
+      var p=m.split('-').map(Number);
+      det.innerHTML='<summary><span>'+MONTHS_DE[p[1]-1]+' '+p[0]+' <span class="muted">· '+groups[m].length+'</span></span></summary>'
+        +groups[m].map(function(a){
+          return '<div class="arow"><span class="ad">'+esc(alarmDayLabel(a.ds))+'</span><span class="at">'+esc(a.time)+'</span>'
+            +'<span class="an">'+esc(a.shiftName||'Wecker')+'</span>'
+            +'<button class="adel" title="Wecker löschen" aria-label="Wecker löschen" data-date="'+esc(a.ds)+'" data-key="'+esc(a.alarmKey)+'">🗑</button></div>';
+        }).join('');
+      box.appendChild(det);
+    });
+  }
+  function openAllAlarms(){ openMonths=null; renderAllAlarms(); $('alarmsOverlay').classList.add('open'); $('alarmsOverlay').scrollTop=0; }
+  function closeAllAlarms(){ $('alarmsOverlay').classList.remove('open'); }
 
   /* Warnung bei fehlender Wecker-Berechtigung (z. B. Dialog mit „Später“ weggeklickt) */
   function renderPermWarn(){
@@ -941,6 +969,7 @@ window.onerror=function(msg,src,line,col,err){
     if(vis('cdlgBg')){ $('cdlgCancel').click(); return true; }
     if(vis('wizBg')){ closeWiz(); return true; }
     if($('overlay').classList.contains('open')){ closeSheet(); return true; }
+    if(isAlarmsOpen()){ closeAllAlarms(); return true; }
     if($('settingsOverlay').classList.contains('open')){ $('settingsOverlay').classList.remove('open'); save(); return true; }
     return false;
   };
@@ -1015,6 +1044,8 @@ window.onerror=function(msg,src,line,col,err){
       [1,2,3,4,'free'].forEach(function(k){if(typeof s.autoSchedule[k]==='boolean')S.autoSchedule[k]=s.autoSchedule[k];});
     if(typeof s.skipHolidaysShift==='boolean') S.skipHolidaysShift=s.skipHolidaysShift;
     if(s.startMode==='kw'||s.startMode==='date') S.startMode=s.startMode;
+    if(THEMES.indexOf(s.theme)!==-1) S.theme=s.theme;
+    if(typeof s.wizardDone==='boolean') S.wizardDone=s.wizardDone;
     if(typeof s.preAlarmMin==='number'&&[0,5,10,15,30,45,60].indexOf(s.preAlarmMin)!==-1) S.preAlarmMin=s.preAlarmMin;
     if(Array.isArray(s.suppressed)) S.suppressed=s.suppressed.filter(function(k){return typeof k==='string';});
     if(s.overrides&&typeof s.overrides==='object'&&!Array.isArray(s.overrides)){
@@ -1037,7 +1068,7 @@ window.onerror=function(msg,src,line,col,err){
     keys.forEach(function(k){ data[k]=S[k]; });
     data.manualAlarms=(S.activeAlarms||[]).filter(function(a){return !a.auto&&isFuture(a.ds,a.time);})
       .map(function(a){return {ds:a.ds,alarmKey:a.alarmKey,time:a.time,shiftName:a.shiftName};});
-    var theme='system'; try{ theme=localStorage.getItem(THK)||'system'; }catch(e){}
+    var theme=S.theme||'system'; try{ theme=localStorage.getItem(THK)||theme; }catch(e){}
     return {app:'schichtwecker',format:PROFILE_FORMAT,exportedAt:new Date().toISOString(),theme:theme,
             alarmOptions:readAlarmOptions(),data:data};
   }
@@ -1207,7 +1238,7 @@ window.onerror=function(msg,src,line,col,err){
     $('wizNext').textContent=wizStep===wizSteps.length-1?'Fertig':'Weiter';
   }
   function openWiz(){wizStep=0;renderWiz();$('wizBg').style.display='flex';}
-  function closeWiz(){$('wizBg').style.display='none';try{localStorage.setItem(WIZ_KEY,'1');}catch(e){}}
+  function closeWiz(){$('wizBg').style.display='none';S.wizardDone=true;save();try{localStorage.setItem(WIZ_KEY,'1');}catch(e){}}
   $('wizNext').onclick=function(){
     if(wizStep<wizSteps.length-1){wizStep++;renderWiz();}
     else closeWiz();
@@ -1332,10 +1363,19 @@ window.onerror=function(msg,src,line,col,err){
   $('nextM').onclick=function(){viewDate.setMonth(viewDate.getMonth()+1);renderCal();};
   $('todayM').onclick=function(){viewDate=new Date();viewDate.setDate(1);viewDate.setHours(12,0,0,0);renderCal();};
   $('aList').addEventListener('click',function(e){
-    var b=e.target.closest('.adel');if(b)cancelAlarm(b.dataset.date,b.dataset.key);
-    if(e.target.id==='aMore'){aListLimit+=5;renderAList();}
-    if(e.target.id==='aLess'){aListLimit=5;renderAList();}
+    var r=e.target.closest('.arow'); if(r) openSheet(r.dataset.date,getShift(r.dataset.date));
   });
+  $('allAlarmsBtn').onclick=openAllAlarms;
+  $('closeAlarms').onclick=closeAllAlarms;
+  $('allAlarmList').addEventListener('click',function(e){
+    var b=e.target.closest('.adel'); if(b) cancelAlarm(b.dataset.date,b.dataset.key);
+  });
+  // Auf-/Zugeklappte Monate merken (toggle-Ereignis steigt nicht auf → capture)
+  $('allAlarmList').addEventListener('toggle',function(e){
+    var m=e.target&&e.target.dataset&&e.target.dataset.m; if(!m||!openMonths) return;
+    var i=openMonths.indexOf(m);
+    if(e.target.open&&i===-1) openMonths.push(m); else if(!e.target.open&&i!==-1) openMonths.splice(i,1);
+  },true);
   $('overlay').onclick=function(e){if(e.target===this)closeSheet();};
   $('testAlarmBtn').onclick=function(){
     if(window.Android&&typeof window.Android.testAlarm==='function'){
@@ -1383,7 +1423,8 @@ window.onerror=function(msg,src,line,col,err){
 
   /* ── INIT ───────────────────────────────── */
   S.startDate=todayYmd();
-  load(); if(!S.startDate) S.startDate=todayYmd(); initPat(); purgeExpiredAlarms();
+  load(); if(!S.startDate) S.startDate=todayYmd();
+  if(S.theme) applyTheme(S.theme); initPat(); purgeExpiredAlarms();
   // Migration: Frei-Defaults setzen falls leer (alte Versionen hatten '' / false)
   if(!S.alarmTimes[1]) S.alarmTimes[1]='07:00';
   initDateSelects();
@@ -1394,5 +1435,7 @@ window.onerror=function(msg,src,line,col,err){
   syncWithNative(); resyncAlarms({quiet:true}); showAppVersion(); updateAlarmOptionsUi(); renderPermWarn();
   renderAlarmSettings(); renderFreeAlarmSettings(); renderPat(); renderPatHint(); renderEx(); renderCal();
   /* Wizard beim allerersten Start anzeigen */
-  try{if(!localStorage.getItem(WIZ_KEY))openWiz();}catch(e){}
+  var wizSeen=S.wizardDone; try{ wizSeen=wizSeen||!!localStorage.getItem(WIZ_KEY); }catch(e){}
+  if(!wizSeen) openWiz();
+  else if(!S.wizardDone){ S.wizardDone=true; save(); }   // Altbestand: Merker auch nativ sichern
 })();

@@ -201,6 +201,18 @@
     </div>
   </div><!-- /settingsOverlay -->
 
+  <!-- ======= ALLE WECKER (Liste auf Abruf) ======= -->
+  <div class="settings-overlay" id="alarmsOverlay">
+    <div class="settings-inner">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem;">
+        <div style="font-weight:800;font-size:1.05rem;">&#x1F514; Alle Wecker</div>
+        <button class="icon" id="closeAlarms" title="Schlie&szlig;en">&#x2715;</button>
+      </div>
+      <div class="small muted" id="allSummary" style="margin-bottom:.8rem;"></div>
+      <div id="allAlarmList"></div>
+    </div>
+  </div>
+
   <!-- ======= KALENDAR ======= -->
   <div class="permwarn" id="permWarn" style="display:none;"></div>
   <div class="nextalarm" id="nextAlarm"></div>
@@ -217,8 +229,12 @@
 
   <!-- gesetzte Wecker -->
   <div class="card" id="aCard" style="display:none;">
-    <div class="ctitle">&#x1F514;&nbsp;Gesetzte Wecker</div>
-    <div class="stack" id="aList" style="gap:.35rem;"></div>
+    <div class="ctitle">&#x1F514;&nbsp;N&auml;chste Wecker</div>
+    <div id="aList" class="alist"></div>
+    <div class="asum">
+      <span class="small muted" id="aSummary"></span>
+      <button class="sm" id="allAlarmsBtn">Alle Wecker &rsaquo;</button>
+    </div>
   </div>
 
 </div><!-- /wrap -->

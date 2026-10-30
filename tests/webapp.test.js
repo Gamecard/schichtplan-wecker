@@ -370,20 +370,20 @@ function openDay(w, ds) {
   ok(w12.handleBack() === true && !w12.document.getElementById('alarmsOverlay').classList.contains('open'), 'Zurück schließt „Alle Wecker“');
   w12.close();
 
-  // ── Anleitung und Design überleben verlorenen localStorage (nativer Stand)
+  // ── Einrichtung und Design überleben verlorenen localStorage (nativer Stand)
   const n13 = {}; const br13 = makeBridge(n13); let st13 = '';
   br13.saveState = j => { st13 = j; return true; }; br13.loadState = () => st13;
   const w13 = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://localhost/',
     beforeParse(w) { w.Android = br13; w.scrollTo = () => {}; } }).window; await sleep(50);
-  ok(w13.document.getElementById('wizBg').style.display === 'flex', 'Erststart: Anleitung erscheint');
-  for (let i = 0; i < 6; i++) w13.document.getElementById('wizNext').click();
+  ok(w13.document.getElementById('wizBg').classList.contains('open'), 'Erststart: Einrichtung erscheint');
+  w13.document.getElementById('wizSkip').click();
   w13.document.getElementById('themeBtn').click();   // system → light
-  ok(JSON.parse(st13).wizardDone === true && JSON.parse(st13).theme === 'light', 'Anleitung gesehen + Design nativ gespeichert');
+  ok(JSON.parse(st13).wizardDone === true && JSON.parse(st13).theme === 'light', 'Einrichtung erledigt + Design nativ gespeichert');
   w13.close();
   // localStorage „verloren“ (neues Fenster ohne localStorage), nur nativer Stand vorhanden
   const w14 = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://localhost/',
     beforeParse(w) { w.Android = br13; w.scrollTo = () => {}; } }).window; await sleep(50);
-  ok(w14.document.getElementById('wizBg').style.display !== 'flex', 'Anleitung erscheint nicht erneut');
+  ok(!w14.document.getElementById('wizBg').classList.contains('open'), 'Einrichtung erscheint nicht erneut');
   ok(w14.document.documentElement.getAttribute('data-theme') === 'light', 'Design bleibt erhalten');
   w14.close();
 

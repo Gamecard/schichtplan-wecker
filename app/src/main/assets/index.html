@@ -277,16 +277,20 @@
   </div>
 </div>
 
-<!-- ======= EINRICHTUNGSASSISTENT ======= -->
-<div class="wiz-bg" id="wizBg" style="display:none;">
-  <div class="wiz">
-    <div class="wiz-icon" id="wizIcon"></div>
-    <div class="wiz-title" id="wizTitle"></div>
+<!-- ======= EINRICHTUNG (Vollbild-Ebene, Overlay-Muster) ======= -->
+<div class="wiz-ov" id="wizBg" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="wizTitle">
+  <div class="wiz-inner">
+    <div class="wiz-top">
+      <span class="wiz-steptxt" id="wizStepTxt"></span>
+      <button type="button" class="sm" id="wizSkip">&Uuml;berspringen</button>
+    </div>
+    <div class="wiz-bar" id="wizBar"></div>
+    <h2 class="wiz-title" id="wizTitle"></h2>
+    <div class="wiz-sub" id="wizSub"></div>
     <div class="wiz-body" id="wizBody"></div>
-    <div class="wiz-dots" id="wizDots"></div>
     <div class="wiz-nav">
-      <button class="sm" id="wizPrev">Zur&uuml;ck</button>
-      <button class="primary sm" id="wizNext">Weiter</button>
+      <button type="button" id="wizPrev">Zur&uuml;ck</button>
+      <button type="button" class="primary" id="wizNext">Weiter</button>
     </div>
   </div>
 </div>

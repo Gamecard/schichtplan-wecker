@@ -134,7 +134,15 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 - „Alle Wecker ›“ öffnet `#alarmsOverlay` (gleiches Overlay-Muster wie die Einstellungen): nach Monaten gruppierte `<details>`, erster Monat offen, auf-/zugeklappte Monate bleiben beim Löschen erhalten (`openMonths`). Zurück-Geste schließt es
 - Im Kalender ein dezenter Punkt (`.aind`) statt 🔔
 
-### Persistenz von Design und Anleitung
+### Geführte Einrichtung (ersetzt die frühere Text-Anleitung)
+- Vollbild-Ebene `#wizBg.wiz-ov` nach dem Overlay-Muster (Ebene scrollt selbst, `.open`-Klasse, `body.overflow`), `z-index:150` (über Navigation/Sheet, unter Toast/Dialog). Navigation unten `position:sticky` innerhalb der Ebene
+- Schritte: 1 Startwoche (KW + Jahr, Anzeige Mo–So) → 2 Rhythmus (Vorlagen `WIZ_TPLS` + Wochenraster, Tippen reihum leer→Frei→Früh→Spät→Nacht, Zellen `.pday[data-wi]` – NICHT `data-idx`, das gehört zu `#patGrid`) → 3 Weckzeiten (nur Schichtarten im Muster, `<input type="time">` + „automatisch wecken“) → 4 Bundesland → Abschluss (Zusammenfassung aus `upcomingAlarms()`, Hinweis Test-Alarm, „Zum Plan“ = Plan + Kalender im Monat der Startwoche)
+- ENTWURF: Alle Eingaben liegen in `W` und werden erst mit „Einrichten“ (Schritt 4) übernommen (`wizApply`). „Überspringen“, Zurück-Geste und Schließen ändern also nichts. Übernommen wird nur, was sich gegenüber `S` geändert hat – ausschließlich über die Setter `applyStartDate`, `setWeeksCount`, `setPatternDay`, `setShiftTime`, `setShiftAuto`. `setShiftAuto` NUR bei geändertem Schalter rufen (`setShiftAuto(t,true)` leert `S.suppressed` dieser Art → gelöschte Wecker kämen zurück). Danach ausstehenden `scheduleResync` verwerfen und einmal still `resyncAlarms({quiet:true})`
+- Vorbelegung beim erneuten Start: aktuelle Werte aus `S`; Vorlagen erst beim Antippen. „automatisch wecken“: Art schon im Muster → aktueller Stand (`autoSchedule && alarmEnabled`), neue Art → Schichten an, Frei aus
+- Start automatisch, solange weder `S.wizardDone` noch der localStorage-Merker `schichtplan-wizard-done` gesetzt ist; sonst über `#startWizBtn` (Bereich Schichtplan → App). Schließen/Einrichten setzt beides
+- Tests: `tests/einrichtung.test.js`
+
+### Persistenz von Design und Einrichtung
 - `S.theme` und `S.wizardDone` werden wie der übrige Zustand nativ gesichert (zusätzlich zu `localStorage`), weil `localStorage` bei Absturz/Stromverlust verloren gehen kann. Bestehende Installationen übernehmen den alten `localStorage`-Merker beim Start
 
 ### Wochenrhythmus-Eingabe
@@ -161,10 +169,10 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 - Fehlt die Vollbild- (14+) oder Exact-Alarm-Berechtigung (12/12L), zeigt die App oben einen roten Hinweis mit „Erlauben“ (`getAlarmPermissionIssue`/`openAlarmPermissionSettings`), Prüfung bei jeder Rückkehr in die App
 
 ### Zurück-Geste
-- `MainActivity.backCallback` fragt `window.handleBack()`: schließt Dialog → Anleitung → Tages-Sheet → Einstellungen; erst wenn nichts offen ist, verlässt die App
+- `MainActivity.backCallback` fragt `window.handleBack()`: schließt Dialog → Einrichtung (einen Schritt zurück, auf Schritt 1 schließen, auf dem Abschluss „Zum Plan“) → Tages-Sheet → „Alle Wecker“ → anderer Bereich zurück zum Plan; erst wenn nichts offen ist, verlässt die App
 
 ### WebView-Kompatibilität
-- Die WebView wird über den Play Store aktualisiert; die Fallbacks in `app.css` (`top/right/bottom/left` vor `inset`, `margin` statt Flexbox-`gap` bei den Anleitungs-Punkten) stammen aus einem Test mit altem WebView und schaden nicht
+- Die WebView wird über den Play Store aktualisiert; die Fallbacks in `app.css` (`top/right/bottom/left` vor `inset`) stammen aus einem Test mit altem WebView und schaden nicht
 
 ### Widget
 - `ShiftWidget` zeigt heute/morgen + nächsten Wecker. `app.js` schickt bei jedem `save()` 60 Tage Schichtnamen (`Android.updateWidget`), der nächste Wecker kommt aus dem `AlarmStore`
@@ -218,7 +226,7 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 
 ## Tests
 
-- Web-Logik: `cd tests && npm install && npm test` (jsdom, nachgebaute Android-Bridge; deckt Alle stellen, Urlaub, Weckzeit, Löschen, Feiertage, Profil-Export/-Import inkl. manipulierter Dateien, Waisen-Übernahme, Persistenz, Reset ab)
+- Web-Logik: `cd tests && npm install && npm test` (jsdom, nachgebaute Android-Bridge; `run-all.js` führt alle `*.test.js` aus; deckt Einrichtung, Alle stellen, Urlaub, Weckzeit, Löschen, Feiertage, Profil-Export/-Import inkl. manipulierter Dateien, Waisen-Übernahme, Persistenz, Reset ab)
 - Vor jedem Release zusätzlich auf Gerät/Emulator: frische Installation, Dark Mode an/aus, Test-Alarm bei gesperrtem Bildschirm, Neustart MIT PIN ohne Entsperren
 - `./gradlew lintDebug` muss ohne Fehler durchlaufen
 - CI: `.github/workflows/build.yml` (Tests, Lint, Debug-APK bei jedem Push; signiertes GitHub-Release bei Tag `v<versionName>`)

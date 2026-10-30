@@ -8,10 +8,12 @@ import android.util.Log
 /**
  * Android löscht alle AlarmManager-Wecker beim Neustart. Dieser Receiver plant sie aus dem
  * [AlarmStore] neu ein – ebenso nach App-Update und Zeit-/Zeitzonenwechsel.
+ * LOCKED_BOOT_COMPLETED kommt schon vor dem ersten Entsperren (Direct Boot).
  */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
+            Intent.ACTION_LOCKED_BOOT_COMPLETED,
             Intent.ACTION_BOOT_COMPLETED,
             Intent.ACTION_MY_PACKAGE_REPLACED,
             Intent.ACTION_TIME_CHANGED,

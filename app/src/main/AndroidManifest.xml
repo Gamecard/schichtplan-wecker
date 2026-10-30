@@ -37,14 +37,17 @@
 
         <receiver
             android:name="de.schichtwecker.app.AlarmReceiver"
+            android:directBootAware="true"
             android:enabled="true"
             android:exported="false" />
 
         <!-- Plant gespeicherte Wecker nach Neustart / Update / Zeitwechsel neu ein -->
         <receiver
             android:name="de.schichtwecker.app.BootReceiver"
+            android:directBootAware="true"
             android:exported="true">
             <intent-filter>
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
                 <action android:name="android.intent.action.TIME_SET" />
@@ -55,11 +58,13 @@
         <!-- Spielt den Weckton, unabhängig von der sichtbaren AlarmActivity -->
         <service
             android:name="de.schichtwecker.app.AlarmService"
+            android:directBootAware="true"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 
         <activity
             android:name="de.schichtwecker.app.AlarmActivity"
+            android:directBootAware="true"
             android:launchMode="singleTop"
             android:exported="false"
             android:showWhenLocked="true"

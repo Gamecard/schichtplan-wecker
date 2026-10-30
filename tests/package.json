@@ -1,0 +1,11 @@
+{
+  "name": "schichtwecker-webapp-tests",
+  "private": true,
+  "description": "Ablauftests der Web-Oberfläche (index.html) mit nachgebauter Android-Bridge",
+  "scripts": {
+    "test": "node webapp.test.js"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0"
+  }
+}

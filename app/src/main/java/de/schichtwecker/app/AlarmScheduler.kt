@@ -201,8 +201,36 @@ object AlarmStore {
         }
     }
 
-    private fun prefs(context: Context) =
-        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    /**
+     * Gerätegeschützter Speicher (Direct Boot): lesbar schon vor dem ersten Entsperren
+     * nach einem Neustart – sonst klingelt nach einem nächtlichen Update-Neustart nichts,
+     * bis das Handy entsperrt wird.
+     */
+    private fun prefs(context: Context): android.content.SharedPreferences {
+        val app = context.applicationContext
+        val device = app.createDeviceProtectedStorageContext()
+        migrateToDeviceStorage(app, device)
+        return device.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    }
+
+    @Volatile private var migrationChecked = false
+
+    /** Einmalig: Liste aus dem alten (erst nach Entsperren lesbaren) Speicher übernehmen. */
+    private fun migrateToDeviceStorage(app: Context, device: Context) {
+        if (migrationChecked) return
+        if (!app.getSystemService(android.os.UserManager::class.java).isUserUnlocked) return
+        try {
+            val old = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            if (old.contains(KEY_ALARMS) &&
+                !device.getSharedPreferences(PREFS, Context.MODE_PRIVATE).contains(KEY_ALARMS)
+            ) {
+                device.moveSharedPreferencesFrom(app, PREFS)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("SchichtplanAlarm", "AlarmStore-Migration fehlgeschlagen", e)
+        }
+        migrationChecked = true
+    }
 
     private fun load(context: Context): JSONObject =
         try { JSONObject(prefs(context).getString(KEY_ALARMS, "{}")!!) } catch (_: Exception) { JSONObject() }
@@ -238,6 +266,14 @@ object AlarmStore {
     }
 
     fun keysJson(context: Context): String = JSONArray(all(context).map { it.key }).toString()
+
+    /** Alle Wanduhr-Wecker mit Datum/Uhrzeit (für den Abgleich mit der Web-Oberfläche). */
+    fun entriesJson(context: Context): String = JSONArray(all(context).filter { it.isWallClock }.map { e ->
+        JSONObject().apply {
+            put("key", e.key); put("message", e.message)
+            put("y", e.year); put("mo", e.month); put("d", e.day); put("h", e.hour); put("mi", e.minute)
+        }
+    }).toString()
 
     /**
      * requestCode für einen Schlüssel: vorhandener Wert, sonst hashCode (identisch zu älteren

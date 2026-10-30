@@ -18,7 +18,10 @@ class AlarmReceiver : BroadcastReceiver() {
         const val CHANNEL_ID = "schichtplan_alarm_v4"
 
         fun getAlarmSoundUri(context: Context): Uri {
-            if (MainActivity.usesCustomRingtone(context)) {
+            // Vor dem ersten Entsperren sind eigene Einstellungen und Dateien nicht lesbar
+            // → Standard-Weckton
+            val unlocked = context.getSystemService(android.os.UserManager::class.java).isUserUnlocked
+            if (unlocked && MainActivity.usesCustomRingtone(context)) {
                 val custom = MainActivity.getCustomRingtoneUri(context)
                 if (!custom.isNullOrEmpty()) {
                     try {

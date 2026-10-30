@@ -112,6 +112,25 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 - Auslöser: jede Planänderung ruft `scheduleResync()` (800 ms gebündelt)
 - `S.skipHolidaysShift` (Standard `false`): Schicht-Wecker an Feiertagen auslassen. Freie-Tage-Wecker lassen Feiertage immer aus
 
+### Persistenz (WICHTIG)
+- `save()` schreibt den Zustand ZUERST synchron nativ (`Android.saveState`, SharedPreferences `app_state`, `commit()`), danach in `localStorage`. `load()` bevorzugt `Android.loadState()`
+- Grund (Gerätetest): Der localStorage der WebView schreibt verzögert. Wird die App direkt nach einer Änderung beendet (z. B. aus den „Letzten Apps" gewischt), ging die Änderung verloren – gelöschte Wecker kamen zurück
+- `syncWithNative()` übernimmt beim Start Wecker, die nativ geplant, aber in `activeAlarms` unbekannt sind (`Android.getScheduledAlarms()`), damit es keine unsichtbaren, nicht löschbaren Wecker gibt
+
+### Direct Boot (WICHTIG)
+- Android-Handys starten nachts für Updates neu. Mit PIN kommt `BOOT_COMPLETED` erst nach dem ersten Entsperren – ohne Direct Boot würde bis dahin KEIN Wecker klingeln (im Gerätetest nachgewiesen)
+- Deshalb: `AlarmStore` liegt im gerätegeschützten Speicher (`createDeviceProtectedStorageContext()`, einmalige Migration aus dem alten Speicher), `BootReceiver` hört auf `LOCKED_BOOT_COMPLETED`, `AlarmReceiver`/`AlarmService`/`AlarmActivity`/`BootReceiver` sind `directBootAware`
+- Vor dem ersten Entsperren ist der eigene Klingelton nicht lesbar → Standard-Weckton (`getAlarmSoundUri` prüft `isUserUnlocked`)
+
+### Profil (Sicherung)
+- Einstellungen → „Profil sichern“/„Profil laden“: JSON-Datei über den System-Dateidialog (`CreateDocument`/`OpenDocument` in `MainActivity`, Rückruf `onProfileImported(text)`)
+- Inhalt: `{app:"schichtwecker", format:1, exportedAt, theme, data:{Plan, Einstellungen, autoSchedule, suppressed, manualAlarms}}` – automatische Wecker werden NICHT gespeichert, sondern beim Laden per `resyncAlarms()` neu berechnet
+- Import läuft durch `applyState()` (dieselben Prüfungen wie beim Laden, plus Bereinigung von Muster, Bundesland, Ausnahmen). Eigener Klingelton ist nicht übertragbar (Dateizugriff gilt nur auf dem Gerät)
+- `format` erhöhen, wenn sich die Struktur inkompatibel ändert; neuere Formate werden abgelehnt
+
+### Version
+- `versionCode`/`versionName` NUR in `app/build.gradle.kts` pflegen und bei jeder ausgelieferten APK erhöhen. Die App zeigt die Version unten in den Einstellungen (`Android.getAppVersion()`)
+
 ### Reset-Verhalten
 - „Alles zurücksetzen“ ruft `cancelAlarm()` je Wecker + `Android.cancelAllAlarms()` VOR `createDefaultState()`
 
@@ -151,6 +170,12 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 - ~~Reset: Toast-Flut durch cancelAlarm()~~ → cancelAlarm ohne Toast
 - ~~Zweites Schlummern nicht mehr löschbar~~ → Schlüssel `<key>#snooze`
 - ~~Vollbild-Berechtigung: Einstellungen ohne Erklärung bei jedem Start~~ → Hinweisdialog
+
+## Tests
+
+- Web-Logik: `cd tests && npm install && npm test` (jsdom, nachgebaute Android-Bridge; deckt Alle stellen, Urlaub, Weckzeit, Löschen, Feiertage, Profil-Export/-Import inkl. manipulierter Dateien, Waisen-Übernahme, Persistenz, Reset ab)
+- Vor jedem Release zusätzlich auf Gerät/Emulator: frische Installation, Dark Mode an/aus, Test-Alarm bei gesperrtem Bildschirm, Neustart MIT PIN ohne Entsperren
+- `./gradlew lintDebug` muss ohne Fehler durchlaufen
 
 ## Build-Commands
 

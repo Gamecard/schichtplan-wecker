@@ -36,6 +36,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import de.schichtwecker.app.ui.theme.MyApplicationTheme
+import org.json.JSONObject
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
@@ -121,6 +122,72 @@ class MainActivity : ComponentActivity() {
         Toast.makeText(this, text, Toast.LENGTH_LONG).show()
     }
 
+    /* ── Profil-Sicherung: JSON-Datei über den System-Dateidialog ── */
+    private var pendingProfileJson: String? = null
+
+    private val profileSaver = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri: Uri? ->
+        val json = pendingProfileJson
+        pendingProfileJson = null
+        if (uri == null || json == null) return@registerForActivityResult
+        try {
+            contentResolver.openOutputStream(uri, "wt")?.use { it.write(json.toByteArray(Charsets.UTF_8)) }
+                ?: throw IllegalStateException("Kein Ausgabestrom")
+            toast("Profil gespeichert")
+        } catch (e: Exception) {
+            Log.e("SchichtplanAlarm", "Profil speichern fehlgeschlagen", e)
+            toast("Profil konnte nicht gespeichert werden")
+        }
+    }
+
+    private val profileOpener = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri == null) return@registerForActivityResult
+        val text = try {
+            contentResolver.openInputStream(uri)?.use { input ->
+                // Profile sind wenige KB groß – alles über 1 MB ist keine Profil-Datei
+                val bytes = input.readNBytes(1_000_001)
+                if (bytes.size > 1_000_000) null else String(bytes, Charsets.UTF_8)
+            }
+        } catch (e: Exception) {
+            Log.e("SchichtplanAlarm", "Profil lesen fehlgeschlagen", e)
+            null
+        }
+        if (text == null) {
+            toast("Datei konnte nicht gelesen werden")
+            return@registerForActivityResult
+        }
+        pendingWebView?.let { wv ->
+            wv.post {
+                wv.evaluateJavascript(
+                    "if(typeof onProfileImported==='function')onProfileImported(${JSONObject.quote(text)});",
+                    null
+                )
+            }
+        }
+    }
+
+    fun launchProfileExport(json: String, fileName: String) {
+        pendingProfileJson = json
+        try {
+            profileSaver.launch(fileName)
+        } catch (e: Exception) {
+            Log.e("SchichtplanAlarm", "Speichern-Dialog fehlgeschlagen", e)
+            toast("Datei-Dialog nicht verfügbar")
+        }
+    }
+
+    fun launchProfileImport() {
+        try {
+            profileOpener.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
+        } catch (e: Exception) {
+            Log.e("SchichtplanAlarm", "Öffnen-Dialog fehlgeschlagen", e)
+            toast("Datei-Dialog nicht verfügbar")
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -134,6 +201,18 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    // WebView im Hintergrund anhalten (Rendering, Animationen) – spart Strom.
+    // Wecker hängen nicht an der WebView, sondern am AlarmManager.
+    override fun onPause() {
+        super.onPause()
+        pendingWebView?.onPause()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        pendingWebView?.onResume()
     }
 
     override fun onDestroy() {
@@ -184,6 +263,11 @@ class MainActivity : ComponentActivity() {
 
 @Keep
 class WebAppInterface(private val mContext: Context, private val activity: MainActivity) {
+    private companion object {
+        const val STATE_PREFS = "app_state"
+        const val STATE_KEY = "state"
+    }
+
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private fun toast(text: String) {
@@ -248,6 +332,33 @@ class WebAppInterface(private val mContext: Context, private val activity: MainA
     @Keep
     fun getScheduledKeys(): String = AlarmStore.keysJson(mContext)
 
+    /**
+     * Speichert den App-Zustand SOFORT (commit, synchron). Der localStorage der WebView
+     * schreibt verzögert – wird die App direkt nach einer Änderung beendet, ginge sie verloren.
+     */
+    @JavascriptInterface
+    @Keep
+    fun saveState(json: String): Boolean =
+        mContext.getSharedPreferences(STATE_PREFS, Context.MODE_PRIVATE)
+            .edit().putString(STATE_KEY, json).commit()
+
+    @JavascriptInterface
+    @Keep
+    fun loadState(): String =
+        mContext.getSharedPreferences(STATE_PREFS, Context.MODE_PRIVATE).getString(STATE_KEY, "") ?: ""
+
+    /** JSON-Array aller geplanten Wanduhr-Wecker mit Datum/Uhrzeit. */
+    @JavascriptInterface
+    @Keep
+    fun getScheduledAlarms(): String = AlarmStore.entriesJson(mContext)
+
+    /** Versionsname der installierten App, z. B. "1.3". */
+    @JavascriptInterface
+    @Keep
+    fun getAppVersion(): String = try {
+        mContext.packageManager.getPackageInfo(mContext.packageName, 0).versionName ?: ""
+    } catch (_: Exception) { "" }
+
     /** false, solange die Wecker aus Versionen vor dem AlarmStore noch nicht übernommen wurden. */
     @JavascriptInterface
     @Keep
@@ -284,6 +395,20 @@ class WebAppInterface(private val mContext: Context, private val activity: MainA
     @Keep
     fun pickRingtone() {
         mainHandler.post { activity.launchRingtonePicker() }
+    }
+
+    /** Öffnet den Speichern-Dialog für eine Profil-Datei (JSON vom Web-Teil). */
+    @JavascriptInterface
+    @Keep
+    fun exportProfile(json: String, fileName: String) {
+        mainHandler.post { activity.launchProfileExport(json, fileName) }
+    }
+
+    /** Öffnet den Datei-Dialog; das Ergebnis kommt per onProfileImported(text) zurück. */
+    @JavascriptInterface
+    @Keep
+    fun importProfile() {
+        mainHandler.post { activity.launchProfileImport() }
     }
 
     @JavascriptInterface

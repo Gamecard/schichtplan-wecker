@@ -96,7 +96,7 @@ window.onerror=function(msg,src,line,col,err){
     $('kwYear').value=ky; fillKwWeeks(ky,kw);
     setDateSelects(S.startDate);
     if(kwMode){
-      $('startLabel').innerHTML='Startwoche (Woche&nbsp;1)';
+      $('startLabel').innerHTML='Woche&nbsp;1 deines Rhythmus beginnt in';
       $('startInfo').textContent='Mo '+fmtDe(toYmd(mo))+' \u2013 So '+fmtDe(toYmd(su));
     } else {
       $('startLabel').innerHTML='Startdatum (Woche&nbsp;1 = <b>KW '+kw+'</b>'+(ky!==d.getFullYear()?' '+ky:'')+')';

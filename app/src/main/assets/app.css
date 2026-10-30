@@ -311,7 +311,7 @@ label {
   font:inherit; font-size:var(--t-label-md); font-weight:500; color:var(--muted);
 }
 .navbtn .navico {
-  font-size:1.25rem; line-height:1; padding:4px 18px; border-radius:var(--shape-full);
+  display:flex; line-height:1; padding:4px 18px; border-radius:var(--shape-full);
   transition:background var(--motion-duration-short) var(--motion-easing-standard);
 }
 .navbtn.active { color:var(--fg); font-weight:600; }

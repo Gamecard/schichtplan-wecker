@@ -589,8 +589,24 @@ window.onerror=function(msg,src,line,col,err){
       S.pattern=p;
     }
   }
+  /* Schnellauswahl: gewählte Schicht aus der Legende (null = Tippen wechselt reihum) */
+  var patBrush=null;
+  function renderPatHint(){
+    document.querySelectorAll('#patLegend .pick').forEach(function(b){
+      b.classList.toggle('active',Number(b.dataset.pick)===patBrush);
+    });
+    $('patHint').textContent=patBrush
+      ?'\u270F\uFE0F '+SNAMES[patBrush]+' gew\u00E4hlt: Tag antippen setzt '+SNAMES[patBrush]+', nochmal antippen leert den Tag. Legende erneut antippen beendet die Auswahl.'
+      :'Tipp: Frei/Fr\u00FCh/Sp\u00E4t/Nacht in der Legende antippen und dann Tage mit einem Klick belegen.';
+  }
   function renderPat(){
     var c=$('patGrid'); c.innerHTML='';
+    // Kopfzeile mit Wochentagen – belegte Tage zeigen die Schicht statt des Wochentags
+    var head=document.createElement('div'); head.className='wrow whead';
+    var hl=document.createElement('span'); hl.className='wlbl'; head.appendChild(hl);
+    var hd=document.createElement('div'); hd.className='pdays';
+    DAYS.forEach(function(dn){ var e=document.createElement('div'); e.className='pdh'; e.textContent=dn; hd.appendChild(e); });
+    head.appendChild(hd); c.appendChild(head);
     for(var w=0;w<S.weeksCount;w++){
       var row=document.createElement('div'); row.className='wrow';
       var lbl=document.createElement('span'); lbl.className='wlbl'; lbl.textContent='Woche '+(w+1); row.appendChild(lbl);
@@ -607,7 +623,8 @@ window.onerror=function(msg,src,line,col,err){
     }
   }
   function cycleShift(idx){
-    S.pattern[idx]=(S.pattern[idx]+1)%5;
+    if(patBrush) S.pattern[idx]=S.pattern[idx]===patBrush?0:patBrush;
+    else S.pattern[idx]=(S.pattern[idx]+1)%5;
     renderPat(); renderCal(); save(); scheduleResync();
   }
 
@@ -1292,6 +1309,12 @@ window.onerror=function(msg,src,line,col,err){
   $('skipHolShift').addEventListener('change',function(e){
     S.skipHolidaysShift=e.target.checked; save(); scheduleResync();
   });
+  $('patLegend').addEventListener('click',function(e){
+    var b=e.target.closest('.pick'); if(!b) return;
+    var t=Number(b.dataset.pick);
+    patBrush=patBrush===t?null:t;
+    renderPatHint();
+  });
   $('patGrid').addEventListener('click',function(e){
     var b=e.target.closest('.pday'); if(b) cycleShift(Number(b.dataset.idx));
   });
@@ -1369,7 +1392,7 @@ window.onerror=function(msg,src,line,col,err){
   $('bundesland').value=S.bundesland;
   $('skipHolShift').checked=S.skipHolidaysShift;
   syncWithNative(); resyncAlarms({quiet:true}); showAppVersion(); updateAlarmOptionsUi(); renderPermWarn();
-  renderAlarmSettings(); renderFreeAlarmSettings(); renderPat(); renderEx(); renderCal();
+  renderAlarmSettings(); renderFreeAlarmSettings(); renderPat(); renderPatHint(); renderEx(); renderCal();
   /* Wizard beim allerersten Start anzeigen */
   try{if(!localStorage.getItem(WIZ_KEY))openWiz();}catch(e){}
 })();

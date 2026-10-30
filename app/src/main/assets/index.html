@@ -173,14 +173,15 @@
         <button class="sm" id="clearPat">Leeren</button>
       </div>
       <div id="patGrid"></div>
-      <div class="legend">
-        <div class="li"><div class="ld" style="background:var(--accent)"></div><span>Frei</span></div>
-        <div class="li"><div class="ld" style="background:var(--frueh)"></div><span>Fr&uuml;h</span></div>
-        <div class="li"><div class="ld" style="background:var(--spaet)"></div><span>Sp&auml;t</span></div>
-        <div class="li"><div class="ld" style="background:var(--nacht)"></div><span>Nacht</span></div>
+      <div class="legend" id="patLegend">
+        <button type="button" class="li pick" data-pick="1"><div class="ld" style="background:var(--accent)"></div><span>Frei</span></button>
+        <button type="button" class="li pick" data-pick="2"><div class="ld" style="background:var(--frueh)"></div><span>Fr&uuml;h</span></button>
+        <button type="button" class="li pick" data-pick="3"><div class="ld" style="background:var(--spaet)"></div><span>Sp&auml;t</span></button>
+        <button type="button" class="li pick" data-pick="4"><div class="ld" style="background:var(--nacht)"></div><span>Nacht</span></button>
         <div class="li"><div class="ld" style="background:#a855f7"></div><span>Ausnahme</span></div>
         <div class="li"><div class="ld" style="background:var(--hol-b)"></div><span>Feiertag</span></div>
       </div>
+      <div class="small muted" id="patHint" style="margin-top:.5rem;"></div>
     </div>
 
     <div class="card">

@@ -410,6 +410,16 @@ label {
 .legend { display:flex; gap:12px; flex-wrap:wrap; align-items:center; padding-top:12px; border-top:1px solid var(--border); margin-top:8px; }
 .li { display:flex; align-items:center; gap:6px; font-size:var(--t-label-md); font-weight:500; color:var(--muted); }
 .ld { width:12px; height:12px; border-radius:3px; flex-shrink:0; }
+/* Legende als Schnellauswahl (nur Frei/Früh/Spät/Nacht) */
+.li.pick {
+  font:inherit; font-size:var(--t-label-md); font-weight:500; color:var(--muted);
+  background:transparent; border:1.5px solid var(--border); border-radius:var(--shape-full);
+  padding:5px 10px; cursor:pointer; min-height:0;
+}
+.li.pick.active { border-color:var(--md-primary); background:var(--md-secondary-container, var(--chip)); color:var(--fg); }
+/* Wochentag-Kopfzeile über dem Muster */
+.wrow.whead { margin-bottom:2px; }
+.pdh { flex:1; text-align:center; font-size:var(--t-label-sm); font-weight:600; color:var(--muted); }
 
 /* ═══════════════════════════════════════════════════════
    CALENDAR — M3 Cards with tonal elevation

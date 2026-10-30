@@ -129,6 +129,10 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 - Import läuft durch `applyState()` (dieselben Prüfungen wie beim Laden, plus Bereinigung von Muster, Bundesland, Ausnahmen). Eigener Klingelton ist nicht übertragbar (Dateizugriff gilt nur auf dem Gerät)
 - `format` erhöhen, wenn sich die Struktur inkompatibel ändert; neuere Formate werden abgelehnt
 
+### Wochenrhythmus-Eingabe
+- Über dem Muster steht eine Kopfzeile Mo–So (`.pdh`), weil belegte Tage den Schichtnamen statt des Wochentags zeigen
+- Schnellauswahl: Legenden-Einträge Frei/Früh/Spät/Nacht sind Buttons (`#patLegend .pick`, `patBrush`). Gewählt → Tag antippen setzt die Schicht, gleicher Tag nochmal → leer. Ohne Auswahl wechselt ein Tipp reihum (leer → Frei → Früh → Spät → Nacht). „Ausnahme“/„Feiertag“ sind NICHT wählbar (nur Erklärung)
+
 ### Startwoche
 - Standard: Auswahl per ISO-Kalenderwoche (`kwNum`/`kwYear`) → `S.startDate` = Montag der KW (`mondayOfIsoWeek`). Alternativ `S.startMode='date'`: Datumsauswahl, Label zeigt „Woche 1 = KW n“. Woche 1 beginnt immer am Montag der Woche von `startDate` (`mondayOf` in `getShift`)
 - ISO-Wochenjahr beachten (`isoWeekYear`): 02.01.2027 liegt in KW 53/2026, 2026 hat 53 KW

@@ -320,6 +320,29 @@ function openDay(w, ds) {
   ok(state(w10).startMode === 'kw' && state(w10).startDate === '2026-12-28' && $w('kwNum').value === '53', 'Zurück auf KW setzt Start auf den Montag');
   w10.close();
 
+  // ── Wochenrhythmus: Wochentag-Kopfzeile und Schnellauswahl über die Legende
+  const n11 = {}; const br11 = makeBridge(n11);
+  const w11 = open({ [LS]: JSON.stringify(Object.assign({}, base, { weeksCount: 2, pattern: new Array(14).fill(0) })) }, br11); await sleep(50);
+  const q = sel => w11.document.querySelector(sel);
+  const qa = sel => [...w11.document.querySelectorAll(sel)];
+  ok(qa('#patGrid .pdh').map(e => e.textContent).join(',') === 'Mo,Di,Mi,Do,Fr,Sa,So', 'Kopfzeile Mo–So über dem Muster');
+  q('.pday[data-idx="0"]').click(); q('.pday[data-idx="0"]').click();
+  ok(state(w11).pattern[0] === 2 && qa('#patGrid .pdh').length === 7, 'ohne Auswahl: Tippen wechselt reihum, Kopfzeile bleibt');
+  ok(qa('#patLegend .pick').length === 4 && !qa('#patLegend .pick').some(b => /Ausnahme|Feiertag/.test(b.textContent)), 'nur Frei/Früh/Spät/Nacht auswählbar');
+  q('#patLegend [data-pick="3"]').click();
+  ok(q('#patLegend [data-pick="3"]').classList.contains('active') && /Spät gewählt/.test(q('#patHint').textContent), 'Legende „Spät“ aktiv mit Hinweis');
+  [7, 8, 9, 10, 11].forEach(i => q('.pday[data-idx="' + i + '"]').click());
+  ok(state(w11).pattern.slice(7, 12).every(t => t === 3), 'ein Klick je Tag setzt Spät (Woche 2 Mo–Fr)');
+  q('.pday[data-idx="0"]').click();
+  ok(state(w11).pattern[0] === 3, 'Früh-Tag wird mit einem Klick zu Spät');
+  q('.pday[data-idx="0"]').click();
+  ok(state(w11).pattern[0] === 0, 'erneuter Klick auf Spät-Tag leert ihn');
+  q('#patLegend [data-pick="3"]').click();
+  ok(!q('#patLegend .pick.active') && /Tipp/.test(q('#patHint').textContent), 'Legende erneut antippen beendet die Auswahl');
+  q('.pday[data-idx="1"]').click();
+  ok(state(w11).pattern[1] === 1, 'danach wieder reihum (leer → Frei)');
+  w11.close();
+
   console.log(fails ? `\n${fails} FEHLER` : '\nalle Tests bestanden');
   process.exit(fails ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(2); });

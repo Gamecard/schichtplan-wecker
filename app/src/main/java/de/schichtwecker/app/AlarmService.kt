@@ -9,7 +9,6 @@ import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.media.RingtoneManager
-import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -95,14 +94,10 @@ class AlarmService : Service() {
         notificationId = NOTIFICATION_ID_BASE + notificationCounter
         // startForeground muss nach startForegroundService() sofort erfolgen
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(
-                    notificationId, buildNotification(message),
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-                )
-            } else {
-                startForeground(notificationId, buildNotification(message))
-            }
+            startForeground(
+                notificationId, buildNotification(message),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+            )
         } catch (e: Exception) {
             // Lieber ohne Vordergrund-Status klingeln als gar nicht
             Log.e(TAG, "startForeground fehlgeschlagen", e)
@@ -242,25 +237,11 @@ class AlarmService : Service() {
     }
 
     private fun startVibration() {
-        vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            getSystemService(VibratorManager::class.java).defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            getSystemService(Vibrator::class.java)
-        }
+        vibrator = getSystemService(VibratorManager::class.java).defaultVibrator
         val effect = VibrationEffect.createWaveform(longArrayOf(0, 800, 400, 800, 400, 800), 0)
         // Als Wecker-Vibration kennzeichnen – sonst kann Android sie im Lautlos-/„Bitte nicht
         // stören“-Modus oder bei reduzierter Vibration unterdrücken (wichtig bei „Nur vibrieren“)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            vibrator?.vibrate(effect, VibrationAttributes.createForUsage(VibrationAttributes.USAGE_ALARM))
-        } else {
-            @Suppress("DEPRECATION")
-            vibrator?.vibrate(
-                effect,
-                AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
-            )
-        }
+        vibrator?.vibrate(effect, VibrationAttributes.createForUsage(VibrationAttributes.USAGE_ALARM))
     }
 
     private fun stopSound() {

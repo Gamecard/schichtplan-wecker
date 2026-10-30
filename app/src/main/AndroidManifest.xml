@@ -23,7 +23,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Schichtwecker"
-        tools:targetApi="35">
+>
 
         <activity
             android:name="de.schichtwecker.app.MainActivity"
@@ -83,8 +83,7 @@
             android:showWhenLocked="true"
             android:turnScreenOn="true"
             android:taskAffinity=""
-            android:excludeFromRecents="true"
-            tools:targetApi="27" />
+            android:excludeFromRecents="true" />
 
     </application>
 

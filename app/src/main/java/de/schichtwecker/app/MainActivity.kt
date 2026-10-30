@@ -10,7 +10,6 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -257,9 +256,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun requestPermissions() {
-        // Benachrichtigungen sind erst ab Android 13 eine Laufzeit-Berechtigung
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
             != PackageManager.PERMISSION_GRANTED
         ) {
             notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -269,9 +266,6 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkFullScreenIntentPermission() {
-        checkExactAlarmPermission()
-        // Vollbild-Benachrichtigungen sind erst ab Android 14 freigabepflichtig
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         if (!nm.canUseFullScreenIntent()) {
             Log.w("SchichtplanAlarm", "USE_FULL_SCREEN_INTENT not granted")
@@ -290,29 +284,6 @@ class MainActivity : ComponentActivity() {
                 .setNegativeButton("Sp\u00E4ter", null)
                 .show()
         }
-    }
-
-    /**
-     * Android 12/12L: exakte Wecker brauchen SCHEDULE_EXACT_ALARM, das der Nutzer abschalten
-     * kann (USE_EXACT_ALARM gibt es erst ab Android 13). Ohne Freigabe kein Wecker → Hinweis.
-     */
-    private fun checkExactAlarmPermission() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
-        val am = getSystemService(android.app.AlarmManager::class.java)
-        if (am.canScheduleExactAlarms()) return
-        AlertDialog.Builder(this)
-            .setTitle("Wecker erlauben")
-            .setMessage(
-                "Damit die App Wecker stellen kann, braucht sie die Berechtigung " +
-                "\u201EWecker und Erinnerungen\u201C. Ohne sie klingelt kein Wecker."
-            )
-            .setPositiveButton("Einstellungen \u00F6ffnen") { _, _ ->
-                startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                    data = "package:$packageName".toUri()
-                })
-            }
-            .setNegativeButton("Sp\u00E4ter", null)
-            .show()
     }
 
     fun launchRingtonePicker() {
@@ -412,17 +383,16 @@ class WebAppInterface(private val mContext: Context, private val activity: MainA
         mContext.getSharedPreferences(STATE_PREFS, Context.MODE_PRIVATE).getString(STATE_KEY, "") ?: ""
 
     /**
-     * Fehlende Berechtigung, die den Wecker beeinträchtigt: "exact" (Android 12/12L: kein
-     * Wecker möglich), "fullscreen" (Android 14+: kein Vollbild über dem Sperrbildschirm) oder "".
+     * Fehlende Berechtigung, die den Wecker beeinträchtigt: "exact" (keine exakten Wecker –
+     * dank USE_EXACT_ALARM eigentlich ausgeschlossen, Absicherung), "fullscreen" (kein Vollbild
+     * über dem Sperrbildschirm) oder "".
      */
     @JavascriptInterface
     @Keep
     fun getAlarmPermissionIssue(): String {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-            !mContext.getSystemService(android.app.AlarmManager::class.java).canScheduleExactAlarms()
+        if (!mContext.getSystemService(android.app.AlarmManager::class.java).canScheduleExactAlarms()
         ) return "exact"
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
-            !mContext.getSystemService(NotificationManager::class.java).canUseFullScreenIntent()
+        if (!mContext.getSystemService(NotificationManager::class.java).canUseFullScreenIntent()
         ) return "fullscreen"
         return ""
     }
@@ -432,9 +402,9 @@ class WebAppInterface(private val mContext: Context, private val activity: MainA
     @Keep
     fun openAlarmPermissionSettings(issue: String) {
         val action = when {
-            issue == "exact" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+            issue == "exact" ->
                 Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM
-            issue == "fullscreen" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE ->
+            issue == "fullscreen" ->
                 Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT
             else -> return
         }

@@ -21,7 +21,7 @@
 
 - **Kotlin**: `MainActivity.kt` (WebView + JS-Bridge), `AlarmScheduler.kt` (+ `AlarmStore`), `AlarmReceiver.kt`, `AlarmService.kt`, `AlarmActivity.kt`, `AlarmOptions.kt`, `BootReceiver.kt`, `ShiftWidget.kt`
 - **Web** (`app/src/main/assets/`): `index.html` (Struktur), `app.css` (Gestaltung), `app.js` (Logik, eine IIFE – Funktionen sind NICHT global, Tests bedienen die Oberfläche)
-- **minSdk 26** (Android 8): neuere APIs immer mit `Build.VERSION.SDK_INT`-Abfrage; `./gradlew lintDebug` meldet vergessene Abfragen als `NewApi`-Fehler
+- **minSdk 36** (Android 16). Regel: nur Android-Versionen unterstützen, die noch ≥ 2 Jahre Sicherheitspatches bekommen (nachschlagen: endoflife.date/android, Android Security Bulletin). Stand 10/2026: gepatcht 14–17, ≥ 2 Jahre nur 16 und 17. Keine `Build.VERSION`-Abfragen für Versionen unter minSdk (Lint `ObsoleteSdkInt`)
 - **Paket**: `de.schichtwecker.app`
 - **App-Name**: Schichtwecker
 - **Theme**: `Theme.Schichtwecker` (res/values, res/values-night), Compose: `SchichtweckerTheme` in `ui/theme/`
@@ -147,8 +147,8 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 ### Zurück-Geste
 - `MainActivity.backCallback` fragt `window.handleBack()`: schließt Dialog → Anleitung → Tages-Sheet → Einstellungen; erst wenn nichts offen ist, verlässt die App
 
-### WebView-Kompatibilität (Android 8)
-- Android-8-Geräte ohne WebView-Update haben Chrome 69: kein `inset` (immer `top/right/bottom/left` davor), kein `gap` in Flexbox (wo der Abstand wichtig ist, `margin` an den Kindern)
+### WebView-Kompatibilität
+- Die WebView wird über den Play Store aktualisiert; die Fallbacks in `app.css` (`top/right/bottom/left` vor `inset`, `margin` statt Flexbox-`gap` bei den Anleitungs-Punkten) stammen aus einem Test mit altem WebView und schaden nicht
 
 ### Widget
 - `ShiftWidget` zeigt heute/morgen + nächsten Wecker. `app.js` schickt bei jedem `save()` 60 Tage Schichtnamen (`Android.updateWidget`), der nächste Wecker kommt aus dem `AlarmStore`

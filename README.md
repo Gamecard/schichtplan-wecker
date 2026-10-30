@@ -31,7 +31,9 @@ Eine Android-App zur Verwaltung von Schichtplänen mit Wecker-Funktion.
 
 ## Mindestanforderung
 
-Android 8.0 (API 26)+
+Android 16 (API 36)+
+
+Unterstützt werden nur Android-Versionen, die noch mindestens zwei Jahre offizielle Sicherheitspatches erhalten (Stand Oktober 2026: Android 16 und 17). Mit jeder neuen Android-Version wird geprüft, ob die Mindestversion angehoben wird.
 
 ## Projektstruktur
 

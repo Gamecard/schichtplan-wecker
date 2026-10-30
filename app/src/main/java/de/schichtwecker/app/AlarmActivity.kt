@@ -1,7 +1,6 @@
 package de.schichtwecker.app
 
 import android.app.KeyguardManager
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.WindowManager
@@ -56,16 +55,8 @@ class AlarmActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         Log.d("SchichtplanAlarm", "AlarmActivity.onCreate()")
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-            setShowWhenLocked(true)
-            setTurnScreenOn(true)
-        } else {
-            @Suppress("DEPRECATION")
-            window.addFlags(
-                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
-            )
-        }
+        setShowWhenLocked(true)
+        setTurnScreenOn(true)
         getSystemService(KeyguardManager::class.java).requestDismissKeyguard(this, null)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 

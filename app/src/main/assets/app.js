@@ -389,10 +389,11 @@ window.onerror=function(msg,src,line,col,err){
   }
 
   /* ── ZEITAUSWAHL ─────────────────────────
-     Eine Komponente für alle Weckzeiten (Schichten, unbelegte Tage, Einzelwecker im Tages-Sheet):
-     Pfeile ▲▼ für Stunde/Minute; Antippen der Ziffern öffnet die System-Zeitauswahl über ein
-     verstecktes <input type="time">. opts: label (Vorsilbe für aria-label), hId/mId (IDs der Ziffern).
-     onChange(hhmm) nur bei Änderungen durch den Nutzer. Das Element hat getTime()/setTime(hhmm). */
+     Eine Komponente für alle Weckzeiten (Schichten, unbelegte Tage, Einzelwecker, Einrichtung):
+     ein Uhrzeit-Chip; Antippen öffnet das Zeit-Fenster (große Uhrzeit → Android-Uhr, −15/−5/+5/+15,
+     Abbrechen/Übernehmen). Erst „Übernehmen“ ruft onChange(hhmm) – Vertippen ändert keine Wecker.
+     opts: label (Name für Titel/aria), id (ID des Chips). Das Element hat getTime()/setTime(hhmm).
+     Das versteckte <input type="time"> im Element übernimmt Werte direkt (Barrierefreiheit, Tests). */
   function parseHhmm(s){
     var m=/^(\d{1,2}):(\d{2})/.exec(String(s||''));
     if(!m||Number(m[1])>23||Number(m[2])>59) return null;
@@ -400,54 +401,52 @@ window.onerror=function(msg,src,line,col,err){
   }
   function buildTimePicker(hhmm,onChange,opts){
     opts=opts||{};
-    var pre=opts.label?opts.label+': ':'';
     var cur=parseHhmm(hhmm)||'07:00';
-    var box=document.createElement('div'); box.className='tpick';
+    var box=document.createElement('span'); box.className='tpick';
+    var chip=document.createElement('button'); chip.type='button'; chip.className='tchip';
+    if(opts.id) chip.id=opts.id;
     var nat=document.createElement('input');
     nat.type='time'; nat.className='tnative'; nat.tabIndex=-1; nat.setAttribute('aria-hidden','true');
-    function btn(cls,txt,aria){
-      var b=document.createElement('button'); b.type='button'; b.className=cls; b.textContent=txt;
-      if(aria) b.setAttribute('aria-label',aria);
-      return b;
-    }
     function set(v,fire){
-      cur=v; hVal.textContent=v.slice(0,2); mVal.textContent=v.slice(3); nat.value=v;
-      var a=pre+'Uhrzeit '+v+' Uhr, antippen zum Auswählen';
-      hVal.setAttribute('aria-label',a); mVal.setAttribute('aria-label',a);
+      cur=v; chip.textContent=v; nat.value=v;
+      chip.setAttribute('aria-label',(opts.label?opts.label+': ':'')+'Weckzeit '+v+' Uhr, antippen zum Ändern');
       if(fire&&onChange) onChange(v);
     }
-    function step(i,d){
-      var p=cur.split(':').map(Number), max=i?60:24;
-      p[i]=(p[i]+d+max)%max;   // ohne Übertrag: 59 → 00 lässt die Stunde stehen
-      set(pad(p[0])+':'+pad(p[1]),true);
-    }
-    function openNative(){
-      nat.value=cur;
-      try{ if(typeof nat.showPicker==='function'){ nat.showPicker(); return; } }catch(e){}
-      try{ nat.focus(); nat.click(); }catch(e){}
-    }
-    function unit(i,id,what){
-      var u=document.createElement('div'); u.className='tunit';
-      var up=btn('tbtn','▲',pre+what+' später'), val=btn('tval','',''), dn=btn('tbtn','▼',pre+what+' früher');
-      if(id) val.id=id;
-      up.onclick=function(){ step(i,1); };
-      dn.onclick=function(){ step(i,-1); };
-      val.onclick=openNative;
-      u.appendChild(up); u.appendChild(val); u.appendChild(dn);
-      box.appendChild(u);
-      return val;
-    }
-    var hVal=unit(0,opts.hId,'Stunde');
-    var col=document.createElement('span'); col.className='tcolon'; col.textContent=':'; box.appendChild(col);
-    var mVal=unit(1,opts.mId,'Minute');
-    var uhr=document.createElement('span'); uhr.className='tuhr'; uhr.textContent='Uhr'; box.appendChild(uhr);
-    box.appendChild(nat);
+    chip.onclick=function(){
+      openTimeSheet((opts.label?opts.label+' – ':'')+'Weckzeit',cur,function(v){ if(v!==cur) set(v,true); });
+    };
     nat.addEventListener('change',function(){ var v=parseHhmm(nat.value); if(v&&v!==cur) set(v,true); });
+    box.appendChild(chip); box.appendChild(nat);
     set(cur,false);
     box.getTime=function(){ return cur; };
     box.setTime=function(v){ v=parseHhmm(v); if(v&&v!==cur) set(v,false); };
     return box;
   }
+  /* Zeit-Fenster: Entwurf bearbeiten, erst „Übernehmen“ ruft onApply */
+  var TS={value:'07:00',onApply:null};
+  function tsShow(){ $('tsDigits').textContent=TS.value; $('tsNative').value=TS.value; }
+  function openTimeSheet(title,hhmm,onApply){
+    TS.value=parseHhmm(hhmm)||'07:00'; TS.onApply=onApply;
+    $('tsTitle').textContent=title; tsShow();
+    var ov=$('timeSheet'); ov.classList.add('open'); document.body.style.overflow='hidden';
+    // Fenster an den unteren Rand: Abstandshalter = freie Höhe über dem Fenster
+    var sp=ov.querySelector('.tsheet-space'), sh=ov.querySelector('.tsheet');
+    sp.style.height=Math.max(0,window.innerHeight-sh.offsetHeight)+'px'; ov.scrollTop=0;
+  }
+  function isTimeSheetOpen(){ return $('timeSheet').classList.contains('open'); }
+  function closeTimeSheet(apply){
+    $('timeSheet').classList.remove('open');
+    // Body-Scroll nur freigeben, wenn darunter kein anderes Sheet offen ist
+    if(!$('overlay').classList.contains('open')&&!$('wizBg').classList.contains('open')) document.body.style.overflow='';
+    var cb=TS.onApply; TS.onApply=null;
+    if(apply&&cb) cb(TS.value);
+  }
+  /* ±Minuten mit Übertrag in die Stunde, rundum über Mitternacht */
+  function tsShift(d){
+    var p=TS.value.split(':').map(Number), m=((p[0]*60+p[1]+d)%1440+1440)%1440;
+    TS.value=pad(Math.floor(m/60))+':'+pad(m%60); tsShow();
+  }
+
   function buildSwitch(id,aria,checked){
     var sw=document.createElement('label'); sw.className='sw'; sw.title=aria;
     var cb=document.createElement('input'); cb.type='checkbox'; cb.id=id; cb.checked=!!checked;
@@ -487,7 +486,7 @@ window.onerror=function(msg,src,line,col,err){
     return kind==='free'?'keine unbelegten Tage an den gewählten Wochentagen':'keine '+SNAMES[kind]+'-Tage im Rhythmus';
   }
   function autoStatusText(kind){
-    if(!isAutoOn(kind)) return 'Aus – kein automatischer Wecker';
+    if(!isAutoOn(kind)) return 'Aus';
     var n=autoCount(kind);
     if(n) return 'An – '+n+' Wecker gestellt';
     if(kind==='free'&&!S.freeAlarm.days.length) return 'An – keine Wochentage gewählt';
@@ -526,32 +525,34 @@ window.onerror=function(msg,src,line,col,err){
       :'Im Rhythmus gibt es keine '+name+'-Tage – erst unter Schichtplan eintragen');
     else toast(name+': automatisch an – zurzeit kein Wecker fällig'+(err?' ('+err+' fehlgeschlagen)':''),err>0);
   }
+  var KIND_COLORS={1:'var(--accent)',2:'var(--frueh)',3:'var(--spaet)',4:'var(--nacht)'};
+  /* eine kompakte Zeile: Name + Stand | Uhrzeit-Chip | Schalter */
+  function buildWeckerRow(name,color,picker,switchEl,stateId){
+    var r=document.createElement('div'); r.className='wkrow';
+    var nm=document.createElement('div'); nm.className='wkname';
+    var lbl=document.createElement('span'); lbl.className='slbl';
+    lbl.innerHTML=(color?'<span class="ld" style="background:'+color+'"></span>':'')+esc(name);
+    var st=document.createElement('span'); st.className='wkstate small muted'; st.id=stateId;
+    nm.appendChild(lbl); nm.appendChild(st);
+    r.appendChild(nm); r.appendChild(picker); r.appendChild(switchEl);
+    return r;
+  }
   function renderAlarmSettings(){
     var c=$('alarmBox'); c.innerHTML=''; shiftPickers={};
     SMETA.forEach(function(sm){
-      var r=document.createElement('div'); r.className='wkrow '+sm.c;
-      var lbl=document.createElement('span'); lbl.className='slbl'; lbl.textContent=sm.n;
-      var pick=buildTimePicker(S.alarmTimes[sm.t],function(v){ setShiftTime(sm.t,v); },{label:sm.n,hId:'tph'+sm.t,mId:'tpm'+sm.t});
+      var pick=buildTimePicker(S.alarmTimes[sm.t],function(v){ setShiftTime(sm.t,v); },{label:sm.n,id:'tp'+sm.t});
       shiftPickers[sm.t]=pick;
-      var st=document.createElement('div'); st.className='wkstate small muted'; st.id='aeState'+sm.t;
-      r.appendChild(lbl); r.appendChild(pick);
-      r.appendChild(buildSwitch('ae'+sm.t,sm.n+': automatisch wecken',isAutoOn(sm.t)));
-      r.appendChild(st);
-      c.appendChild(r);
+      c.appendChild(buildWeckerRow(sm.n,KIND_COLORS[sm.t],pick,
+        buildSwitch('ae'+sm.t,sm.n+': automatisch wecken',isAutoOn(sm.t)),'aeState'+sm.t));
     });
     renderWeckerStatus();
   }
   function renderFreeAlarmSettings(){
     var c=$('freeAlarmBox'); if(!c) return;
     c.innerHTML='';
-    var r=document.createElement('div'); r.className='wkrow';
-    var lbl=document.createElement('span'); lbl.className='slbl'; lbl.textContent='Weckzeit';
-    freePicker=buildTimePicker(S.freeAlarm.time,setFreeTime,{label:'Unbelegte Tage',hId:'fatph',mId:'fatpm'});
-    var st=document.createElement('div'); st.className='wkstate small muted'; st.id='freeAutoState';
-    r.appendChild(lbl); r.appendChild(freePicker);
-    r.appendChild(buildSwitch('freeAlarmEnabled','Unbelegte Tage: automatisch wecken',isAutoOn('free')));
-    r.appendChild(st);
-    c.appendChild(r);
+    freePicker=buildTimePicker(S.freeAlarm.time,setFreeTime,{label:'Unbelegte Tage',id:'fatp'});
+    c.appendChild(buildWeckerRow('Weckzeit','',freePicker,
+      buildSwitch('freeAlarmEnabled','Unbelegte Tage: automatisch wecken',isAutoOn('free')),'freeAutoState'));
     var cap=document.createElement('div'); cap.className='small muted wkcap'; cap.textContent='An diesen Wochentagen:';
     c.appendChild(cap);
     var days=document.createElement('div'); days.className='chiprow';
@@ -866,7 +867,7 @@ window.onerror=function(msg,src,line,col,err){
           chips.appendChild(b);
         });
         markSheetType(chips);
-        sheetPicker=buildTimePicker(sheetDefaultTime(sheetSelType),null,{label:'Wecker',hId:'sqh',mId:'sqm'});
+        sheetPicker=buildTimePicker(sheetDefaultTime(sheetSelType),null,{label:'Wecker',id:'sqt'});
         pickerEl.appendChild(chips); pickerEl.appendChild(sheetPicker);
       }
       btns.innerHTML='<button class="primary" id="ssetBtn" style="flex:2;">\uD83D\uDD14 Wecker stellen</button><button id="sclBtn">Abbrechen</button>';
@@ -943,6 +944,7 @@ window.onerror=function(msg,src,line,col,err){
   window.handleBack=function(){
     var vis=function(id){ var e=$(id); return e&&getComputedStyle(e).display!=='none'; };
     if(vis('cdlgBg')){ $('cdlgCancel').click(); return true; }
+    if(isTimeSheetOpen()){ closeTimeSheet(false); return true; }
     if(isWizOpen()){ wizBack(); return true; }
     if($('overlay').classList.contains('open')){ closeSheet(); return true; }
     if(isAlarmsOpen()){ closeAllAlarms(); return true; }
@@ -1466,6 +1468,16 @@ window.onerror=function(msg,src,line,col,err){
   /* ── EVENTS ─────────────────────────────── */
   $('themeBtn').onclick=cycleTheme;
   $('startWizBtn').onclick=function(){openWiz();};
+  $('tsDigits').onclick=function(){
+    var n=$('tsNative'); n.value=TS.value;
+    try{ if(typeof n.showPicker==='function'){ n.showPicker(); return; } }catch(e){}
+    try{ n.focus(); n.click(); }catch(e){}
+  };
+  $('tsNative').addEventListener('change',function(){ var v=parseHhmm($('tsNative').value); if(v){ TS.value=v; tsShow(); } });
+  $('tsQuick').addEventListener('click',function(e){ var b=e.target.closest('[data-d]'); if(b) tsShift(Number(b.dataset.d)); });
+  $('tsApply').onclick=function(){ closeTimeSheet(true); };
+  $('tsCancel').onclick=function(){ closeTimeSheet(false); };
+  $('timeSheet').addEventListener('click',function(e){ if(e.target===this||e.target.classList.contains('tsheet-space')) closeTimeSheet(false); });
   $('bottomNav').addEventListener('click',function(e){
     var b=e.target.closest('.navbtn'); if(b) showTab(b.dataset.tab);
   });

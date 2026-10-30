@@ -370,16 +370,16 @@ label {
 }
 /* Wecker-Bereich: eine Zeile je Schicht (Name · Uhrzeit · Schalter, darunter der Stand) */
 .wkrow {
-  display:flex; flex-wrap:wrap; align-items:center; gap:4px 12px;
-  padding:10px 14px; border-radius:var(--shape-md);
-  background:var(--md-surface-container-low);
+  display:flex; align-items:center; gap:12px;
+  padding:10px 12px; border-bottom:1px solid var(--border);
 }
-.wkrow.free  { background:var(--free-bg); border-left:4px solid var(--accent); }
-.wkrow.frueh { background:var(--frueh-bg); border-left:4px solid var(--frueh); }
-.wkrow.spaet { background:var(--spaet-bg); border-left:4px solid var(--spaet); }
-.wkrow.nacht { background:var(--nacht-bg); border-left:4px solid var(--nacht); }
-.wkrow .slbl { font-weight:500; min-width:48px; font-size:var(--t-label-lg); }
-.wkrow .wkstate { flex-basis:100%; }
+.wkrow:last-child { border-bottom:none; }
+.wkname { flex:1; min-width:0; display:flex; flex-direction:column; }
+.wkname .slbl { display:flex; align-items:center; gap:8px; font-weight:600; font-size:var(--t-body-lg); }
+.wkname .slbl .ld { width:12px; height:12px; }
+.wkname .wkstate { margin-top:2px; }
+#alarmBox { border:1px solid var(--border); border-radius:var(--shape-md); background:var(--card); }
+#freeAlarmBox .wkrow { padding-left:0; padding-right:0; }
 .wkintro { margin:0 0 12px; }
 .wkcap { margin:12px 0 6px; }
 /* Auswahl-Chips (Wochentage, Art des Einzelweckers) */
@@ -388,32 +388,20 @@ label {
 /* ═══════════════════════════════════════════════════════
    TIME PICKER — M3 Stepper
    ═══════════════════════════════════════════════════════ */
-.tpick { display:flex; align-items:center; gap:0; flex:1; justify-content:center; position:relative; }
-.tunit { display:flex; flex-direction:column; align-items:center; gap:2px; }
-.tunit .tbtn {
-  width:40px; height:36px; display:flex; align-items:center; justify-content:center;
-  font-size:1rem; font-weight:500; border-radius:var(--shape-full);
-  border:none; background:var(--md-surface-container-high); color:var(--fg);
-  cursor:pointer; user-select:none; padding:0;
-  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
-  transition:background var(--motion-duration-short) var(--motion-easing-standard);
+.tpick { display:inline-flex; position:relative; }
+/* Uhrzeit als antippbarer Chip – öffnet das Zeit-Fenster */
+.tchip {
+  font:inherit; font-size:1.5rem; font-weight:600; font-variant-numeric:tabular-nums;
+  padding:6px 14px; min-height:0; border-radius:var(--shape-md);
+  border:1.5px solid var(--border); background:var(--md-surface-container-lowest, var(--card)); color:var(--fg);
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
 }
-.tunit .tbtn:active { background:var(--md-primary); color:var(--md-on-primary); }
-.tunit .tval {
-  font-size:2rem; font-weight:500; min-width:36px; text-align:center;
-  font-variant-numeric:tabular-nums; line-height:1.2;
-  /* Ziffern sind Knöpfe (öffnen die System-Zeitauswahl) – wie Text aussehen */
-  background:none; border:0; padding:0 2px; color:inherit; border-radius:var(--shape-sm);
-  -webkit-tap-highlight-color:transparent;
-}
-.tunit .tval:active { background:var(--chip); }
+.tchip:active { background:var(--chip); }
 /* verstecktes Systemfeld für die Zeitauswahl (nicht display:none, sonst kein showPicker) */
 .tnative {
   position:absolute; left:50%; top:50%; width:1px; height:1px;
   opacity:0; pointer-events:none; border:0; padding:0; margin:0;
 }
-.tcolon { font-weight:300; font-size:2rem; margin:0 4px; padding-top:4px; color:var(--muted); }
-.tuhr { font-size:var(--t-body-sm); color:var(--muted); margin-left:8px; font-weight:500; }
 
 /* ═══════════════════════════════════════════════════════
    SHIFT TYPE SELECTOR — M3 Filter Chips
@@ -633,18 +621,36 @@ label {
 .sinfo-ico { font-size:1.5rem; }
 .sinfo-txt { flex:1; font-size:var(--t-body-md); }
 .sbtns { display:flex; gap:8px; }
+/* Zeit-Fenster: über Tages-Sheet und Einrichtung */
+.tsheet-ov { z-index:180; }
+.tsheet-space { height:40vh; }
+.tsheet { min-height:0; text-align:center; padding-bottom:calc(24px + env(safe-area-inset-bottom)); }
+.tsdigits {
+  display:block; margin:8px auto 2px; font:inherit; font-size:4rem; font-weight:500;
+  font-variant-numeric:tabular-nums; letter-spacing:.02em; line-height:1.1;
+  padding:6px 24px; min-height:0; border:none; border-radius:var(--shape-lg);
+  background:var(--md-secondary-container, var(--chip)); color:var(--md-on-secondary-container, var(--fg));
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+}
+.tshint { margin-bottom:16px; }
+.tsquick { display:flex; gap:8px; justify-content:center; margin-bottom:24px; }
+.tsquick button {
+  flex:1; max-width:80px; font:inherit; font-weight:600; padding:10px 0; min-height:0;
+  border-radius:var(--shape-full); border:1.5px solid var(--border); background:transparent; color:var(--fg); cursor:pointer;
+}
+.tsquick button:active { background:var(--chip); }
 .sbtns button { flex:1; }
 
 /* ═══════════════════════════════════════════════════════
    M3 SNACKBAR (Toast)
    ═══════════════════════════════════════════════════════ */
 #toast {
-  visibility:hidden; position:fixed; left:50%; bottom:24px;
+  visibility:hidden; position:fixed; left:50%; bottom:calc(88px + env(safe-area-inset-bottom));  /* über der Navigation */
   transform:translateX(-50%);
   background:var(--md-inverse-surface); color:var(--md-inverse-on-surface);
   padding:14px 24px; border-radius:var(--shape-xs);
   font-weight:500; font-size:var(--t-body-md);
-  z-index:200; min-width:200px; text-align:center; white-space:nowrap;
+  z-index:200; min-width:200px; max-width:calc(100vw - 32px); text-align:center; white-space:normal;
   box-shadow:var(--elev-3); letter-spacing:.01em;
 }
 #toast.show { visibility:visible; animation:tin .35s var(--motion-easing-emphasized), tout .35s 2.5s forwards; }

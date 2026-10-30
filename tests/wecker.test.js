@@ -64,14 +64,14 @@ function setAuto(w, t, on = true) {
   const cb = w.document.getElementById(t === 'free' ? 'freeAlarmEnabled' : 'ae' + t);
   if (cb.checked !== on) cb.click();
 }
-// Zeitauswahl: Pfeile und verstecktes Systemfeld der Auswahl, in der das Element (z. B. #tph2) liegt
-const pickerOf = (w, id) => w.document.getElementById(id).closest('.tpick');
-const arrows = (w, id) => w.document.getElementById(id).parentElement.querySelectorAll('.tbtn'); // [0]=▲ [1]=▼
-function setNativeTime(w, pick, v) {
-  const inp = pick.querySelector('input[type=time]');
-  inp.value = v; inp.dispatchEvent(new w.Event('change', { bubbles: true }));
+// Weckzeit über das Zeit-Fenster setzen: Chip antippen, Systemuhr-Wert, Übernehmen
+function pickTime(w, chipId, v) {
+  w.document.getElementById(chipId).click();
+  const n = w.document.getElementById('tsNative'); n.value = v; n.dispatchEvent(new w.Event('change'));
+  w.document.getElementById('tsApply').click();
 }
-const shown = (w, hId, mId) => w.document.getElementById(hId).textContent + ':' + w.document.getElementById(mId).textContent;
+const chipTime = (w, id) => w.document.getElementById(id).textContent;
+const tsOpen = w => w.document.getElementById('timeSheet').classList.contains('open');
 function openDay(w, ds) {
   const [y, m, d] = ds.split('-').map(Number);
   const months = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
@@ -104,19 +104,23 @@ function openDay(w, ds) {
     // Einzelwecker von Hand (Tages-Sheet) – gemeinsame Zeitauswahl
     openDay(w, '2026-11-03');
     const sp = d.querySelector('#sPicker .tpick');
-    ok(sp && sp.querySelector('input[type=time]') && sp.querySelectorAll('.tbtn').length === 4, 'Tages-Sheet nutzt die einheitliche Zeitauswahl');
-    ok(d.querySelector('#sPicker [data-st="2"]').classList.contains('sftbtn-active') && shown(w, 'sqh', 'sqm') === '05:30', 'Sheet: Früh-Tag → Früh vorgewählt, 05:30');
+    ok(sp && d.getElementById('sqt') && sp.querySelector('input[type=time]'), 'Tages-Sheet nutzt die einheitliche Zeitauswahl (Chip)');
+    ok(d.querySelector('#sPicker [data-st="2"]').classList.contains('sftbtn-active') && chipTime(w, 'sqt') === '05:30', 'Sheet: Früh-Tag → Früh vorgewählt, 05:30');
     d.querySelector('#sPicker [data-st="0"]').click();
-    ok(shown(w, 'sqh', 'sqm') === '07:00' && d.querySelector('#sPicker [data-st="0"]').getAttribute('aria-pressed') === 'true', 'Einzelwecker gewählt → Uhrzeit der unbelegten Tage (07:00)');
-    arrows(w, 'sqh')[0].click(); arrows(w, 'sqm')[1].click();
-    ok(shown(w, 'sqh', 'sqm') === '08:59', 'Sheet-Pfeile: Stunde ▲, Minute ▼ (00 → 59 ohne Übertrag)');
-    setNativeTime(w, sp, '06:10');
-    ok(shown(w, 'sqh', 'sqm') === '06:10', 'Sheet: Systemauswahl übernimmt 06:10');
+    ok(chipTime(w, 'sqt') === '07:00' && d.querySelector('#sPicker [data-st="0"]').getAttribute('aria-pressed') === 'true', 'Einzelwecker gewählt → Uhrzeit der unbelegten Tage (07:00)');
+    click(w, 'sqt');
+    ok(tsOpen(w) && d.getElementById('overlay').classList.contains('open'), 'Zeit-Fenster öffnet über dem Tages-Sheet');
+    d.querySelector('#tsQuick [data-d="-5"]').click(); d.querySelector('#tsQuick [data-d="-5"]').click();
+    ok(d.getElementById('tsDigits').textContent === '06:50' && chipTime(w, 'sqt') === '07:00', 'Entwurf 06:50, Chip noch unverändert');
+    click(w, 'tsCancel');
+    ok(!tsOpen(w) && chipTime(w, 'sqt') === '07:00' && d.getElementById('overlay').classList.contains('open'), 'Abbrechen: nichts geändert, Tages-Sheet bleibt offen');
+    pickTime(w, 'sqt', '06:10');
+    ok(chipTime(w, 'sqt') === '06:10', 'Sheet: Systemuhr + Übernehmen setzt 06:10');
     click(w, 'ssetBtn');
     ok(n['custom-2026-11-03'] && n['custom-2026-11-03'].time === '06:10'
        && state(w).activeAlarms.some(a => a.alarmKey === 'custom-2026-11-03' && a.auto === false && a.shiftName === 'Einzelwecker'), 'Einzelwecker 06:10 von Hand gestellt');
     openDay(w, '2026-11-04');
-    setNativeTime(w, d.querySelector('#sPicker .tpick'), '04:50');
+    pickTime(w, 'sqt', '04:50');
     click(w, 'ssetBtn');
     ok(n['shift-2026-11-04-t2'] && n['shift-2026-11-04-t2'].time === '04:50', 'Früh-Wecker 04:50 von Hand am 04.11.');
 
@@ -164,12 +168,12 @@ function openDay(w, ds) {
     await sleep(1000);
     const fr = Object.keys(n).filter(k => /^free-day-/.test(k));
     ok(fr.length > 45 && n['free-day-2026-11-07'] && n['free-day-2026-11-07'].time === '07:00' && !n['free-day-2026-11-08'], `Samstags-Wecker automatisch (${fr.length}), Sonntag nicht`);
-    setNativeTime(w, pickerOf(w, 'fatph'), '06:45');
-    ok(state(w).freeAlarm.time === '06:45' && shown(w, 'fatph', 'fatpm') === '06:45', 'Systemauswahl setzt Uhrzeit für unbelegte Tage');
-    arrows(w, 'fatpm')[0].click();
-    ok(state(w).freeAlarm.time === '06:46', 'Pfeil ▲ Minute bei unbelegten Tagen');
+    pickTime(w, 'fatp', '06:45');
+    ok(state(w).freeAlarm.time === '06:45' && chipTime(w, 'fatp') === '06:45', 'Zeit-Fenster setzt Uhrzeit für unbelegte Tage');
+    click(w, 'fatp'); d.querySelector('#tsQuick [data-d="5"]').click(); click(w, 'tsApply');
+    ok(state(w).freeAlarm.time === '06:50', '+5 bei unbelegten Tagen');
     await sleep(1000);
-    ok(n['free-day-2026-11-07'].time === '06:46', 'Uhrzeit-Änderung gleicht die Wecker ab');
+    ok(n['free-day-2026-11-07'].time === '06:50', 'Uhrzeit-Änderung gleicht die Wecker ab');
     setAuto(w, 'free', false);
     ok(toastText(w) === 'Unbelegte Tage: automatische Wecker entfernt (von Hand gestellte bleiben)' && !Object.keys(n).some(k => /^free-day-/.test(k)), 'Ausschalten entfernt die Wecker der unbelegten Tage');
     setAuto(w, 'free');
@@ -182,32 +186,35 @@ function openDay(w, ds) {
     w.close();
   }
 
-  // ── 3. Einheitliche Zeitauswahl der Schichten
+  // ── 3. Kompakte Schicht-Zeilen + Zeit-Fenster
   {
     const n = {}; const br = makeBridge(n);
     const w = open({ [LS]: JSON.stringify(Object.assign({}, base, { autoSchedule: { 2: true } })) }, br); await sleep(50);
     const d = w.document;
-    ok(d.querySelectorAll('#alarmBox .tpick').length === 4 && d.querySelectorAll('#alarmBox .tpick input[type=time]').length === 4, 'jede Schicht-Zeile hat dieselbe Zeitauswahl');
-    ok(arrows(w, 'tph2')[0].getAttribute('aria-label') === 'Früh: Stunde später' && arrows(w, 'tpm2')[1].getAttribute('aria-label') === 'Früh: Minute früher', 'Pfeile mit aria-label');
-    ok(/^Früh: Uhrzeit 05:30 Uhr/.test(d.getElementById('tph2').getAttribute('aria-label')), 'Ziffern sind beschriftete Knöpfe');
-    const pick = pickerOf(w, 'tph2');
-    setNativeTime(w, pick, '04:45');
-    ok(state(w).alarmTimes[2] === '04:45' && shown(w, 'tph2', 'tpm2') === '04:45', 'Systemauswahl setzt Früh auf 04:45');
+    ok(d.querySelectorAll('#alarmBox .wkrow .tchip').length === 4 && d.querySelectorAll('#alarmBox .tbtn').length === 0, 'jede Schicht-Zeile: ein Uhrzeit-Chip, keine Pfeile mehr');
+    ok(chipTime(w, 'tp2') === '05:30' && /^Früh: Weckzeit 05:30 Uhr/.test(d.getElementById('tp2').getAttribute('aria-label')), 'Chip zeigt Uhrzeit, mit aria-label');
+    click(w, 'tp2');
+    ok(tsOpen(w) && d.getElementById('tsTitle').textContent === 'Früh – Weckzeit' && d.getElementById('tsDigits').textContent === '05:30', 'Antippen öffnet das Zeit-Fenster mit Titel und Uhrzeit');
+    const q = v => d.querySelector('#tsQuick [data-d="' + v + '"]').click();
+    q(-15); q(-15); q(-5);
+    ok(d.getElementById('tsDigits').textContent === '04:55' && state(w).alarmTimes[2] === '05:30', '−15 −15 −5 → Entwurf 04:55, gespeichert bleibt 05:30');
+    ok(w.handleBack() === true && !tsOpen(w) && state(w).alarmTimes[2] === '05:30', 'Zurück-Geste schließt ohne zu ändern');
+    click(w, 'tp2'); q(-15); q(-15); click(w, 'tsApply');
+    ok(!tsOpen(w) && state(w).alarmTimes[2] === '05:00' && chipTime(w, 'tp2') === '05:00', 'Übernehmen setzt Früh auf 05:00');
     await sleep(1000);
-    ok(n['shift-2026-11-09-t2'] && n['shift-2026-11-09-t2'].time === '04:45', 'Wecker folgen der neuen Uhrzeit');
-    setNativeTime(w, pick, '04:59'); arrows(w, 'tpm2')[0].click();
-    ok(state(w).alarmTimes[2] === '04:00', 'Minute 59 ▲ → 00 ohne Übertrag');
-    setNativeTime(w, pick, '00:10'); arrows(w, 'tph2')[1].click();
-    ok(state(w).alarmTimes[2] === '23:10', 'Stunde 00 ▼ → 23');
-    setNativeTime(w, pick, '');
-    ok(state(w).alarmTimes[2] === '23:10', 'leere Systemauswahl ändert nichts');
-    const inp = pick.querySelector('input[type=time]'); let calls = 0;
-    inp.showPicker = () => { calls++; };
-    click(w, 'tph2');
-    ok(calls === 1, 'Ziffern antippen öffnet die System-Zeitauswahl (showPicker)');
-    inp.showPicker = undefined;
-    click(w, 'tpm2');
-    ok(d.activeElement === inp, 'ohne showPicker wird das Zeitfeld fokussiert');
+    ok(n['shift-2026-11-09-t2'] && n['shift-2026-11-09-t2'].time === '05:00', 'Wecker folgen der neuen Uhrzeit');
+    click(w, 'tp2'); q(15); q(15); q(15); q(15); click(w, 'tsApply');
+    ok(state(w).alarmTimes[2] === '06:00', '+15 mit Übertrag in die Stunde (05:00 → 06:00)');
+    pickTime(w, 'tp2', '00:05'); click(w, 'tp2'); q(-15); click(w, 'tsApply');
+    ok(state(w).alarmTimes[2] === '23:50', '−15 über Mitternacht (00:05 → 23:50)');
+    click(w, 'tp2'); const tn = d.getElementById('tsNative'); tn.value = ''; tn.dispatchEvent(new w.Event('change'));
+    ok(d.getElementById('tsDigits').textContent === '23:50', 'leere Systemuhr ändert den Entwurf nicht');
+    let calls = 0; tn.showPicker = () => { calls++; };
+    click(w, 'tsDigits');
+    ok(calls === 1, 'große Uhrzeit antippen öffnet die Android-Uhr (showPicker)');
+    tn.showPicker = undefined; click(w, 'tsDigits');
+    ok(d.activeElement === tn, 'ohne showPicker wird das Zeitfeld fokussiert');
+    click(w, 'tsCancel');
     w.close();
   }
 

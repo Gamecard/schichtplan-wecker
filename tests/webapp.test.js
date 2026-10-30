@@ -59,6 +59,13 @@ const state = w => JSON.parse(w.localStorage.getItem(LS));
 const dump = w => { const o = {}; for (let i = 0; i < w.localStorage.length; i++) { const k = w.localStorage.key(i); o[k] = w.localStorage.getItem(k); } return o; };
 const autoKeys = (w, re) => state(w).activeAlarms.filter(a => a.auto && re.test(a.alarmKey));
 const click = (w, id) => w.document.getElementById(id).click();
+// Weckzeit über das Zeit-Fenster setzen: Chip antippen, Systemuhr-Wert, Übernehmen
+function pickTime(w, chipId, v) {
+  w.document.getElementById(chipId).click();
+  const n = w.document.getElementById('tsNative'); n.value = v; n.dispatchEvent(new w.Event('change'));
+  w.document.getElementById('tsApply').click();
+}
+
 // Schalter „automatisch wecken“ einer Schicht (1–4) bzw. 'free' umlegen (ersetzt „Alle stellen“)
 function setAuto(w, t, on = true) {
   const cb = w.document.getElementById(t === 'free' ? 'freeAlarmEnabled' : 'ae' + t);
@@ -98,7 +105,7 @@ function openDay(w, ds) {
   ok(!native['shift-2026-11-02-t2'] && !!native['shift-2026-11-09-t2'], 'Urlaub entfernt Wecker, danach bleiben sie');
 
   // Weckzeit
-  w.document.getElementById('tph2').parentElement.querySelector('.tbtn').click(); await sleep(1000);
+  pickTime(w, 'tp2', '06:30'); await sleep(1000);
   ok(native['shift-2026-11-09-t2'].time === '06:30', 'Weckzeit-Änderung übernommen');
 
   // Gelöscht bleibt gelöscht
@@ -241,8 +248,7 @@ function openDay(w, ds) {
   ok(n7['pre-shift-2026-11-16-t2'] && n7['pre-shift-2026-11-16-t2'].time === '05:00', 'Vorwecker 30 Min vor Früh (05:00)');
   ok(Object.keys(n7).filter(k => k.startsWith('pre-')).length === Object.keys(n7).filter(k => k.startsWith('shift-')).length, 'zu jedem Schicht-Wecker ein Vorwecker');
   // über Mitternacht: Früh um 00:15 → Vorwecker am Vortag 23:45
-  for (let i = 0; i < 5; i++) w7.document.getElementById('tph2').parentElement.querySelectorAll('.tbtn')[1].click(); // 05→00
-  for (let i = 0; i < 15; i++) w7.document.getElementById('tpm2').parentElement.querySelectorAll('.tbtn')[1].click(); // 30→15
+  pickTime(w7, 'tp2', '00:15');
   await sleep(1000);
   const pa = state(w7).activeAlarms.find(a => a.alarmKey === 'pre-shift-2026-11-16-t2');
   ok(pa && pa.ds === '2026-11-15' && pa.time === '23:45' && n7['pre-shift-2026-11-16-t2'].d === 15, 'Vorwecker über Mitternacht am Vortag 23:45');

@@ -121,9 +121,9 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 - Bedienelemente nach Setter-Aufrufen per `syncWeckerUi()` angleichen (kein Neuaufbau → Fokus bleibt); `renderAlarmSettings`/`renderFreeAlarmSettings` nur beim Start und in `refreshAllUi`
 
 ### Zeitauswahl (`buildTimePicker`)
-- EINE Komponente für alle Weckzeiten: Schicht-Zeilen, unbelegte Tage, Einzelwecker im Tages-Sheet. `buildTimePicker(hhmm, onChange, {label, hId, mId})` → Element mit `getTime()`/`setTime()`; `onChange` nur bei Nutzeränderung
-- Pfeile ▲▼ je Stunde/Minute (ohne Übertrag: Minute 59 ▲ → 00, Stunde bleibt). Die Ziffern sind Knöpfe und öffnen die System-Zeitauswahl über ein verstecktes `<input type="time" class="tnative">` (`showPicker()`, sonst `focus()`); NICHT `display:none`, sonst geht `showPicker` nicht
-- Ziffern-IDs bleiben `tph<t>`/`tpm<t>` (Schichten), `fatph`/`fatpm` (unbelegte Tage), `sqh`/`sqm` (Sheet). Auswahl-Chips (Wochentage, Art im Sheet) = `.chiprow` mit `.sftbtn`/`.sftbtn-active` + `aria-pressed`, keine Inline-Styles
+- EINE Komponente für alle Weckzeiten: Schicht-Zeilen, unbelegte Tage, Einzelwecker im Tages-Sheet, Einrichtung. `buildTimePicker(hhmm, onChange, {label, id})` → Uhrzeit-Chip (`.tchip`) mit `getTime()`/`setTime()`
+- Chip antippen öffnet das Zeit-Fenster `#timeSheet` (`openTimeSheet(titel, hhmm, onApply)`): große Uhrzeit (antippen → Android-Uhr über `#tsNative`, `showPicker()`), −15/−5/+5/+15 mit Übertrag über Mitternacht, Abbrechen/Übernehmen. Erst „Übernehmen“ ruft onChange – Vertippen ändert keine Wecker. Zurück-Geste = Abbrechen. Fenster wird per Abstandshalter an den unteren Rand gesetzt (Overlay-Muster, kein flex-end)
+- Chip-IDs: `tp<t>` (Schichten), `fatp` (unbelegte Tage), `sqt` (Tages-Sheet). Das versteckte `input.tnative` im Chip übernimmt Werte direkt (Einrichtung nutzt es als `wizTime<t>`). Schicht-Zeilen sind kompakt: Name + Stand | Chip | Schalter. Auswahl-Chips (Wochentage, Art im Sheet) = `.chiprow` mit `.sftbtn`/`.sftbtn-active` + `aria-pressed`, keine Inline-Styles
 
 ### Persistenz (WICHTIG)
 - `save()` schreibt den Zustand ZUERST synchron nativ (`Android.saveState`, SharedPreferences `app_state`, `commit()`), danach in `localStorage`. `load()` bevorzugt `Android.loadState()`

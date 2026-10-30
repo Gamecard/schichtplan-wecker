@@ -65,14 +65,12 @@
     <div class="card">
       <div class="ctitle">&#x23F0;&nbsp;Wecker pro Schicht</div>
       <p class="small muted wkintro">
-        Schalter an = <b>automatisch wecken</b>: Die App stellt f&uuml;r jeden passenden Tag der n&auml;chsten 12&nbsp;Monate
-        einen Wecker zur eingestellten Uhrzeit und h&auml;lt ihn aktuell &ndash; bei Urlaub, Schichttausch oder ge&auml;ndertem
-        Rhythmus passt sie sich von selbst an. Schalter aus = diese automatischen Wecker werden entfernt.
+        Schalter an: Die App weckt an jedem Tag mit dieser Schicht und passt sich bei Urlaub, Tausch oder
+        neuem Rhythmus von selbst an. Uhrzeit antippen zum &Auml;ndern.
       </p>
       <div class="stack" id="alarmBox"></div>
       <p class="small muted" style="margin:.55rem 0 0;">
-        Uhrzeit mit &#x25B2;&#x25BC; &auml;ndern oder auf die Ziffern tippen. Einen Wecker nur f&uuml;r einen Tag stellst du im Plan:
-        Tag antippen &ndash; solche Wecker bleiben, bis du sie l&ouml;schst.
+        Einen Wecker nur f&uuml;r einen Tag stellst du im Plan: Tag antippen.
       </p>
       <div style="margin-top:.7rem;display:flex;gap:.6rem;align-items:center;">
         <label class="sw" title="Schicht-Wecker an Feiertagen auslassen"><input type="checkbox" id="skipHolShift" aria-label="Schicht-Wecker an Feiertagen auslassen"><span class="sl"></span></label>
@@ -256,6 +254,28 @@
   <button class="navbtn" data-tab="wecker" aria-label="Wecker"><span class="navico"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 2"/><path d="M4.5 4.5l-2 2M19.5 4.5l2 2M7 20l-1.5 1.5M17 20l1.5 1.5"/></svg></span><span>Wecker</span></button>
   <button class="navbtn" data-tab="schicht" aria-label="Schichtplan"><span class="navico"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3.5" width="18" height="17" rx="2.5"/><path d="M3 9h18M3 14.5h18M9 9v11.5M15 9v11.5"/></svg></span><span>Schichtplan</span></button>
 </nav>
+
+<!-- ======= ZEIT-FENSTER (Weckzeit ändern) ======= -->
+<div class="overlay tsheet-ov" id="timeSheet">
+  <div class="tsheet-space"></div>
+  <div class="sheet tsheet" role="dialog" aria-modal="true" aria-labelledby="tsTitle">
+    <div class="shandle"></div>
+    <div class="sdate" id="tsTitle">Weckzeit</div>
+    <button type="button" class="tsdigits" id="tsDigits" aria-label="Uhrzeit wählen"></button>
+    <input type="time" class="tnative" id="tsNative" tabindex="-1" aria-hidden="true">
+    <div class="small muted tshint">Uhrzeit antippen öffnet die Uhr</div>
+    <div class="tsquick" id="tsQuick">
+      <button type="button" data-d="-15" aria-label="15 Minuten früher">&minus;15</button>
+      <button type="button" data-d="-5" aria-label="5 Minuten früher">&minus;5</button>
+      <button type="button" data-d="5" aria-label="5 Minuten später">+5</button>
+      <button type="button" data-d="15" aria-label="15 Minuten später">+15</button>
+    </div>
+    <div class="sbtns">
+      <button type="button" id="tsCancel">Abbrechen</button>
+      <button type="button" class="primary" id="tsApply">&Uuml;bernehmen</button>
+    </div>
+  </div>
+</div>
 
 <!-- ======= BOTTOM SHEET ======= -->
 <div class="overlay" id="overlay">

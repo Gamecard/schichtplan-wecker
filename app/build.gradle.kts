@@ -32,8 +32,8 @@ android {
         applicationId = "de.schichtwecker.app"
         minSdk = 36
         targetSdk = 36
-        versionCode = 10
-        versionName = "1.9"
+        versionCode = 11
+        versionName = "1.10"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

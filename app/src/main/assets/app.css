@@ -286,7 +286,36 @@ label {
 /* ═══════════════════════════════════════════════════════
    LAYOUT
    ═══════════════════════════════════════════════════════ */
-.wrap   { max-width:960px; margin:0 auto; padding:0 8px 16px; }
+.wrap   { max-width:960px; margin:0 auto; padding:0 8px 88px; }  /* unten Platz für die Navigation */
+
+/* ═══════════════════════════════════════════════════════
+   BEREICHE + UNTERE NAVIGATION
+   ═══════════════════════════════════════════════════════ */
+.tab[hidden] { display:none !important; }
+.tabtitle { font-size:var(--t-title-lg); font-weight:600; margin:12px 4px 10px; }
+.stepno {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:22px; height:22px; border-radius:50%; margin-right:8px;
+  background:var(--md-primary); color:var(--md-on-primary, #fff);
+  font-size:var(--t-label-md); font-weight:700; vertical-align:2px;
+}
+.bottomnav {
+  position:fixed; left:0; right:0; bottom:0; z-index:50;
+  display:flex; justify-content:space-around;
+  background:var(--md-surface-container, var(--card)); border-top:1px solid var(--border);
+  padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+}
+.navbtn {
+  flex:1; max-width:160px; display:flex; flex-direction:column; align-items:center; gap:2px;
+  background:transparent; border:none; padding:4px 0; min-height:0; cursor:pointer;
+  font:inherit; font-size:var(--t-label-md); font-weight:500; color:var(--muted);
+}
+.navbtn .navico {
+  font-size:1.25rem; line-height:1; padding:4px 18px; border-radius:var(--shape-full);
+  transition:background var(--motion-duration-short) var(--motion-easing-standard);
+}
+.navbtn.active { color:var(--fg); font-weight:600; }
+.navbtn.active .navico { background:var(--md-secondary-container, var(--chip)); }
 .card   {
   background:var(--card); border:1px solid var(--border);
   border-radius:var(--shape-lg); padding:16px; margin-bottom:12px;

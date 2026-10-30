@@ -795,15 +795,35 @@ window.onerror=function(msg,src,line,col,err){
   /* Schichttausch im Tages-Sheet: Schicht nur für diesen Tag ändern */
   function renderSwap(ds){
     var el=$('sSwap'); if(!el) return;
-    var ex=S.exceptions.some(function(e){return ds>=e.start&&ds<=e.end;});
-    if(ex){ el.innerHTML='<span class="lbl">Ausnahme eingetragen \u2013 Schicht nicht \u00E4nderbar</span>'; return; }
+    var ex=S.exceptions.find(function(e){return ds>=e.start&&ds<=e.end;});
+    if(ex){
+      // Tag gehört zu einer Ausnahme: anzeigen und entfernen anbieten
+      var span=ex.start===ex.end?fmtDe(ex.start):fmtDe(ex.start)+' – '+fmtDe(ex.end);
+      el.innerHTML='<span class="lbl">📌 '+esc(ex.type)+' ('+esc(span)+')</span>'
+        +'<button type="button" class="sftbtn" id="exDelBtn">Ausnahme entfernen</button>';
+      $('exDelBtn').onclick=function(){
+        delEx(ex.id); resyncAlarms({quiet:true}); openSheet(ds,getShift(ds)); toast(ex.type+' ('+span+') entfernt');
+      };
+      return;
+    }
     var cur=Object.prototype.hasOwnProperty.call(S.overrides,ds)?S.overrides[ds]:null;
-    var opts=[{t:null,n:'Wie Plan'},{t:1,n:'Frei'},{t:2,n:'Fr\u00FCh'},{t:3,n:'Sp\u00E4t'},{t:4,n:'Nacht'}];
+    var opts=[{t:null,n:'Wie Plan'},{t:1,n:'Frei'},{t:2,n:'Früh'},{t:3,n:'Spät'},{t:4,n:'Nacht'}];
     el.innerHTML='<span class="lbl">Schicht an diesem Tag:</span>'+opts.map(function(o){
       return '<button type="button" class="sftbtn'+(cur===o.t?' sftbtn-active':'')+'" data-swap="'+(o.t===null?'':o.t)+'">'+o.n+'</button>';
-    }).join('');
+    }).join('')
+      +'<span class="lbl" style="flex-basis:100%;margin-top:4px;">Ausnahme an diesem Tag:</span>'
+      +['Urlaub','Krank','Schulung'].map(function(t){
+        return '<button type="button" class="sftbtn" data-ex="'+t+'">'+t+'</button>';
+      }).join('');
     el.querySelectorAll('[data-swap]').forEach(function(b){
       b.onclick=function(){ setOverride(ds,b.dataset.swap===''?null:Number(b.dataset.swap)); };
+    });
+    el.querySelectorAll('[data-ex]').forEach(function(b){
+      b.onclick=function(){
+        S.exceptions.push({id:uid(),start:ds,end:ds,type:b.dataset.ex});
+        renderEx(); renderCal(); save(); resyncAlarms({quiet:true});
+        openSheet(ds,getShift(ds)); toast(b.dataset.ex+' am '+fmtDe(ds)+' eingetragen');
+      };
     });
   }
   function setOverride(ds,type){
@@ -970,9 +990,40 @@ window.onerror=function(msg,src,line,col,err){
     if(vis('wizBg')){ closeWiz(); return true; }
     if($('overlay').classList.contains('open')){ closeSheet(); return true; }
     if(isAlarmsOpen()){ closeAllAlarms(); return true; }
-    if($('settingsOverlay').classList.contains('open')){ $('settingsOverlay').classList.remove('open'); save(); return true; }
+    if(currentTab!=='plan'){ showTab('plan'); return true; }
     return false;
   };
+
+  /* ── BEREICHE (untere Navigation) ─────────
+     plan = Kalender (Startseite), wecker = alles rund ums Wecken,
+     schicht = Einrichtung des Schichtplans + Daten/App */
+  var TABS={plan:'tabPlan',wecker:'tabWecker',schicht:'tabSchicht'};
+  var currentTab='plan';
+  function showTab(name){
+    if(!TABS[name]) name='plan';
+    currentTab=name;
+    Object.keys(TABS).forEach(function(k){ $(TABS[k]).hidden=(k!==name); });
+    document.querySelectorAll('#bottomNav .navbtn').forEach(function(b){
+      b.classList.toggle('active',b.dataset.tab===name);
+    });
+    window.scrollTo(0,0);
+  }
+
+  /* ── SCHNITTSTELLE für Bereiche und Einrichtung ──
+     Kleine Setter, die Zustand ändern, speichern und den Wecker-Abgleich anstoßen.
+     Die Oberfläche (Wecker-Bereich, Einrichtung) soll nur diese verwenden. */
+  function setShiftTime(t,hhmm){
+    if(!(t>=1&&t<=4)||!/^\d{2}:\d{2}$/.test(hhmm)) return;
+    S.alarmTimes[t]=hhmm; save(); renderAlarmSettings(); renderCal(); scheduleResync();
+  }
+  function setPatternDay(idx,t){
+    if(idx<0||idx>=S.pattern.length||!(t>=0&&t<=4)) return;
+    S.pattern[idx]=t; renderPat(); renderCal(); save(); scheduleResync();
+  }
+  function setWeeksCount(n){
+    S.weeksCount=Math.max(1,Math.min(6,n)); $('weeksVal').textContent=S.weeksCount;
+    initPat(); renderPat(); renderCal(); save(); scheduleResync();
+  }
 
   /* ── PERSISTENZ ─────────────────────────── */
   function save(){
@@ -1250,21 +1301,10 @@ window.onerror=function(msg,src,line,col,err){
 
   /* ── EVENTS ─────────────────────────────── */
   $('themeBtn').onclick=cycleTheme;
-  $('settingsBtn').onclick=function(){
-    var ov=$('settingsOverlay');
-    ov.classList.toggle('open');
-  };
-  $('closeSettings').onclick=function(){
-    $('settingsOverlay').classList.remove('open');
-  };
-  $('settingsOverlay').onclick=function(e){
-    if(e.target===this) this.classList.remove('open');
-  };
   $('startWizBtn').onclick=function(){openWiz();};
-  $('doneSettings').onclick=function(){
-    $('settingsOverlay').classList.remove('open');
-    save();
-  };
+  $('bottomNav').addEventListener('click',function(e){
+    var b=e.target.closest('.navbtn'); if(b) showTab(b.dataset.tab);
+  });
   function applyStartDate(nd){
     S.startDate=nd;
     var d=parseYmd(S.startDate);
@@ -1311,7 +1351,7 @@ window.onerror=function(msg,src,line,col,err){
       initPat();
       save();
       refreshAllUi();
-      $('settingsOverlay').classList.remove('open');
+      showTab('plan');
       toast('Alles zur\u00fcckgesetzt. Alle Wecker sind jetzt deaktiviert.');
     });
   };
@@ -1366,6 +1406,7 @@ window.onerror=function(msg,src,line,col,err){
     var r=e.target.closest('.arow'); if(r) openSheet(r.dataset.date,getShift(r.dataset.date));
   });
   $('allAlarmsBtn').onclick=openAllAlarms;
+  $('allAlarmsBtn2').onclick=openAllAlarms;
   $('closeAlarms').onclick=closeAllAlarms;
   $('allAlarmList').addEventListener('click',function(e){
     var b=e.target.closest('.adel'); if(b) cancelAlarm(b.dataset.date,b.dataset.key);

@@ -12,102 +12,73 @@
   <div class="hdr-title"><span id="hdrCalIcon" style="display:inline-flex;align-items:center;justify-content:center;position:relative;width:1.6em;height:1.6em;vertical-align:middle;margin-right:8px"><svg viewBox="0 0 32 32" width="1.6em" height="1.6em" style="position:absolute;top:0;left:0"><rect x="1" y="5" width="30" height="25" rx="4" fill="var(--md-primary-container)" stroke="var(--border)" stroke-width=".8"/><rect x="1" y="5" width="30" height="7" rx="4" fill="var(--md-primary)"/><rect x="1" y="10" width="30" height="2" fill="var(--md-primary)"/><rect x="8.5" y="2" width="2.4" height="5.5" rx="1.2" fill="var(--muted)"/><rect x="21.1" y="2" width="2.4" height="5.5" rx="1.2" fill="var(--muted)"/><text id="hdrCalDay" x="16" y="24" text-anchor="middle" font-size="12" font-weight="500" fill="var(--md-on-primary-container)"></text><text id="hdrCalMon" x="16" y="10" text-anchor="middle" font-size="5" font-weight="500" fill="var(--md-on-primary)"></text></svg></span>Mein Schichtplan</div>
   <div class="hdr-btns">
     <button class="icon" id="themeBtn" title="Farbschema wechseln">&#x1F5A5;&#xFE0F;</button>
-    <button class="icon" id="settingsBtn" title="Einstellungen">&#x2699;&#xFE0F;</button>
   </div>
 </header>
 
 <div class="wrap">
 
-  <!-- ======= EINSTELLUNGEN (OVERLAY) ======= -->
-  <div class="settings-overlay" id="settingsOverlay">
+
+
+  <!-- ======= ALLE WECKER (Liste auf Abruf) ======= -->
+  <div class="settings-overlay" id="alarmsOverlay">
     <div class="settings-inner">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem;">
-        <div style="font-weight:800;font-size:1.05rem;">&#x2699;&#xFE0F; Einstellungen</div>
-        <button class="icon" id="closeSettings" title="Schlie&szlig;en">&#x2715;</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem;">
+        <div style="font-weight:800;font-size:1.05rem;">&#x1F514; Alle Wecker</div>
+        <button class="icon" id="closeAlarms" title="Schlie&szlig;en">&#x2715;</button>
       </div>
-  <div id="settingsPanel">
-
-    <div class="card">
-      <div class="ctitle">&#x1F5C2;&#xFE0F; Grundeinstellungen</div>
-      <div class="stack">
-        <div style="margin-bottom:.6rem;">
-          <label id="startLabel">Startwoche (Woche&nbsp;1)</label>
-          <div class="small muted" id="startInfo" style="margin-top:.1rem;"></div>
-          <div id="kwPick" style="display:flex;gap:.4rem;align-items:center;margin-top:.25rem;">
-            <select id="kwNum" style="flex:1;padding:.5rem .3rem;font-size:1rem;"></select>
-            <select id="kwYear" style="width:5.6rem;padding:.5rem .3rem;font-size:1rem;"></select>
-          </div>
-          <div id="datePick" style="display:none;gap:.4rem;align-items:center;margin-top:.25rem;">
-            <select id="sdDay" style="width:4.2rem;padding:.5rem .3rem;font-size:1rem;"></select>
-            <select id="sdMon" style="flex:1;padding:.5rem .3rem;font-size:1rem;"></select>
-            <select id="sdYear" style="width:5.6rem;padding:.5rem .3rem;font-size:1rem;"></select>
-          </div>
-          <button type="button" class="sm" id="startModeBtn" style="margin-top:.4rem;">Stattdessen Datum w&auml;hlen</button>
-        </div>
-        <div class="row">
-          <div class="f1">
-            <label>Wochen im Rhythmus</label>
-            <div style="display:flex;gap:.4rem;align-items:center;">
-              <button class="icon" id="decWeeks" aria-label="Weniger Wochen">&#x2212;</button>
-              <span id="weeksVal" style="font-weight:800;font-size:1.1rem;min-width:1.8ch;text-align:center;">6</span>
-              <button class="icon" id="incWeeks" aria-label="Mehr Wochen">+</button>
-            </div>
-          </div>
-          <div class="f1">
-            <label for="bundesland">Bundesland (Feiertage)</label>
-            <select id="bundesland">
-              <option value="NW">Nordrhein-Westfalen</option>
-              <option value="BW">Baden-W&uuml;rttemberg</option>
-              <option value="BY">Bayern</option>
-              <option value="BE">Berlin</option>
-              <option value="BB">Brandenburg</option>
-              <option value="HB">Bremen</option>
-              <option value="HH">Hamburg</option>
-              <option value="HE">Hessen</option>
-              <option value="MV">Mecklenburg-Vorpommern</option>
-              <option value="NI">Niedersachsen</option>
-              <option value="RP">Rheinland-Pfalz</option>
-              <option value="SL">Saarland</option>
-              <option value="SN">Sachsen</option>
-              <option value="ST">Sachsen-Anhalt</option>
-              <option value="SH">Schleswig-Holstein</option>
-              <option value="TH">Th&uuml;ringen</option>
-            </select>
-          </div>
-        </div>
-        <div class="row" style="justify-content:flex-start;">
-          <button class="primary sm" id="doneSettings">Kalender anzeigen</button>
-          <button class="sm" id="startWizBtn">&#x2753;&nbsp;Anleitung</button>
-          <button class="danger sm" id="resetAll">&#x26A0;&#xFE0F;&nbsp;Alles zur&uuml;cksetzen</button>
-        </div>
-      </div>
+      <div class="small muted" id="allSummary" style="margin-bottom:.8rem;"></div>
+      <div id="allAlarmList"></div>
     </div>
+  </div>
 
+  <!-- ======= BEREICH: PLAN ======= -->
+  <section class="tab" id="tabPlan">
+  <!-- ======= KALENDAR ======= -->
+  <div class="permwarn" id="permWarn" style="display:none;"></div>
+  <div class="nextalarm" id="nextAlarm"></div>
+
+  <div id="calSection" style="margin:0 -.5rem;padding:.5rem .5rem 0;">
+    <div class="mnav" style="padding:.35rem 0;">
+      <button id="prevM" aria-label="Vorheriger Monat">&#x25C4;</button>
+      <div id="mTitle" class="mtitle">Monat Jahr</div>
+      <button id="todayM" class="sm primary">Heute</button>
+      <button id="nextM" aria-label="N&auml;chster Monat">&#x25BA;</button>
+    </div>
+    <div id="calGrid"></div>
+  </div>
+
+  <!-- gesetzte Wecker -->
+  <div class="card" id="aCard" style="display:none;">
+    <div class="ctitle">&#x1F514;&nbsp;N&auml;chste Wecker</div>
+    <div id="aList" class="alist"></div>
+    <div class="asum">
+      <span class="small muted" id="aSummary"></span>
+      <button class="sm" id="allAlarmsBtn">Alle Wecker &rsaquo;</button>
+    </div>
+  </div>
+
+  </section>
+
+  <!-- ======= BEREICH: WECKER ======= -->
+  <section class="tab" id="tabWecker" hidden>
+    <h2 class="tabtitle">&#x23F0; Wecker</h2>
     <div class="card">
       <div class="ctitle">&#x23F0;&nbsp;Weckerzeit pro Schicht</div>
       <div class="stack" id="alarmBox"></div>
       <p class="small muted" style="margin:.55rem 0 0;">
-        Diese vier Zeiten sind Standardzeiten f&uuml;r Frei, Fr&uuml;h, Sp&auml;t und Nacht.
-        Auf einen Kalendertag tippen &rarr; Wecker f&uuml;r genau dieses Datum stellen.
+        Einen einzelnen Wecker f&uuml;r genau einen Tag stellst du im Plan: Tag antippen.
       </p>
       <div style="margin-top:.7rem;display:flex;gap:.6rem;align-items:center;">
         <label class="sw" title="Schicht-Wecker an Feiertagen auslassen"><input type="checkbox" id="skipHolShift"><span class="sl"></span></label>
         <span class="small">Schicht-Wecker an Feiertagen auslassen</span>
       </div>
-      <div style="margin-top:.7rem;display:flex;gap:.5rem;align-items:center;">
-        <button class="sm" id="testAlarmBtn" style="background:#f59e0b;color:#fff;border-color:transparent;">&#x1F514; Test-Alarm (15 Sek.)</button>
-        <span class="small muted">Testet ob der Wecker funktioniert</span>
-      </div>
+      
     </div>
 
     <div class="card">
-      <div class="ctitle">&#x1F3B5;&nbsp;Klingelton</div>
-      <div class="small muted" style="margin-bottom:.6rem;">W&auml;hle einen eigenen Klingelton aus deinen Dateien oder nutze den Android-Standard.</div>
-      <div id="ringtoneBox" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
-        <button class="primary sm" id="pickRingtoneBtn">&#x1F4C1; Klingelton w&auml;hlen</button>
-        <button class="sm" id="resetRingtoneBtn" style="display:none;">&#x27F3; Standard</button>
-        <span class="small muted" id="ringtoneName" style="flex:1;">Standard-Klingelton</span>
-      </div>
+      <div class="ctitle">&#x1F4C5;&nbsp;Wecker f&uuml;r unbelegte Tage</div>
+      <div class="small muted" style="margin-bottom:.6rem;">Setzt einen Wecker an Tagen ohne Schichteintrag – w&auml;hle Uhrzeit und Wochentage.</div>
+      <div id="freeAlarmBox"></div>
     </div>
 
     <div class="card">
@@ -141,13 +112,98 @@
     </div>
 
     <div class="card">
-      <div class="ctitle">&#x1F4C5;&nbsp;Wecker f&uuml;r unbelegte Tage</div>
-      <div class="small muted" style="margin-bottom:.6rem;">Setzt einen Wecker an Tagen ohne Schichteintrag – w&auml;hle Uhrzeit und Wochentage.</div>
-      <div id="freeAlarmBox"></div>
+      <div class="ctitle">&#x1F3B5;&nbsp;Klingelton</div>
+      <div class="small muted" style="margin-bottom:.6rem;">W&auml;hle einen eigenen Klingelton aus deinen Dateien oder nutze den Android-Standard.</div>
+      <div id="ringtoneBox" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+        <button class="primary sm" id="pickRingtoneBtn">&#x1F4C1; Klingelton w&auml;hlen</button>
+        <button class="sm" id="resetRingtoneBtn" style="display:none;">&#x27F3; Standard</button>
+        <span class="small muted" id="ringtoneName" style="flex:1;">Standard-Klingelton</span>
+      </div>
     </div>
 
     <div class="card">
-      <div class="ctitle">&#x1F4CC;&nbsp;Ausnahmen / Urlaub</div>
+      <div class="ctitle">&#x2705;&nbsp;Pr&uuml;fen</div>
+      <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+        <button class="sm" id="testAlarmBtn" style="background:#f59e0b;color:#fff;border-color:transparent;">&#x1F514; Test-Alarm (15 Sek.)</button>
+        <button class="sm" id="allAlarmsBtn2">Alle Wecker &rsaquo;</button>
+      </div>
+      <div class="small muted" style="margin-top:.5rem;">Der Test-Alarm klingelt in 15 Sekunden &ndash; am besten einmal mit gesperrtem Bildschirm ausprobieren.</div>
+    </div>
+  </section>
+
+  <!-- ======= BEREICH: SCHICHTPLAN ======= -->
+  <section class="tab" id="tabSchicht" hidden>
+    <h2 class="tabtitle">&#x1F5C2;&#xFE0F; Schichtplan</h2>
+    <div class="card">
+      <div class="ctitle"><span class="stepno">1</span>Startwoche</div>
+      <div style="margin-bottom:.6rem;">
+          <label id="startLabel">Startwoche (Woche&nbsp;1)</label>
+          <div class="small muted" id="startInfo" style="margin-top:.1rem;"></div>
+          <div id="kwPick" style="display:flex;gap:.4rem;align-items:center;margin-top:.25rem;">
+            <select id="kwNum" style="flex:1;padding:.5rem .3rem;font-size:1rem;"></select>
+            <select id="kwYear" style="width:5.6rem;padding:.5rem .3rem;font-size:1rem;"></select>
+          </div>
+          <div id="datePick" style="display:none;gap:.4rem;align-items:center;margin-top:.25rem;">
+            <select id="sdDay" style="width:4.2rem;padding:.5rem .3rem;font-size:1rem;"></select>
+            <select id="sdMon" style="flex:1;padding:.5rem .3rem;font-size:1rem;"></select>
+            <select id="sdYear" style="width:5.6rem;padding:.5rem .3rem;font-size:1rem;"></select>
+          </div>
+          <button type="button" class="sm" id="startModeBtn" style="margin-top:.4rem;">Stattdessen Datum w&auml;hlen</button>
+        </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;gap:.6rem;flex-wrap:wrap;">
+        <div>
+          <div class="ctitle" style="margin:0;"><span class="stepno">2</span>Rhythmus</div>
+          <div class="small muted">Lege dein Schichtmuster fest. Es wiederholt sich ab der Startwoche automatisch.</div>
+        </div>
+        <button class="sm" id="clearPat">Leeren</button>
+      </div>
+      <div style="display:flex;gap:.6rem;align-items:center;margin-bottom:.6rem;">
+        <label style="margin:0;">Wochen im Rhythmus</label>
+        <button class="icon" id="decWeeks" aria-label="Weniger Wochen">&#x2212;</button>
+        <span id="weeksVal" style="font-weight:800;font-size:1.1rem;min-width:1.8ch;text-align:center;">6</span>
+        <button class="icon" id="incWeeks" aria-label="Mehr Wochen">+</button>
+      </div>
+      <div id="patGrid"></div>
+      <div class="legend" id="patLegend">
+        <button type="button" class="li pick" data-pick="1"><div class="ld" style="background:var(--accent)"></div><span>Frei</span></button>
+        <button type="button" class="li pick" data-pick="2"><div class="ld" style="background:var(--frueh)"></div><span>Fr&uuml;h</span></button>
+        <button type="button" class="li pick" data-pick="3"><div class="ld" style="background:var(--spaet)"></div><span>Sp&auml;t</span></button>
+        <button type="button" class="li pick" data-pick="4"><div class="ld" style="background:var(--nacht)"></div><span>Nacht</span></button>
+        <div class="li"><div class="ld" style="background:#a855f7"></div><span>Ausnahme</span></div>
+        <div class="li"><div class="ld" style="background:var(--hol-b)"></div><span>Feiertag</span></div>
+      </div>
+      <div class="small muted" id="patHint" style="margin-top:.5rem;"></div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle"><span class="stepno">3</span>Feiertage</div>
+      <label for="bundesland">Bundesland (Feiertage)</label>
+            <select id="bundesland">
+              <option value="NW">Nordrhein-Westfalen</option>
+              <option value="BW">Baden-W&uuml;rttemberg</option>
+              <option value="BY">Bayern</option>
+              <option value="BE">Berlin</option>
+              <option value="BB">Brandenburg</option>
+              <option value="HB">Bremen</option>
+              <option value="HH">Hamburg</option>
+              <option value="HE">Hessen</option>
+              <option value="MV">Mecklenburg-Vorpommern</option>
+              <option value="NI">Niedersachsen</option>
+              <option value="RP">Rheinland-Pfalz</option>
+              <option value="SL">Saarland</option>
+              <option value="SN">Sachsen</option>
+              <option value="ST">Sachsen-Anhalt</option>
+              <option value="SH">Schleswig-Holstein</option>
+              <option value="TH">Th&uuml;ringen</option>
+            </select>
+    </div>
+
+    <div class="card">
+      <div class="ctitle"><span class="stepno">4</span>Urlaub &amp; Ausnahmen</div>
+      <div class="small muted" style="margin-bottom:.6rem;">An diesen Tagen gilt der Rhythmus nicht und es klingelt kein automatischer Wecker. Schneller geht es im Plan: Tag antippen.</div>
       <div class="row" style="margin-bottom:.5rem;">
         <div class="f1"><label for="exS">Von</label><input type="date" id="exS"></div>
         <div class="f1"><label for="exE">Bis (opt.)</label><input type="date" id="exE"></div>
@@ -165,27 +221,7 @@
     </div>
 
     <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;gap:.6rem;flex-wrap:wrap;">
-        <div>
-          <div class="ctitle" style="margin:0;">&#x1F4CB;&nbsp;Wochenrhythmus</div>
-          <div class="small muted">Lege deinen Schichtrhythmus fest (1–6&nbsp;Wochen). Er wiederholt sich ab dem Startdatum automatisch.</div>
-        </div>
-        <button class="sm" id="clearPat">Leeren</button>
-      </div>
-      <div id="patGrid"></div>
-      <div class="legend" id="patLegend">
-        <button type="button" class="li pick" data-pick="1"><div class="ld" style="background:var(--accent)"></div><span>Frei</span></button>
-        <button type="button" class="li pick" data-pick="2"><div class="ld" style="background:var(--frueh)"></div><span>Fr&uuml;h</span></button>
-        <button type="button" class="li pick" data-pick="3"><div class="ld" style="background:var(--spaet)"></div><span>Sp&auml;t</span></button>
-        <button type="button" class="li pick" data-pick="4"><div class="ld" style="background:var(--nacht)"></div><span>Nacht</span></button>
-        <div class="li"><div class="ld" style="background:#a855f7"></div><span>Ausnahme</span></div>
-        <div class="li"><div class="ld" style="background:var(--hol-b)"></div><span>Feiertag</span></div>
-      </div>
-      <div class="small muted" id="patHint" style="margin-top:.5rem;"></div>
-    </div>
-
-    <div class="card">
-      <div class="ctitle">&#x1F4BE;&nbsp;Profil sichern</div>
+      <div class="ctitle">&#x1F4BE;&nbsp;Sichern &amp; Exportieren</div>
       <div class="small muted" style="margin-bottom:.6rem;">Speichert Schichtplan, Ausnahmen, Weckzeiten und Einstellungen in einer Datei &ndash; z.&nbsp;B. f&uuml;r ein neues Handy oder als Sicherung. Beim Laden werden die Wecker automatisch neu gesetzt.</div>
       <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
         <button class="primary sm" id="exportProfileBtn">&#x1F4BE;&nbsp;Profil sichern</button>
@@ -195,49 +231,23 @@
       <div class="small muted" style="margin-top:.5rem;">&bdquo;Kalender exportieren&ldquo; erstellt eine .ics-Datei mit deinen Schichten der n&auml;chsten 12 Monate &ndash; z.&nbsp;B. f&uuml;r den Google-Kalender (dort: Einstellungen &rarr; Importieren).</div>
     </div>
 
-    <p class="small muted" id="appVersion" style="text-align:center;margin:.4rem 0 1rem;">Schichtwecker</p>
-
-  </div><!-- /settingsPanel -->
-    </div>
-  </div><!-- /settingsOverlay -->
-
-  <!-- ======= ALLE WECKER (Liste auf Abruf) ======= -->
-  <div class="settings-overlay" id="alarmsOverlay">
-    <div class="settings-inner">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem;">
-        <div style="font-weight:800;font-size:1.05rem;">&#x1F514; Alle Wecker</div>
-        <button class="icon" id="closeAlarms" title="Schlie&szlig;en">&#x2715;</button>
+    <div class="card">
+      <div class="ctitle">&#x2699;&#xFE0F;&nbsp;App</div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        <button class="sm" id="startWizBtn">&#x1F9ED;&nbsp;Einrichtung starten</button>
+        <button class="danger sm" id="resetAll">&#x26A0;&#xFE0F;&nbsp;Alles zur&uuml;cksetzen</button>
       </div>
-      <div class="small muted" id="allSummary" style="margin-bottom:.8rem;"></div>
-      <div id="allAlarmList"></div>
+      <p class="small muted" id="appVersion" style="text-align:center;margin:.8rem 0 0;">Schichtwecker</p>
     </div>
-  </div>
-
-  <!-- ======= KALENDAR ======= -->
-  <div class="permwarn" id="permWarn" style="display:none;"></div>
-  <div class="nextalarm" id="nextAlarm"></div>
-
-  <div id="calSection" style="margin:0 -.5rem;padding:.5rem .5rem 0;">
-    <div class="mnav" style="padding:.35rem 0;">
-      <button id="prevM" aria-label="Vorheriger Monat">&#x25C4;</button>
-      <div id="mTitle" class="mtitle">Monat Jahr</div>
-      <button id="todayM" class="sm primary">Heute</button>
-      <button id="nextM" aria-label="N&auml;chster Monat">&#x25BA;</button>
-    </div>
-    <div id="calGrid"></div>
-  </div>
-
-  <!-- gesetzte Wecker -->
-  <div class="card" id="aCard" style="display:none;">
-    <div class="ctitle">&#x1F514;&nbsp;N&auml;chste Wecker</div>
-    <div id="aList" class="alist"></div>
-    <div class="asum">
-      <span class="small muted" id="aSummary"></span>
-      <button class="sm" id="allAlarmsBtn">Alle Wecker &rsaquo;</button>
-    </div>
-  </div>
-
+  </section>
 </div><!-- /wrap -->
+
+<!-- ======= NAVIGATION ======= -->
+<nav class="bottomnav" id="bottomNav">
+  <button class="navbtn active" data-tab="plan"><span class="navico">&#x1F4C5;</span><span>Plan</span></button>
+  <button class="navbtn" data-tab="wecker"><span class="navico">&#x23F0;</span><span>Wecker</span></button>
+  <button class="navbtn" data-tab="schicht"><span class="navico">&#x1F5C2;&#xFE0F;</span><span>Schichtplan</span></button>
+</nav>
 
 <!-- ======= BOTTOM SHEET ======= -->
 <div class="overlay" id="overlay">

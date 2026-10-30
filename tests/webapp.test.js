@@ -287,8 +287,9 @@ function openDay(w, ds) {
   Object.defineProperty(w9.document, 'hidden', { value: false, configurable: true });
   w9.document.dispatchEvent(new w9.Event('visibilitychange'));
   ok(pw.style.display === 'none', 'Warnung verschwindet nach Rückkehr mit Berechtigung');
-  click(w9, 'settingsBtn');
-  ok(w9.handleBack() === true && !w9.document.getElementById('settingsOverlay').classList.contains('open'), 'Zurück schließt Einstellungen');
+  w9.document.querySelector('#bottomNav [data-tab="wecker"]').click();
+  ok(!w9.document.getElementById('tabWecker').hidden && w9.document.getElementById('tabPlan').hidden, 'Navigation: Bereich Wecker sichtbar');
+  ok(w9.handleBack() === true && !w9.document.getElementById('tabPlan').hidden, 'Zurück aus einem Bereich führt zum Plan');
   openDay(w9, '2026-11-16');
   ok(w9.handleBack() === true && !w9.document.getElementById('overlay').classList.contains('open'), 'Zurück schließt Tages-Sheet');
   ok(w9.handleBack() === false, 'Zurück ohne offene Ebene verlässt die App');
@@ -385,6 +386,24 @@ function openDay(w, ds) {
   ok(w14.document.getElementById('wizBg').style.display !== 'flex', 'Anleitung erscheint nicht erneut');
   ok(w14.document.documentElement.getAttribute('data-theme') === 'light', 'Design bleibt erhalten');
   w14.close();
+
+  // ── Bereiche und Ausnahme direkt im Tages-Sheet
+  const n15 = {}; const br15 = makeBridge(n15);
+  const w15 = open({ [LS]: JSON.stringify(base) }, br15); await sleep(50);
+  const d15 = w15.document;
+  ok(['tabPlan','tabWecker','tabSchicht'].filter(id => !d15.getElementById(id).hidden).join() === 'tabPlan', 'Start im Plan, andere Bereiche verborgen');
+  ok(d15.getElementById('tabWecker').contains(d15.getElementById('alarmBox')) && d15.getElementById('tabWecker').contains(d15.getElementById('testAlarmBtn'))
+     && d15.getElementById('tabSchicht').contains(d15.getElementById('patGrid')) && d15.getElementById('tabSchicht').contains(d15.getElementById('exList'))
+     && d15.getElementById('tabSchicht').contains(d15.getElementById('kwNum')) && d15.getElementById('tabSchicht').contains(d15.getElementById('resetAll')), 'Karten liegen im richtigen Bereich');
+  ok(!d15.getElementById('settingsOverlay') && !d15.getElementById('settingsBtn'), 'altes Einstellungs-Fenster entfernt');
+  [...d15.querySelectorAll('#alarmBox button')].filter(b => b.textContent === 'Alle stellen')[1].click(); click(w15, 'cdlgOk');
+  openDay(w15, '2026-11-17');
+  d15.querySelector('#sSwap [data-ex="Urlaub"]').click();
+  ok(state(w15).exceptions.some(e => e.start === '2026-11-17' && e.end === '2026-11-17' && e.type === 'Urlaub') && !n15['shift-2026-11-17-t2'], 'Urlaub im Tages-Sheet: Ausnahme gesetzt, Wecker sofort entfernt');
+  ok(/Urlaub \(17\.11\.2026\)/.test(d15.getElementById('sSwap').textContent), 'Sheet zeigt die Ausnahme an');
+  d15.getElementById('exDelBtn').click();
+  ok(!state(w15).exceptions.length && !!n15['shift-2026-11-17-t2'], 'Ausnahme entfernen stellt den Wecker wieder her');
+  w15.close();
 
   console.log(fails ? `\n${fails} FEHLER` : '\nalle Tests bestanden');
   process.exit(fails ? 1 : 0);

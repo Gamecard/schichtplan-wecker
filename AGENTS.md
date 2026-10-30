@@ -129,6 +129,10 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 - Import läuft durch `applyState()` (dieselben Prüfungen wie beim Laden, plus Bereinigung von Muster, Bundesland, Ausnahmen). Eigener Klingelton ist nicht übertragbar (Dateizugriff gilt nur auf dem Gerät)
 - `format` erhöhen, wenn sich die Struktur inkompatibel ändert; neuere Formate werden abgelehnt
 
+### Startwoche
+- Standard: Auswahl per ISO-Kalenderwoche (`kwNum`/`kwYear`) → `S.startDate` = Montag der KW (`mondayOfIsoWeek`). Alternativ `S.startMode='date'`: Datumsauswahl, Label zeigt „Woche 1 = KW n“. Woche 1 beginnt immer am Montag der Woche von `startDate` (`mondayOf` in `getShift`)
+- ISO-Wochenjahr beachten (`isoWeekYear`): 02.01.2027 liegt in KW 53/2026, 2026 hat 53 KW
+
 ### Schichttausch, Vorwecker, Weck-Verhalten
 - `S.overrides` = `{"YYYY-MM-DD": 0..4}`: Schicht für einen Tag. `getShift()`: Ausnahme > Tausch > Muster. Vergangene Einträge löscht `purgeExpiredAlarms()`
 - `S.preAlarmMin` (0/5/10/15/30/45/60): Vorwecker-Schlüssel `pre-<shift-Schlüssel>`, gehört zur selben Art wie der Hauptwecker (folgt „Alle stellen“). Kann über Mitternacht auf den Vortag fallen → eigenes `ds` im Soll-Eintrag. Löschen eines Schicht-Weckers löscht seinen Vorwecker mit

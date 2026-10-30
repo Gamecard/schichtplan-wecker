@@ -31,12 +31,18 @@
       <div class="ctitle">&#x1F5C2;&#xFE0F; Grundeinstellungen</div>
       <div class="stack">
         <div style="margin-bottom:.6rem;">
-          <label>Startdatum (Woche&nbsp;1)</label>
-          <div style="display:flex;gap:.4rem;align-items:center;margin-top:.25rem;">
+          <label id="startLabel">Startwoche (Woche&nbsp;1)</label>
+          <div class="small muted" id="startInfo" style="margin-top:.1rem;"></div>
+          <div id="kwPick" style="display:flex;gap:.4rem;align-items:center;margin-top:.25rem;">
+            <select id="kwNum" style="flex:1;padding:.5rem .3rem;font-size:1rem;"></select>
+            <select id="kwYear" style="width:5.6rem;padding:.5rem .3rem;font-size:1rem;"></select>
+          </div>
+          <div id="datePick" style="display:none;gap:.4rem;align-items:center;margin-top:.25rem;">
             <select id="sdDay" style="width:4.2rem;padding:.5rem .3rem;font-size:1rem;"></select>
             <select id="sdMon" style="flex:1;padding:.5rem .3rem;font-size:1rem;"></select>
             <select id="sdYear" style="width:5.6rem;padding:.5rem .3rem;font-size:1rem;"></select>
           </div>
+          <button type="button" class="sm" id="startModeBtn" style="margin-top:.4rem;">Stattdessen Datum w&auml;hlen</button>
         </div>
         <div class="row">
           <div class="f1">

@@ -296,6 +296,30 @@ function openDay(w, ds) {
   ok(br9.windowSyncs > 0, 'Nach Sammel-Abgleich wird das Scharf-Fenster nativ geprüft');
   w9.close();
 
+  // ── Startwoche per Kalenderwoche
+  const n10 = {}; const br10 = makeBridge(n10);
+  const w10 = open({}, br10); await sleep(50);
+  const $w = id => w10.document.getElementById(id);
+  const ch = (id, v) => { $w(id).value = String(v); $w(id).dispatchEvent(new w10.Event('change')); };
+  ok($w('kwPick').style.display === 'flex' && $w('datePick').style.display === 'none', 'Standard: Auswahl per Kalenderwoche');
+  ch('kwYear', 2026);
+  ok($w('kwNum').options.length === 53, '2026 hat 53 Kalenderwochen');
+  ch('kwNum', 46);
+  ok(state(w10).startDate === '2026-11-09' && /Mo 09\.11\.2026 – So 15\.11\.2026/.test($w('startInfo').textContent), 'KW 46/2026 → Montag 09.11.2026, Hinweis Mo–So');
+  ch('kwYear', 2027); ch('kwNum', 1);
+  ok(state(w10).startDate === '2027-01-04', 'KW 1/2027 beginnt am 04.01.2027');
+  ch('kwYear', 2026); ch('kwNum', 53);
+  ok(state(w10).startDate === '2026-12-28', 'KW 53/2026 beginnt am 28.12.2026');
+  click(w10, 'startModeBtn');
+  ok($w('datePick').style.display === 'flex' && $w('kwPick').style.display === 'none' && state(w10).startMode === 'date', 'Umschalten auf Datum');
+  ch('sdDay', 12); ch('sdMon', 11); ch('sdYear', 2026);
+  ok(/Woche\s*1 = KW 46\)/.test($w('startLabel').textContent.replace(/\u00a0/g, ' ')), 'Datum gewählt → Label zeigt KW: ' + $w('startLabel').textContent);
+  ch('sdDay', 2); ch('sdMon', 1); ch('sdYear', 2027);
+  ok(/KW 53 2026/.test($w('startLabel').textContent), 'Datum 02.01.2027 → KW 53 2026: ' + $w('startLabel').textContent);
+  click(w10, 'startModeBtn');
+  ok(state(w10).startMode === 'kw' && state(w10).startDate === '2026-12-28' && $w('kwNum').value === '53', 'Zurück auf KW setzt Start auf den Montag');
+  w10.close();
+
   console.log(fails ? `\n${fails} FEHLER` : '\nalle Tests bestanden');
   process.exit(fails ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(2); });

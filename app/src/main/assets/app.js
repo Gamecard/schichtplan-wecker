@@ -41,6 +41,8 @@ window.onerror=function(msg,src,line,col,err){
       overrides:{},
       /* Vorwecker: Minuten vor jedem Auto-Schicht-Wecker (0 = aus) */
       preAlarmMin:0,
+      /* Startwoche als Kalenderwoche ('kw', Standard) oder als Datum ('date') wählen */
+      startMode:'kw',
       /* vom Nutzer gelöschte Auto-Wecker – werden nicht wieder angelegt */
       suppressed:[]
     };
@@ -60,6 +62,44 @@ window.onerror=function(msg,src,line,col,err){
     var y=new Date(Date.UTC(dt.getUTCFullYear(),0,1));
     return Math.ceil((((dt-y)/86400000)+1)/7);
   }
+  /* ISO-Kalenderwochen-Jahr (31.12. kann KW 1 des Folgejahres sein, 1.1. KW 52/53 des Vorjahres) */
+  function isoWeekYear(d){
+    var dt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+    dt.setUTCDate(dt.getUTCDate()+4-(dt.getUTCDay()||7));
+    return dt.getUTCFullYear();
+  }
+  function isoWeeksInYear(y){ return getISOWeek(new Date(y,11,28,12)); }
+  /* Montag der ISO-KW w im Jahr y (der 4. Januar liegt immer in KW 1) */
+  function mondayOfIsoWeek(y,w){
+    var m=mondayOf(new Date(y,0,4,12));
+    m.setDate(m.getDate()+(w-1)*7);
+    return m;
+  }
+  function fillKwWeeks(y,sel){
+    var kn=$('kwNum'), n=isoWeeksInYear(y); kn.innerHTML='';
+    for(var w=1;w<=n;w++){var o=document.createElement('option');o.value=w;o.textContent='KW '+w;kn.appendChild(o);}
+    kn.value=Math.min(sel||1,n);
+  }
+  /* Startwoche/Startdatum aus S.startDate in die Auswahl übernehmen, Hinweis aktualisieren */
+  function renderStartPicker(){
+    var kwMode=S.startMode!=='date';
+    $('kwPick').style.display=kwMode?'flex':'none';
+    $('datePick').style.display=kwMode?'none':'flex';
+    $('startModeBtn').textContent=kwMode?'Stattdessen Datum w\u00E4hlen':'Stattdessen Kalenderwoche w\u00E4hlen';
+    var d=parseYmd(S.startDate);
+    if(isNaN(d)){ $('startInfo').textContent=''; return; }
+    var mo=mondayOf(d), su=new Date(mo.getTime()); su.setDate(su.getDate()+6);
+    var kw=getISOWeek(mo), ky=isoWeekYear(mo);
+    $('kwYear').value=ky; fillKwWeeks(ky,kw);
+    setDateSelects(S.startDate);
+    if(kwMode){
+      $('startLabel').innerHTML='Startwoche (Woche&nbsp;1)';
+      $('startInfo').textContent='Mo '+fmtDe(toYmd(mo))+' \u2013 So '+fmtDe(toYmd(su));
+    } else {
+      $('startLabel').innerHTML='Startdatum (Woche&nbsp;1 = <b>KW '+kw+'</b>'+(ky!==d.getFullYear()?' '+ky:'')+')';
+      $('startInfo').textContent='Woche 1 l\u00E4uft von Mo '+fmtDe(toYmd(mo))+' bis So '+fmtDe(toYmd(su));
+    }
+  }
   function initDateSelects(){
     var sy=$('sdYear'),sm=$('sdMon'),sd=$('sdDay'); if(!sy||!sm||!sd)return;
     sy.innerHTML=''; sm.innerHTML=''; sd.innerHTML='';
@@ -67,6 +107,8 @@ window.onerror=function(msg,src,line,col,err){
     for(var y=curY-5;y<=curY+10;y++){var o=document.createElement('option');o.value=y;o.textContent=y;sy.appendChild(o);}
     ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'].forEach(function(mn,i){var o=document.createElement('option');o.value=i+1;o.textContent=mn;sm.appendChild(o);});
     for(var d=1;d<=31;d++){var o=document.createElement('option');o.value=d;o.textContent=d+'.';sd.appendChild(o);}
+    var ky=$('kwYear'); ky.innerHTML='';
+    for(var y2=curY-5;y2<=curY+10;y2++){var o2=document.createElement('option');o2.value=y2;o2.textContent=y2;ky.appendChild(o2);}
   }
   function setDateSelects(ymd){
     if(!ymd||!/^\d{4}-\d{2}-\d{2}$/.test(ymd))return;
@@ -340,7 +382,7 @@ window.onerror=function(msg,src,line,col,err){
 
   function scheduleAllShiftAlarms(shiftType){
     if(!S.startDate){
-      toast('Bitte zuerst das Startdatum festlegen.',true);
+      toast('Bitte zuerst die Startwoche festlegen.',true);
       return;
     }
     if(!S.alarmEnabled[shiftType]){
@@ -530,7 +572,7 @@ window.onerror=function(msg,src,line,col,err){
     if(h&&m){ S.freeAlarm.time=pad(Number(h.textContent))+':'+pad(Number(m.textContent)); save(); renderCal(); scheduleResync(); }
   }
   function scheduleAllFreeAlarms(){
-    if(!S.startDate){ toast('Bitte zuerst das Startdatum festlegen.',true); return; }
+    if(!S.startDate){ toast('Bitte zuerst die Startwoche festlegen.',true); return; }
     if(!S.freeAlarm.enabled){ toast('Freie-Tage-Wecker ist deaktiviert.',true); return; }
     if(!S.freeAlarm.time){ toast('Keine Weckzeit gesetzt.',true); return; }
     if(!S.freeAlarm.days.length){ toast('Keine Wochentage ausgew\u00E4hlt.',true); return; }
@@ -955,6 +997,7 @@ window.onerror=function(msg,src,line,col,err){
     if(s.autoSchedule&&typeof s.autoSchedule==='object')
       [1,2,3,4,'free'].forEach(function(k){if(typeof s.autoSchedule[k]==='boolean')S.autoSchedule[k]=s.autoSchedule[k];});
     if(typeof s.skipHolidaysShift==='boolean') S.skipHolidaysShift=s.skipHolidaysShift;
+    if(s.startMode==='kw'||s.startMode==='date') S.startMode=s.startMode;
     if(typeof s.preAlarmMin==='number'&&[0,5,10,15,30,45,60].indexOf(s.preAlarmMin)!==-1) S.preAlarmMin=s.preAlarmMin;
     if(Array.isArray(s.suppressed)) S.suppressed=s.suppressed.filter(function(k){return typeof k==='string';});
     if(s.overrides&&typeof s.overrides==='object'&&!Array.isArray(s.overrides)){
@@ -972,7 +1015,7 @@ window.onerror=function(msg,src,line,col,err){
   var PROFILE_FORMAT=1;
   function buildProfile(){
     var keys=['startDate','weeksCount','bundesland','pattern','exceptions','alarmTimes','alarmEnabled',
-              'freeAlarm','autoSchedule','skipHolidaysShift','suppressed','overrides','preAlarmMin'];
+              'freeAlarm','autoSchedule','skipHolidaysShift','suppressed','overrides','preAlarmMin','startMode'];
     var data={};
     keys.forEach(function(k){ data[k]=S[k]; });
     data.manualAlarms=(S.activeAlarms||[]).filter(function(a){return !a.auto&&isFuture(a.ds,a.time);})
@@ -1087,7 +1130,7 @@ window.onerror=function(msg,src,line,col,err){
   /* Alle Einstellungs-Elemente neu aus S befüllen (nach Reset oder Profil-Import) */
   function refreshAllUi(){
     updateAlarmOptionsUi();
-    setDateSelects(S.startDate);
+    renderStartPicker();
     $('weeksVal').textContent=S.weeksCount;
     $('bundesland').value=S.bundesland;
     $('skipHolShift').checked=S.skipHolidaysShift;
@@ -1100,9 +1143,9 @@ window.onerror=function(msg,src,line,col,err){
     { icon:'\uD83D\uDC4B', title:'Willkommen!',
       body:'<b>Mein Schichtplan</b> hilft dir, deinen Schichtrhythmus im Blick zu behalten und automatisch Wecker zu stellen.'
         +'<br><br>Diese kurze Anleitung zeigt dir die wichtigsten Funktionen.' },
-    { icon:'\uD83D\uDCC5', title:'Startdatum & Rhythmus',
+    { icon:'\uD83D\uDCC5', title:'Startwoche & Rhythmus',
       body:'<ul>'
-        +'<li><b>Startdatum</b> \u2013 W\u00E4hle den Montag, an dem dein aktueller Rhythmus beginnt.</li>'
+        +'<li><b>Startwoche</b> \u2013 W\u00E4hle die Kalenderwoche, in der Woche 1 deines Rhythmus liegt (oder stattdessen ein Datum).</li>'
         +'<li><b>Wochen im Rhythmus</b> \u2013 Wie viele Wochen umfasst ein kompletter Durchlauf? (1\u20136)</li>'
         +'<li><b>Bundesland</b> \u2013 Damit Feiertage automatisch angezeigt werden.</li>'
         +'</ul>'
@@ -1174,16 +1217,32 @@ window.onerror=function(msg,src,line,col,err){
     $('settingsOverlay').classList.remove('open');
     save();
   };
+  function applyStartDate(nd){
+    S.startDate=nd;
+    var d=parseYmd(S.startDate);
+    if(!isNaN(d)) viewDate=new Date(d.getFullYear(),d.getMonth(),1,12,0,0);
+    renderStartPicker(); renderCal(); save(); scheduleResync();
+  }
   ['sdDay','sdMon','sdYear'].forEach(function(id){
     $(id).addEventListener('change',function(){
       var nd=getDateFromSelects();
       if(!nd){toast('Ung\u00FCltiges Datum gew\u00E4hlt!',true);return;}
-      S.startDate=nd;
-      var d=parseYmd(S.startDate);
-      if(!isNaN(d)) viewDate=new Date(d.getFullYear(),d.getMonth(),1,12,0,0);
-      renderCal(); save(); scheduleResync();
+      applyStartDate(nd);
     });
   });
+  $('kwYear').addEventListener('change',function(){
+    var y=Number($('kwYear').value); fillKwWeeks(y,Number($('kwNum').value));
+    applyStartDate(toYmd(mondayOfIsoWeek(y,Number($('kwNum').value))));
+  });
+  $('kwNum').addEventListener('change',function(){
+    applyStartDate(toYmd(mondayOfIsoWeek(Number($('kwYear').value),Number($('kwNum').value))));
+  });
+  $('startModeBtn').onclick=function(){
+    S.startMode=S.startMode==='date'?'kw':'date';
+    // Wechsel auf KW: Woche 1 beginnt ohnehin am Montag → Startdatum auf den Montag setzen
+    if(S.startMode==='kw'&&S.startDate) S.startDate=toYmd(mondayOf(parseYmd(S.startDate)));
+    renderStartPicker(); save();
+  };
   $('bundesland').addEventListener('change',function(e){S.bundesland=e.target.value;renderCal();save();scheduleResync();});
   $('decWeeks').onclick=function(){
     if(S.weeksCount<=1)return; S.weeksCount--;
@@ -1305,7 +1364,7 @@ window.onerror=function(msg,src,line,col,err){
   // Migration: Frei-Defaults setzen falls leer (alte Versionen hatten '' / false)
   if(!S.alarmTimes[1]) S.alarmTimes[1]='07:00';
   initDateSelects();
-  setDateSelects(S.startDate);
+  renderStartPicker();
   $('weeksVal').textContent=S.weeksCount;
   $('bundesland').value=S.bundesland;
   $('skipHolShift').checked=S.skipHolidaysShift;

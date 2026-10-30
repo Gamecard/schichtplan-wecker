@@ -1,21 +1,7 @@
 package de.schichtwecker.app
 
-import android.app.AlarmManager
 import android.app.KeyguardManager
-import android.app.NotificationManager
-import android.app.PendingIntent
-import android.content.Context
-import android.content.Intent
-import android.media.AudioAttributes
-import android.media.MediaPlayer
-import android.media.RingtoneManager
-import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
 import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -42,6 +28,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -63,178 +51,45 @@ import java.util.Locale
 
 class AlarmActivity : ComponentActivity() {
 
-    private var mediaPlayer: MediaPlayer? = null
-    private var vibrator: Vibrator? = null
-    private var isDismissed = false
-    private val autoDismissHandler = Handler(Looper.getMainLooper())
-    private val AUTO_DISMISS_MS = 15 * 60 * 1000L
-
-    private val autoDismissRunnable = Runnable {
-        if (!isDismissed) {
-            Log.w("SchichtplanAlarm", "Auto-Dismiss nach 15 Min")
-            dismissAlarm()
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d("SchichtplanAlarm", "AlarmActivity.onCreate()")
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-            setShowWhenLocked(true)
-            setTurnScreenOn(true)
-            val km = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
-            km.requestDismissKeyguard(this, null)
-        }
+        setShowWhenLocked(true)
+        setTurnScreenOn(true)
+        getSystemService(KeyguardManager::class.java).requestDismissKeyguard(this, null)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        val message = intent.getStringExtra("message") ?: "Wecker!"
-
-        startAlarmSound()
-        startVibration()
-        autoDismissHandler.postDelayed(autoDismissRunnable, AUTO_DISMISS_MS)
+        // Fallback-Pfad (AlarmReceiver konnte den Service nicht starten): jetzt aus dem
+        // Vordergrund starten – das erlaubt Android immer.
+        val fallbackMessage = intent.getStringExtra(AlarmScheduler.EXTRA_MESSAGE)
+        if (AlarmService.ringing.value == null && fallbackMessage != null) {
+            startForegroundService(AlarmService.startIntent(this, "fallback", fallbackMessage, 0))
+        }
 
         setContent {
+            val ringing by AlarmService.ringing.collectAsState()
             AlarmScreen(
-                message = message,
-                onDismiss = { dismissAlarm() },
-                onSnooze = { snoozeAlarm() }
+                message = ringing?.message ?: fallbackMessage ?: "Wecker!",
+                onDismiss = { sendAction(AlarmService.ACTION_DISMISS) },
+                onSnooze = { sendAction(AlarmService.ACTION_SNOOZE) }
             )
         }
-    }
 
-    private fun startAlarmSound() {
-        try {
-            val uri = AlarmReceiver.getAlarmSoundUri(this)
-            mediaPlayer = MediaPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ALARM)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build()
-                )
-                setDataSource(this@AlarmActivity, uri)
-                setOnPreparedListener { it.start() }
-                setOnCompletionListener { if (it.isLooping) it.start() }
-                isLooping = true
-                prepareAsync()
-            }
-        } catch (e: Exception) {
-            Log.e("SchichtplanAlarm", "Alarm-Sound Fehler, Fallback auf Standard", e)
-            try {
-                val fallback = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                    ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                mediaPlayer = MediaPlayer().apply {
-                    setAudioAttributes(
-                        AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_ALARM)
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                            .build()
-                    )
-                    setDataSource(this@AlarmActivity, fallback)
-                    isLooping = true
-                    setOnPreparedListener { it.start() }
-                    prepareAsync()
-                }
-            } catch (e2: Exception) {
-                Log.e("SchichtplanAlarm", "Auch Fallback-Sound fehlgeschlagen", e2)
+        // Der Ton gehört dem AlarmService: Ist er vorbei (Aus/Schlummern über die
+        // Benachrichtigung, Auto-Dismiss), schließt sich die Activity.
+        lifecycleScope.launch {
+            var seenRinging = AlarmService.ringing.value != null
+            AlarmService.ringing.collect { r ->
+                if (r != null) seenRinging = true
+                else if (seenRinging || fallbackMessage == null) finish()
             }
         }
     }
 
-    private fun startVibration() {
-        vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val mgr = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-            mgr.defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-        }
-        val pattern = longArrayOf(0, 800, 400, 800, 400, 800)
-        vibrator?.vibrate(VibrationEffect.createWaveform(pattern, 0))
-    }
-
-    private fun stopAlarm() {
-        try { mediaPlayer?.let { if (it.isPlaying) it.stop(); it.release() } } catch (_: Exception) {}
-        mediaPlayer = null
-        try { vibrator?.cancel() } catch (_: Exception) {}
-        vibrator = null
-    }
-
-    private fun dismissAlarm() {
-        if (isDismissed) return
-        isDismissed = true
-        autoDismissHandler.removeCallbacks(autoDismissRunnable)
-        stopAlarm()
-        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val requestCode = intent.getIntExtra("requestCode", 0)
-        nm.cancel(requestCode)
+    private fun sendAction(action: String) {
+        startService(AlarmService.actionIntent(this, action))
         finish()
-    }
-
-    private fun snoozeAlarm() {
-        if (isDismissed) return
-        isDismissed = true
-        autoDismissHandler.removeCallbacks(autoDismissRunnable)
-        stopAlarm()
-        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val requestCode = intent.getIntExtra("requestCode", 0)
-        nm.cancel(requestCode)
-        val originalRequestCode = intent.getIntExtra("requestCode", 0)
-        val snoozeRequestCode = 900000 + originalRequestCode
-        val snoozeMessage = intent.getStringExtra("message") ?: "Wecker!"
-        val alarmManager = getSystemService(AlarmManager::class.java)
-        val snoozeIntent = Intent(this, AlarmReceiver::class.java).apply {
-            putExtra("message", snoozeMessage)
-            putExtra("requestCode", snoozeRequestCode)
-        }
-        val pi = PendingIntent.getBroadcast(
-            this, snoozeRequestCode, snoozeIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        val showPi = PendingIntent.getActivity(
-            this, snoozeRequestCode,
-            Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        try {
-            alarmManager.setAlarmClock(
-                AlarmManager.AlarmClockInfo(
-                    System.currentTimeMillis() + 5 * 60 * 1000,
-                    showPi
-                ),
-                pi
-            )
-        } catch (e: SecurityException) {
-            Log.e("SchichtplanAlarm", "Snooze-Alarm konnte nicht geplant werden", e)
-            android.widget.Toast.makeText(this, "Schlummern fehlgeschlagen – keine Alarm-Berechtigung", android.widget.Toast.LENGTH_LONG).show()
-        }
-        finish()
-    }
-    override fun onDestroy() {
-        autoDismissHandler.removeCallbacks(autoDismissRunnable)
-        stopAlarm()
-        val requestCode = intent.getIntExtra("requestCode", 0)
-        AlarmReceiver.releaseWakeLock("schichtplan:alarm-$requestCode")
-        super.onDestroy()
-    }
-
-    override fun onStop() {
-        super.onStop()
-        if (!isDismissed) {
-            stopAlarm()
-        }
-    }
-
-    override fun onRestart() {
-        super.onRestart()
-        if (!isDismissed) {
-            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            val requestCode = intent.getIntExtra("requestCode", 0)
-            nm.cancel(requestCode)
-            startAlarmSound()
-            startVibration()
-        }
     }
 }
 

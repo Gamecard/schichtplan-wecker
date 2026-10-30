@@ -2,10 +2,8 @@ package de.schichtwecker.app
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.AlarmManager
-import android.app.AlarmManager.AlarmClockInfo
+import android.app.AlertDialog
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -24,6 +22,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -33,12 +32,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import de.schichtwecker.app.ui.theme.MyApplicationTheme
-import java.util.Calendar
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
@@ -157,10 +154,21 @@ class MainActivity : ComponentActivity() {
     private fun checkFullScreenIntentPermission() {
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         if (!nm.canUseFullScreenIntent()) {
-            Log.w("SchichtplanAlarm", "USE_FULL_SCREEN_INTENT not granted – opening settings")
-            startActivity(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
-                data = "package:$packageName".toUri()
-            })
+            Log.w("SchichtplanAlarm", "USE_FULL_SCREEN_INTENT not granted")
+            AlertDialog.Builder(this)
+                .setTitle("Vollbild-Wecker erlauben")
+                .setMessage(
+                    "Damit der Wecker auch bei gesperrtem Bildschirm als Vollbild erscheint, " +
+                    "braucht die App die Berechtigung \u201EVollbild-Benachrichtigungen\u201C. " +
+                    "Ohne sie klingelt der Wecker trotzdem, zeigt sich aber nur als Benachrichtigung."
+                )
+                .setPositiveButton("Einstellungen \u00F6ffnen") { _, _ ->
+                    startActivity(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
+                        data = "package:$packageName".toUri()
+                    })
+                }
+                .setNegativeButton("Sp\u00E4ter", null)
+                .show()
         }
     }
 
@@ -176,57 +184,10 @@ class MainActivity : ComponentActivity() {
 
 @Keep
 class WebAppInterface(private val mContext: Context, private val activity: MainActivity) {
-    private fun requestCodeFromKey(key: String): Int {
-        return key.hashCode() and 0x7fffffff
-    }
-
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private fun toast(text: String) {
         mainHandler.post { Toast.makeText(mContext, text, Toast.LENGTH_LONG).show() }
-    }
-
-    private fun scheduleAlarm(
-        alarmTimeMillis: Long,
-        requestCode: Int,
-        toastText: String,
-        message: String,
-        silent: Boolean = false
-    ): Boolean {
-        val alarmManager = mContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-
-        val intent = Intent(mContext, AlarmReceiver::class.java).apply {
-            putExtra("message", message)
-            putExtra("requestCode", requestCode)
-        }
-
-        val pendingIntent = PendingIntent.getBroadcast(
-            mContext,
-            requestCode,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val showIntent = PendingIntent.getActivity(
-            mContext,
-            requestCode,
-            Intent(mContext, MainActivity::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        try {
-            alarmManager.setAlarmClock(
-                AlarmClockInfo(alarmTimeMillis, showIntent),
-                pendingIntent
-            )
-            Log.d("SchichtplanAlarm", "Alarm geplant: $message um ${java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.GERMAN).format(java.util.Date(alarmTimeMillis))}")
-            if (!silent) toast(toastText)
-            return true
-        } catch (e: SecurityException) {
-            Log.e("SchichtplanAlarm", "setAlarmClock fehlgeschlagen", e)
-            if (!silent) toast("Fehler: Wecker konnte nicht geplant werden")
-            return false
-        }
     }
 
     @JavascriptInterface
@@ -255,85 +216,56 @@ class WebAppInterface(private val mContext: Context, private val activity: MainA
         alarmKey: String, message: String,
         silent: Boolean
     ): Boolean {
-        Log.d("SchichtplanAlarm", "setAlarmForDate aufgerufen: $day.$month.$year $hour:$minute key=$alarmKey silent=$silent")
-
-        val calendar = Calendar.getInstance().apply {
-            set(Calendar.YEAR, year)
-            set(Calendar.MONTH, month - 1)
-            set(Calendar.DAY_OF_MONTH, day)
-            set(Calendar.HOUR_OF_DAY, hour)
-            set(Calendar.MINUTE, minute)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-
-        val now = System.currentTimeMillis()
-        val diff = calendar.timeInMillis - now
-        Log.d("SchichtplanAlarm", "Alarm-Zeit: ${calendar.time}, Jetzt: ${java.util.Date(now)}, Differenz: ${diff/1000}s")
-
-        if (diff <= 0) {
-            Log.w("SchichtplanAlarm", "Zeit vorbei, Alarm nicht gesetzt")
-            if (!silent) toast("Hinweis: ${String.format(Locale.GERMAN, "%02d:%02d", hour, minute)} Uhr am ${String.format(Locale.GERMAN, "%02d.%02d.%04d", day, month, year)} liegt in der Vergangenheit!")
-            return false
-        }
-
-        val requestCode = requestCodeFromKey(alarmKey)
+        Log.d("SchichtplanAlarm", "setAlarmForDate: $day.$month.$year $hour:$minute key=$alarmKey silent=$silent")
+        val time = String.format(Locale.GERMAN, "%02d:%02d", hour, minute)
         val dayText = String.format(Locale.GERMAN, "%02d.%02d.%04d", day, month, year)
-        val diffMin = diff / 60_000
-        val diffText = if (diffMin < 60) "${diffMin} Min."
-            else "${diffMin / 60} Std. ${diffMin % 60} Min."
-
-        return scheduleAlarm(
-            alarmTimeMillis = calendar.timeInMillis,
-            requestCode = requestCode,
-            toastText = "\u23F0 Wecker: $dayText ${String.format(Locale.GERMAN, "%02d:%02d", hour, minute)} (in $diffText)",
-            message = message,
-            silent = silent
-        )
+        val ok = AlarmScheduler.schedule(mContext, alarmKey, year, month, day, hour, minute, message)
+        if (!silent) {
+            if (ok) {
+                val millis = AlarmStore.get(mContext, alarmKey)?.millis ?: 0L
+                val diffMin = (millis - System.currentTimeMillis()) / 60_000
+                val diffText = if (diffMin < 60) "$diffMin Min." else "${diffMin / 60} Std. ${diffMin % 60} Min."
+                toast("\u23F0 Wecker: $dayText $time (in $diffText)")
+            } else {
+                toast("Wecker $time Uhr am $dayText konnte nicht gesetzt werden (Vergangenheit?)")
+            }
+        }
+        return ok
     }
+
+    /** Löscht Wecker + Schlummer-Wecker. Ohne Toast – die Meldung zeigt die Web-Oberfläche. */
+    @JavascriptInterface
+    @Keep
+    fun cancelAlarm(alarmKey: String): Boolean = AlarmScheduler.cancel(mContext, alarmKey)
+
+    /** Löscht alle nativ bekannten Wecker (für „Alles zurücksetzen“). */
+    @JavascriptInterface
+    @Keep
+    fun cancelAllAlarms(): Int = AlarmScheduler.cancelAll(mContext)
+
+    /** JSON-Array der Schlüssel aller noch geplanten Wecker (Abgleich mit der Web-Oberfläche). */
+    @JavascriptInterface
+    @Keep
+    fun getScheduledKeys(): String = AlarmStore.keysJson(mContext)
+
+    /** false, solange die Wecker aus Versionen vor dem AlarmStore noch nicht übernommen wurden. */
+    @JavascriptInterface
+    @Keep
+    fun isStoreMigrated(): Boolean = AlarmStore.isMigrated(mContext)
 
     @JavascriptInterface
     @Keep
-    fun cancelAlarm(alarmKey: String) {
-        val alarmManager = mContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val requestCode = requestCodeFromKey(alarmKey)
-        val intent = Intent(mContext, AlarmReceiver::class.java)
-        val pendingIntent = PendingIntent.getBroadcast(
-            mContext, requestCode, intent,
-            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
-        )
-        if (pendingIntent != null) {
-            alarmManager.cancel(pendingIntent)
-            pendingIntent.cancel()
-        }
-        val snoozeRequestCode = 900000 + requestCode
-        val snoozeIntent = Intent(mContext, AlarmReceiver::class.java)
-        val snoozePi = PendingIntent.getBroadcast(
-            mContext, snoozeRequestCode, snoozeIntent,
-            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
-        )
-        if (snoozePi != null) {
-            alarmManager.cancel(snoozePi)
-            snoozePi.cancel()
-            toast("Wecker + Schlummern gelöscht")
-        } else if (pendingIntent != null) {
-            toast("Wecker gelöscht")
-        } else {
-            toast("Kein aktiver Wecker gefunden")
-        }
-    }
+    fun setStoreMigrated() = AlarmStore.setMigrated(mContext)
 
     @JavascriptInterface
     @Keep
     fun testAlarm() {
         Log.d("SchichtplanAlarm", "testAlarm() aufgerufen – Alarm in 15 Sekunden")
-        val alarmTimeMillis = System.currentTimeMillis() + 15_000L
-        scheduleAlarm(
-            alarmTimeMillis = alarmTimeMillis,
-            requestCode = 777777,
-            toastText = "⏰ TEST-Wecker in 15 Sekunden!",
-            message = "TEST – Der Wecker funktioniert!"
+        val ok = AlarmScheduler.scheduleAt(
+            mContext, "test-alarm", System.currentTimeMillis() + 15_000L,
+            "TEST \u2013 Der Wecker funktioniert!"
         )
+        toast(if (ok) "\u23F0 TEST-Wecker in 15 Sekunden!" else "Fehler: Wecker konnte nicht geplant werden")
     }
 
     @JavascriptInterface
@@ -369,7 +301,7 @@ class WebAppInterface(private val mContext: Context, private val activity: MainA
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun WebViewScreen(modifier: Modifier = Modifier) {
-    val act = LocalContext.current as? MainActivity
+    val act = LocalActivity.current as? MainActivity
     AndroidView(
         modifier = modifier.fillMaxSize(),
         factory = { context ->

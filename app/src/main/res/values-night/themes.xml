@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dunkles Theme im System-Nachtmodus: Die WebView leitet prefers-color-scheme
+         vom App-Theme ab (isLightTheme), nicht direkt von der Systemeinstellung. -->
+    <style name="Theme.MyApplication" parent="android:Theme.Material.NoActionBar" />
+</resources>

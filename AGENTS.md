@@ -64,6 +64,9 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 - `--motion-duration-short:200ms`, `--motion-duration-medium:350ms`, `--motion-duration-long:500ms`
 - `--motion-easing-standard`, `--motion-easing-emphasized`, `--motion-easing-decelerated`
 
+### Dark Mode (System)
+- Die WebView beantwortet `prefers-color-scheme` nach dem App-Theme (`isLightTheme`), NICHT direkt nach der Systemeinstellung. Deshalb gibt es `res/values-night/themes.xml` mit dunklem Parent – ohne das bleibt „System“ immer hell
+
 ### CSS-Kompatibilität (WICHTIG)
 - ❌ KEIN `color-mix()` verwenden — wird in älteren Android WebViews nicht unterstützt
 - Stattdessen: feste rgba-Werte oder bestehende M3-Tokens nutzen

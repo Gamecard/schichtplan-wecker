@@ -100,3 +100,16 @@ keytool -genkeypair -v -keystore release.jks -alias release -keyalg RSA -keysize
 ```
 
 Danach `./gradlew assembleRelease`. Ohne `keystore.properties` wird die Release-APK unsigniert gebaut.
+## Lizenz
+
+Dieser Code steht unter der **PolyForm Noncommercial License 1.0.0** (vollständiger Text: [LICENSE.md](LICENSE.md), Original: https://polyformproject.org/licenses/noncommercial/1.0.0).
+
+Kurz gesagt (verbindlich ist nur der Lizenztext):
+
+- **Erlaubt** – für nicht-kommerzielle Zwecke: den Code ansehen, privat nutzen, verändern und weitergeben, z. B. für Hobby, Lernen oder Forschung. Ausdrücklich erlaubt ist die Nutzung auch durch gemeinnützige Organisationen, Schulen und Hochschulen, öffentliche Forschungs-, Gesundheits- und Sicherheitseinrichtungen sowie Behörden.
+- **Nicht erlaubt** – jede kommerzielle Nutzung: den Code oder eine darauf aufbauende App verkaufen, mit Werbung oder In-App-Käufen Geld verdienen oder ihn in einem Unternehmen zu Geschäftszwecken einsetzen.
+- Bei jeder Weitergabe müssen die Lizenzbedingungen und die Zeile `Required Notice: …` aus LICENSE.md mitgegeben werden.
+- Die Lizenz gibt **keine Rechte am Namen „Schichtwecker“ oder am Logo**.
+- Die **App selbst** (z. B. aus Google Play) darf jeder ganz normal benutzen – die Lizenz betrifft nur den Quellcode.
+
+Enthaltene fremde Bestandteile behalten ihre eigenen Lizenzen, u. a. die Schrift „M PLUS Rounded 1c“ (SIL Open Font License, `app/src/main/assets/anime/fonts/OFL.txt`) und die Android-/Kotlin-Bibliotheken (Apache License 2.0).

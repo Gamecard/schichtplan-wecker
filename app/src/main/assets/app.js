@@ -922,6 +922,47 @@ window.onerror=function(msg,src,line,col,err){
   function openAllAlarms(){ openMonths=null; renderAllAlarms(); $('alarmsOverlay').classList.add('open'); $('alarmsOverlay').scrollTop=0; }
   function closeAllAlarms(){ $('alarmsOverlay').classList.remove('open'); }
 
+  /* ── OPEN-SOURCE-LIZENZEN ─────────────────
+     Fremde Bestandteile der App mit ihren Lizenzen; die Texte liegen in assets (kein Internet nötig)
+     und werden erst beim Aufklappen geladen. Namen/Rechteinhaber bleiben unübersetzt. */
+  var LIC_NAMES={'apache-2.0':'Apache License 2.0','ofl-1.1':'SIL Open Font License 1.1','polyform-nc-1.0.0':'PolyForm Noncommercial 1.0.0'};
+  var LIC_PARTS=[
+    {n:'AndroidX Core, Lifecycle, Activity',c:'\u00A9 The Android Open Source Project',l:'apache-2.0'},
+    {n:'Jetpack Compose (UI, Material 3)',c:'\u00A9 The Android Open Source Project',l:'apache-2.0'},
+    {n:'Kotlin Standard Library, kotlinx.coroutines',c:'\u00A9 JetBrains s.r.o. and Kotlin contributors',l:'apache-2.0'},
+    {n:'M PLUS Rounded 1c',c:'\u00A9 2016 The Rounded M+ Project Authors',l:'ofl-1.1'}
+  ];
+  function licenseText(id){
+    try{ if(window.Android&&typeof Android.getLicenseText==='function') return String(Android.getLicenseText(id)||''); }catch(e){}
+    var f={'apache-2.0':'licenses/apache-2.0.txt','ofl-1.1':'anime/fonts/OFL.txt','polyform-nc-1.0.0':'licenses/polyform-noncommercial-1.0.0.txt'}[id];
+    try{ var x=new XMLHttpRequest(); x.open('GET',f,false); x.send(null); if(x.status===200||x.status===0) return x.responseText||''; }catch(e){}
+    return '';
+  }
+  function licEntry(name,holder,lic){
+    var d=document.createElement('div'); d.className='lic-item';
+    var h=document.createElement('div'); h.className='lic-name'; h.textContent=name; d.appendChild(h);
+    if(holder){ var c=document.createElement('div'); c.className='small muted'; c.textContent=holder; d.appendChild(c); }
+    var l=document.createElement('div'); l.className='small'; l.textContent=t('lic.license',{name:LIC_NAMES[lic]}); d.appendChild(l);
+    var b=document.createElement('button'); b.className='sm lic-toggle'; b.textContent=t('lic.show'); d.appendChild(b);
+    var pre=document.createElement('pre'); pre.className='lic-text'; pre.hidden=true; d.appendChild(pre);
+    b.onclick=function(){
+      if(pre.hidden){ if(!pre.textContent) pre.textContent=licenseText(lic)||t('lic.error'); pre.hidden=false; b.textContent=t('lic.hide'); }
+      else { pre.hidden=true; b.textContent=t('lic.show'); }
+    };
+    return d;
+  }
+  function renderLicenses(){
+    var box=$('licList'); box.innerHTML='';
+    var intro=document.createElement('p'); intro.className='small muted'; intro.textContent=t('lic.intro'); box.appendChild(intro);
+    var h1=document.createElement('div'); h1.className='lic-head'; h1.textContent=t('lic.app_heading'); box.appendChild(h1);
+    box.appendChild(licEntry(($('appVersion')&&$('appVersion').textContent)||'Schichtwecker','\u00A9 2026 Codewes \u00B7 '+t('lic.app_note'),'polyform-nc-1.0.0'));
+    var h2=document.createElement('div'); h2.className='lic-head'; h2.textContent=t('lic.parts_heading'); box.appendChild(h2);
+    LIC_PARTS.forEach(function(p){ box.appendChild(licEntry(p.n,p.c,p.l)); });
+  }
+  function isLicOpen(){ return $('licOverlay').classList.contains('open'); }
+  function openLicenses(){ renderLicenses(); $('licOverlay').classList.add('open'); $('licOverlay').scrollTop=0; }
+  function closeLicenses(){ $('licOverlay').classList.remove('open'); }
+
   /* Warnung bei fehlender Wecker-Berechtigung (z. B. Dialog mit „Später“ weggeklickt) */
   function renderPermWarn(){
     var el=$('permWarn'); if(!el) return;
@@ -1138,6 +1179,7 @@ window.onerror=function(msg,src,line,col,err){
     if(vis('cdlgBg')){ $('cdlgCancel').click(); return true; }
     if(isTimeSheetOpen()){ closeTimeSheet(false); return true; }
     if(isWizOpen()){ wizBack(); return true; }
+    if(isLicOpen()){ closeLicenses(); return true; }
     if($('overlay').classList.contains('open')){ closeSheet(); return true; }
     if(isAlarmsOpen()){ closeAllAlarms(); return true; }
     if(currentTab!=='plan'){ showTab('plan'); return true; }
@@ -1669,6 +1711,8 @@ window.onerror=function(msg,src,line,col,err){
   $('themeBtn').onclick=cycleTheme;
   $('startWizBtn').onclick=function(){openWiz();};
   $('privacyLink').onclick=function(e){e.preventDefault();if(window.Android&&Android.openPrivacyPolicy)Android.openPrivacyPolicy();};
+  $('licLink').onclick=function(e){e.preventDefault();openLicenses();};
+  $('closeLic').onclick=closeLicenses;
   $('tsDigits').onclick=function(){
     var n=$('tsNative'); n.value=TS.value;
     try{ if(typeof n.showPicker==='function'){ n.showPicker(); return; } }catch(e){}

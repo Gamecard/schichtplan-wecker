@@ -328,6 +328,12 @@ class WebAppInterface(private val mContext: Context, private val activity: MainA
     private companion object {
         const val STATE_PREFS = "app_state"
         const val STATE_KEY = "state"
+        /** Erlaubte Lizenztexte (Kennung → Datei in assets). */
+        val LICENSE_ASSETS = mapOf(
+            "apache-2.0" to "licenses/apache-2.0.txt",
+            "ofl-1.1" to "anime/fonts/OFL.txt",
+            "polyform-nc-1.0.0" to "licenses/polyform-noncommercial-1.0.0.txt"
+        )
         const val PRIVACY_POLICY_URL = "https://gamecard.github.io/schichtplan-wecker/datenschutz.html"
         /** Englische Fassung für alle Sprachen außer Deutsch. */
         const val PRIVACY_POLICY_URL_EN = "https://gamecard.github.io/schichtplan-wecker/privacy.html"
@@ -557,6 +563,18 @@ class WebAppInterface(private val mContext: Context, private val activity: MainA
             } catch (_: Exception) {
                 toast(tr("native.toast.noBrowser", "url" to url))
             }
+        }
+    }
+
+    /** Lizenztext für die Seite „Open-Source-Lizenzen“ – nur feste Kennungen, keine Pfade von außen. */
+    @JavascriptInterface
+    @Keep
+    fun getLicenseText(id: String): String {
+        val asset = LICENSE_ASSETS[id] ?: return ""
+        return try {
+            mContext.assets.open(asset).bufferedReader().use { it.readText() }
+        } catch (_: Exception) {
+            ""
         }
     }
 

@@ -411,6 +411,18 @@ function openDay(w, ds) {
   let privacyOpened = 0; w15.Android.openPrivacyPolicy = () => { privacyOpened++; };
   d15.getElementById('privacyLink').click();
   ok(privacyOpened === 1 && d15.getElementById('tabSchicht').contains(d15.getElementById('privacyLink')), 'Datenschutz-Link im Bereich Schichtplan öffnet die Erklärung');
+  // Open-Source-Lizenzen: Link öffnet die Ebene, Texte erst beim Aufklappen, Zurück-Geste schließt
+  d15.getElementById('licLink').click();
+  const licOv = d15.getElementById('licOverlay'), licItems = [...licOv.querySelectorAll('.lic-item')];
+  ok(licOv.classList.contains('open') && licItems.length === 5 && /Schichtwecker/.test(licItems[0].textContent) && /PolyForm Noncommercial/.test(licItems[0].textContent)
+     && licItems.some(i => /M PLUS Rounded 1c/.test(i.textContent) && /Open Font License/.test(i.textContent)) && licItems.filter(i => /Apache License 2\.0/.test(i.textContent)).length === 3,
+     'Lizenzseite: App (PolyForm) + 3× Apache + Schrift (OFL)');
+  ok(licItems.every(i => i.querySelector('.lic-text').hidden && !i.querySelector('.lic-text').textContent), 'Lizenztexte erst beim Aufklappen geladen');
+  licItems[1].querySelector('.lic-toggle').click();
+  ok(/Apache License\s+Version 2\.0, January 2004/.test(licItems[1].querySelector('.lic-text').textContent) && !licItems[1].querySelector('.lic-text').hidden && licItems[1].querySelector('.lic-toggle').textContent === 'Lizenztext ausblenden', 'Apache-Text wird angezeigt');
+  licItems[0].querySelector('.lic-toggle').click();
+  ok(/^Required Notice: Copyright \(c\) 2026 Codewes/.test(licItems[0].querySelector('.lic-text').textContent), 'App-Lizenz mit Required Notice');
+  ok(w15.handleBack() === true && !licOv.classList.contains('open'), 'Zurück-Geste schließt die Lizenzseite');
   w15.close();
 
   console.log(fails ? `\n${fails} FEHLER` : '\nalle Tests bestanden');

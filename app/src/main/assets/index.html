@@ -22,6 +22,17 @@
 
 
 
+  <!-- ======= OPEN-SOURCE-LIZENZEN (Vollbild-Ebene wie „Alle Wecker“) ======= -->
+  <div class="settings-overlay" id="licOverlay">
+    <div class="settings-inner">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem;">
+        <div style="font-weight:800;font-size:1.05rem;">&#x1F4DC; <span data-i18n="lic.title">Open-Source-Lizenzen</span></div>
+        <button class="icon" id="closeLic" title="Schlie&szlig;en" data-i18n-attr="title:common.close;aria-label:common.close">&#x2715;</button>
+      </div>
+      <div id="licList"></div>
+    </div>
+  </div>
+
   <!-- ======= ALLE WECKER (Liste auf Abruf) ======= -->
   <div class="settings-overlay" id="alarmsOverlay">
     <div class="settings-inner">
@@ -257,7 +268,7 @@
         <button class="danger sm" id="resetAll">&#x26A0;&#xFE0F;&nbsp;<span data-i18n="app.reset">Alles zur&uuml;cksetzen</span></button>
       </div>
       <p class="small muted" id="appVersion" style="text-align:center;margin:.8rem 0 0;">Schichtwecker</p>
-      <p class="small" style="text-align:center;margin:.3rem 0 0;"><a href="#" id="privacyLink" data-i18n="app.privacy">Datenschutzerkl&auml;rung</a></p>
+      <p class="small" style="text-align:center;margin:.3rem 0 0;"><a href="#" id="privacyLink" data-i18n="app.privacy">Datenschutzerkl&auml;rung</a> &middot; <a href="#" id="licLink" data-i18n="lic.link">Open-Source-Lizenzen</a></p>
     </div>
   </section>
 </div><!-- /wrap -->

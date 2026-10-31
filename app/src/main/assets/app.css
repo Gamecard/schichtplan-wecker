@@ -772,3 +772,11 @@ button.wiz-tpl.active { border-color:var(--md-primary); background:var(--md-seco
 /* Elemente nur für das Anime-Design (Maskottchen, Sprechblasen): im klassischen Design
    unsichtbar und ohne Platzbedarf; anime.css blendet sie unter html[data-design="anime"] ein */
 .an-only { display:none; }
+
+/* ── Open-Source-Lizenzen ── */
+.lic-head { font-weight:700; margin:1rem 0 .4rem; color:var(--md-primary); }
+.lic-item { padding:.6rem 0; border-bottom:1px solid var(--border); }
+.lic-name { font-weight:600; }
+.lic-toggle { margin-top:.4rem; }
+.lic-text { white-space:pre-wrap; word-break:break-word; font-size:.7rem; line-height:1.4; margin:.5rem 0 0;
+  padding:.6rem; background:var(--chip); border-radius:var(--shape-sm); }

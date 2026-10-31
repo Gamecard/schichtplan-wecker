@@ -35,7 +35,11 @@ function withLang(bridge, assets, opts = {}) {
     getSystemLanguage() { return this.sysLang; },
     importCalls: bridge.importCalls || 0,
     langImportCalls: 0,
-    importLanguageFile() { this.langImportCalls++; }
+    importLanguageFile() { this.langImportCalls++; },
+    getLicenseText(id) {
+      const f = { 'apache-2.0': 'licenses/apache-2.0.txt', 'ofl-1.1': 'anime/fonts/OFL.txt', 'polyform-nc-1.0.0': 'licenses/polyform-noncommercial-1.0.0.txt' }[id];
+      return f ? fs.readFileSync(path.join(assets, f), 'utf8') : '';
+    }
   });
 }
 module.exports = { withLang };

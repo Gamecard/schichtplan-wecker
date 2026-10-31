@@ -17,7 +17,7 @@ Eine Android-App zur Verwaltung von Schichtplänen mit Wecker-Funktion.
 - **Widget** – heutige/morgige Schicht und nächster Wecker auf dem Startbildschirm
 - **Profil sichern/laden** – Plan und Einstellungen als Datei (z. B. für ein neues Handy)
 - **Kalender-Export** – Schichten der nächsten 12 Monate als .ics-Datei (z. B. für den Google-Kalender)
-- **Feiertage** – Automatische Anzeige für alle deutschen Bundesländer
+- **Feiertage** – Automatische Anzeige für Deutschland (16 Bundesländer), Österreich (9 Bundesländer) und die Schweiz (26 Kantone, Teilgebiete bei innerkantonal verschiedenen Feiertagen)
 - **Dark Mode** – Unterstützung für helles und dunkles Design
 - **Eigener Klingelton** – Alarmton aus den eigenen Dateien wählbar
 

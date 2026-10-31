@@ -125,7 +125,8 @@ const base = {
   for (const m of HTML_SRC.matchAll(/data-i18n-attr="([^"]+)"/g)) m[1].split(';').forEach(p => used.add(p.split(':')[1].trim()));
   // zusammengesetzte Schlüssel ('shift.'+t, 'holiday.'+id, …) – alle Werte der Familie prüfen
   const holBody = JS.slice(JS.indexOf('function holidays('), JS.indexOf('return h;', JS.indexOf('function holidays(')));
-  const holIds = [...holBody.matchAll(/'([a-z][a-z_0-9]+)'/g)].map(m => m[1]);
+  // Kennungen stehen einzeln ('neujahr') oder als Liste je Kanton ('karfreitag ostermontag …')
+  const holIds = [...new Set([...holBody.matchAll(/'([a-z][a-z_0-9 ]+)'/g)].flatMap(m => m[1].split(' ')))];
   ['weekday.long.', 'month.short.'].forEach(p => { for (let i = 0; i < (p.startsWith('month') ? 12 : 7); i++) used.add(p + i); });
   holIds.forEach(id => used.add('holiday.' + id));
   ['urlaub', 'krank', 'schulung'].forEach(x => used.add('exception.' + x));
@@ -136,7 +137,7 @@ const base = {
   [...used].forEach(k => { if (!NS.has(k.split('.')[0])) used.delete(k); });   // z. B. 'input.tnative' (CSS-Selektor)
   const has = (o, k) => k in o || Object.keys(o).some(x => baseKey(x) === k);
   const missing = [...used].filter(k => !has(de, k) || !has(en, k));
-  ok(holIds.length === 17 && !missing.length, `alle ${used.size} benutzten Schlüssel in de.json und en.json vorhanden` + (missing.length ? ': ' + missing.join(', ') : ''));
+  ok(holIds.length === 35 && !missing.length, `alle ${used.size} benutzten Schlüssel in de.json und en.json vorhanden` + (missing.length ? ': ' + missing.join(', ') : ''));
 
   // ── 2) Englisch: nach dem Rendern aller Bereiche kein deutscher Text mehr
   const nE = {}; const brE = makeBridge(nE, { system: 'en' });

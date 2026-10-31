@@ -167,7 +167,10 @@ window.onerror=function(msg,src,line,col,err){
   /* ── STATE ──────────────────────────────── */
   function createDefaultState(){
     return {
-      startDate:'', weeksCount:6, bundesland:'NW',
+      startDate:'', weeksCount:6,
+      /* Feiertage: Land 'DE'|'AT'|'CH' + Region (Bundesland bzw. Kanton, Kürzel s. REGIONS).
+         Feldname „bundesland“ bleibt aus Kompatibilität (Altdaten/Profile ohne Land = DE) */
+      country:'DE', bundesland:'NW',
       pattern:[], exceptions:[],
       alarmTimes:{1:'07:00',2:'05:30',3:'13:00',4:'21:00'},
       alarmEnabled:{1:false,2:false,3:false,4:false},
@@ -352,12 +355,94 @@ window.onerror=function(msg,src,line,col,err){
   (function(){var t='system';try{t=localStorage.getItem(THK)||t;}catch(e){}applyTheme(t);})();
 
   /* ── FEIERTAGE ──────────────────────────── */
-  function holidays(year,bl){
+  /* Land (S.country) + Region (S.bundesland: Bundesland bzw. Kanton). Interne Kürzel bleiben
+     unverändert gespeichert; Altdaten ohne Land = Deutschland.
+     Regionen: DE = 16 Bundesländer, AT = 9 Bundesländer (B, K, NOE, OOE, S, ST, T, V, W),
+     CH = 26 Kantone (amtliche Kürzel). Kantone mit innerkantonal verschiedenen Feiertagen
+     (AG, AI, FR, NE, SO) haben zusätzliche Teilgebiete „<Kürzel>-<Teil>“, s. holidays(). */
+  var COUNTRIES=['DE','AT','CH'];
+  var COUNTRY_KEYS={DE:'country.de',AT:'country.at',CH:'country.ch'};
+  var DEFAULT_REGION={DE:'NW',AT:'W',CH:'ZH'};
+  /* Anzeige-Namen in Originalsprache (Reihenfolge = Reihenfolge in der Auswahl).
+     Wert mit führendem '@' = Sprachschlüssel (Teilgebiet, das keinen Ortsnamen hat). */
+  var REGIONS={
+    DE:[['NW','Nordrhein-Westfalen'],['BW','Baden-Württemberg'],['BY','Bayern'],['BE','Berlin'],
+        ['BB','Brandenburg'],['HB','Bremen'],['HH','Hamburg'],['HE','Hessen'],
+        ['MV','Mecklenburg-Vorpommern'],['NI','Niedersachsen'],['RP','Rheinland-Pfalz'],['SL','Saarland'],
+        ['SN','Sachsen'],['ST','Sachsen-Anhalt'],['SH','Schleswig-Holstein'],['TH','Thüringen']],
+    AT:[['B','Burgenland'],['K','Kärnten'],['NOE','Niederösterreich'],['OOE','Oberösterreich'],
+        ['S','Salzburg'],['ST','Steiermark'],['T','Tirol'],['V','Vorarlberg'],['W','Wien']],
+    CH:[['AG','Aargau – Aarau, Brugg, Kulm, Lenzburg, Zofingen, Bergdietikon'],
+        ['AG-BD','Aargau – Bezirk Baden (ohne Bergdietikon)'],
+        ['AG-BG','Aargau – Bezirk Bremgarten'],
+        ['AG-LM','Aargau – Laufenburg, Muri, Hellikon, Mumpf, Obermumpf, Schupfart, Stein, Wegenstetten'],
+        ['AG-RF','Aargau – Kaiseraugst, Magden, Möhlin, Olsberg, Rheinfelden, Wallbach, Zeiningen, Zuzgen'],
+        ['AG-ZZ','Aargau – Bezirk Zurzach'],
+        ['AR','Appenzell Ausserrhoden'],
+        ['AI','Appenzell Innerrhoden (ohne Oberegg)'],['AI-OB','Appenzell Innerrhoden – Oberegg'],
+        ['BL','Basel-Landschaft'],['BS','Basel-Stadt'],['BE','Bern/Berne'],
+        ['FR','@region.fr_cath'],['FR-REF','@region.fr_ref'],
+        ['GE','Genève'],['GL','Glarus'],['GR','Graubünden/Grischun/Grigioni'],['JU','Jura'],['LU','Luzern'],
+        ['NE','Neuchâtel'],['NE-LL','Neuchâtel – Le Landeron'],
+        ['NW','Nidwalden'],['OW','Obwalden'],['SH','Schaffhausen'],['SZ','Schwyz'],
+        ['SO','Solothurn (ohne Bucheggberg)'],['SO-BU','Solothurn – Bucheggberg'],
+        ['SG','St. Gallen'],['TG','Thurgau'],['TI','Ticino'],['UR','Uri'],['VS','Valais/Wallis'],['VD','Vaud'],
+        ['ZG','Zug'],['ZH','Zürich']]
+  };
+  function countryOf(c){ return COUNTRIES.indexOf(c)!==-1?c:'DE'; }
+  function regionOk(c,r){ return typeof r==='string'&&(REGIONS[c]||[]).some(function(x){return x[0]===r;}); }
+  function regionLabel(c,r){
+    var x=(REGIONS[c]||[]).filter(function(y){return y[0]===r;})[0];
+    if(!x) return r;
+    return x[1].charAt(0)==='@'?t(x[1].slice(1)):x[1];
+  }
+  /* Feiertage eines Jahres als {"YYYY-MM-DD": kennung}; Anzeige über t('holiday.<kennung>').
+     land fehlt → Deutschland (unverändert wie bisher).
+
+     ÖSTERREICH (Quelle: Arbeitsruhegesetz § 7 Abs. 2, BGBl. I Nr. 22/2019, Fassung seit
+     22.03.2019, RIS abgerufen 31.10.2026; deckungsgleich mit Feiertagsruhegesetz 1957 § 1):
+     13 Feiertage, in ALLEN Bundesländern gleich. Bewusst NICHT gezählt:
+     – Karfreitag: seit 2019 kein Feiertag mehr (nur „persönlicher Feiertag“ nach § 7a ARG,
+       den jede/r selbst wählt – nicht vorhersagbar).
+     – Landespatrone (19.3. Josef K/ST/T/V, 4.5. Florian OÖ, 24.9. Rupert S, 10.10. Volksabstimmung K,
+       11.11. Martin B, 15.11. Leopold NÖ/W): keine gesetzlichen Feiertage, nur teils schulfrei
+       bzw. dienstfrei im Landesdienst.
+     – 24.12. und 31.12.: keine Feiertage.
+
+     SCHWEIZ (Stand 31.10.2026): Nur der 1. August ist bundesrechtlich; alles andere regeln die
+     Kantone. Gezählt wird je Kanton, was KANTONSWEIT ganztägig arbeitsfrei ist:
+     (1) die den Sonntagen gleichgestellten Feiertage nach Art. 20a Abs. 1 ArG laut SECO-Verzeichnis
+         „Feiertage Schweiz“ (Stand 12.12.2024) und
+     (2) zusätzliche gesetzliche öffentliche Ruhetage nach kantonalem Recht:
+         UR: Dreikönig, Josef, Ostermontag, Pfingstmontag, Stephanstag (Amt für Arbeit UR, LSG Art. 9)
+         SZ: Dreikönig, Ostermontag, Pfingstmontag, Mariä Empfängnis, Stephanstag (Ruhetagsgesetz § 2)
+         LU: Mariä Empfängnis (Ruhetags- und Ladenschlussgesetz SRL 855 § 1a)
+         OW: Bruder Klaus 25.9. (Ruhetagsgesetz GDB 975.2 Art. 2)
+         NW: Josefstag (Ruhetagsgesetz Art. 2)
+         GL: Pfingstmontag (Ruhetagsgesetz IX B/21/1 Art. 2)
+         AI: Mariä Himmelfahrt, Allerheiligen, Mariä Empfängnis, Mauritiustag 22.9. nur im
+             inneren Landesteil (Ruhetagsgesetz Art. 2 lit. c; Bericht Standeskommission 2015)
+         TG: Berchtoldstag, 1. Mai (Ruhetagsgesetz § 1; SECO hat 2.1., 1.5. ist Ruhetag)
+         TI: Josef, 1. Mai, Pfingstmontag, Fronleichnam, Peter und Paul, Mariä Empfängnis
+             (Legge sui giorni festivi ufficiali RL 843.200: 15 giorni festivi)
+         JU: Berchtoldstag, 23. Juni, Mariä Himmelfahrt, Allerheiligen
+             (Loi sur les jours fériés officiels RSJU 555.1 vom 31.08.2022, Art. 3)
+         GE: Gesetz J 1 45 (deckt sich mit SECO). SO: Ruhetagsgesetz BGS 512.41 (deckt sich mit SECO).
+     Nicht gezählt: halbe Feiertage (SO 1. Mai ab 12 Uhr), Gemeinde-/Patroziniumsfeiertage,
+     Fasnacht, Sechseläuten, Knabenschiessen, Escalade, nur von Banken/Bund begangene Tage.
+     Innerkantonal verschiedene Regeln → eigene Teilgebiete statt Raten (SECO-Ausnahmeliste,
+     Merkblatt AWA Aargau): AG (6 Gebiete), FR (katholisch/reformiert), SO (Bucheggberg),
+     NE (Le Landeron: + Fronleichnam), AI (Oberegg: ohne Mauritiustag).
+     Sonderregeln: AR und AI: Stephanstag entfällt, wenn er auf Dienstag oder Samstag fällt (sonst
+     drei Ruhetage am Stück; SECO-Liste, AI Ruhetagsgesetz Art. 2 lit. b). NE: 2.1. und 26.12. nur,
+     wenn sie auf einen Montag fallen (SECO-Liste). Näfelser Fahrt (GL): erster Donnerstag im April,
+     fällt er auf Gründonnerstag, eine Woche später (2023: 13.4., 2026: 9.4.). Jeûne genevois (GE):
+     Donnerstag nach dem 1. Septembersonntag (Gesetz J 1 45). Lundi du Jeûne (VD): Montag nach dem
+     3. Septembersonntag (Eidg. Bettag). */
+  function holidays(year,bl,land){
     var h={};
     function a(m,d,n){h[year+'-'+pad(m)+'-'+pad(d)]=n;}
-    /* Werte = Kennung, Anzeige über t('holiday.<kennung>') */
-    a(1,1,'neujahr');a(5,1,'tag_der_arbeit');a(10,3,'einheit');
-    a(12,25,'weihnacht1');a(12,26,'weihnacht2');
+    /* Ostersonntag (Gauß, gregorianisch) */
     var ay=year%19,b=year%4,c=year%7,k=Math.floor(year/100);
     var M=(15-Math.floor((13+8*k)/25)+k-Math.floor(k/4))%30;
     var N=(4+k-Math.floor(k/4))%7;
@@ -367,23 +452,103 @@ window.onerror=function(msg,src,line,col,err){
     if(dd===28&&e===6&&ay>10){ot=18;om=4;}
     var os=new Date(year,om-1,ot,12,0,0);
     function rel(off,n){var x=new Date(os.getTime()+off*864e5);a(x.getMonth()+1,x.getDate(),n);}
-    rel(-2,'karfreitag');rel(1,'ostermontag');rel(39,'himmelfahrt');rel(50,'pfingstmontag');
-    if(['BW','BY','ST'].includes(bl)) a(1,6,'heilige_drei_koenige');
-    if(['BE','MV'].includes(bl)) a(3,8,'frauentag');
-    if(['BW','BY','HE','NW','RP','SL'].includes(bl)) rel(60,'fronleichnam');
-    if(['BW','BY','NW','RP','SL'].includes(bl)) a(11,1,'allerheiligen');
-    if(bl==='TH') a(9,20,'weltkindertag');
-    if(bl==='SL') a(8,15,'mariae_himmelfahrt');
-    if(['BB','HB','HH','MV','NI','SN','SH','ST','TH'].includes(bl)) a(10,31,'reformationstag');
-    if(bl==='SN'){
-      /* Buß- und Bettag: Mittwoch vor Totensonntag (letzter So vor 1. Advent) → 16.–22.11.
-         Startpunkt 22.11. = spätestes mögliches Datum, rückwärts zum Mittwoch. */
-      var x=new Date(year,10,22,12,0,0);
-      while(x.getDay()!==3) x.setDate(x.getDate()-1);
-      a(x.getMonth()+1,x.getDate(),'buss_und_bettag');
+    /* n-ter Wochentag (0=So) eines Monats (1–12) als Date */
+    function nth(m,wd,n){var x=new Date(year,m-1,1,12,0,0);while(x.getDay()!==wd)x.setDate(x.getDate()+1);x.setDate(x.getDate()+7*(n-1));return x;}
+    function at(x,n){a(x.getMonth()+1,x.getDate(),n);}
+    if(land==='AT'){
+      /* Werte = Kennung, Anzeige über t('holiday.<kennung>') */
+      a(1,1,'neujahr');a(1,6,'heilige_drei_koenige');a(5,1,'staatsfeiertag');
+      a(8,15,'mariae_himmelfahrt');a(10,26,'nationalfeiertag');a(11,1,'allerheiligen');
+      a(12,8,'mariae_empfaengnis');a(12,25,'weihnachten');a(12,26,'stephanstag');
+      rel(1,'ostermontag');rel(39,'himmelfahrt');rel(50,'pfingstmontag');rel(60,'fronleichnam');
+    } else if(land==='CH'){
+      /* überall: Neujahr, Auffahrt, Bundesfeier, Weihnachten; dazu je Gebiet: */
+      var CH={
+        'AG':'berchtoldstag karfreitag ostermontag pfingstmontag stephanstag',
+        'AG-BD':'karfreitag ostermontag pfingstmontag fronleichnam stephanstag',
+        'AG-BG':'karfreitag fronleichnam mariae_himmelfahrt allerheiligen stephanstag',
+        'AG-LM':'karfreitag fronleichnam mariae_himmelfahrt allerheiligen mariae_empfaengnis',
+        'AG-RF':'karfreitag ostermontag pfingstmontag allerheiligen stephanstag',
+        'AG-ZZ':'berchtoldstag karfreitag fronleichnam allerheiligen stephanstag',
+        'AR':'karfreitag ostermontag pfingstmontag stephanstag',
+        'AI':'karfreitag ostermontag pfingstmontag fronleichnam mariae_himmelfahrt mauritiustag allerheiligen mariae_empfaengnis stephanstag',
+        'AI-OB':'karfreitag ostermontag pfingstmontag fronleichnam mariae_himmelfahrt allerheiligen mariae_empfaengnis stephanstag',
+        'BL':'karfreitag ostermontag tag_der_arbeit pfingstmontag stephanstag',
+        'BS':'karfreitag ostermontag tag_der_arbeit pfingstmontag stephanstag',
+        'BE':'berchtoldstag karfreitag ostermontag pfingstmontag stephanstag',
+        'FR':'karfreitag fronleichnam mariae_himmelfahrt allerheiligen mariae_empfaengnis',
+        'FR-REF':'berchtoldstag karfreitag ostermontag pfingstmontag stephanstag',
+        'GE':'karfreitag ostermontag pfingstmontag jeune_genevois restauration_ge',
+        'GL':'naefelser_fahrt karfreitag ostermontag pfingstmontag allerheiligen stephanstag',
+        'GR':'karfreitag ostermontag pfingstmontag stephanstag',
+        'JU':'berchtoldstag karfreitag ostermontag tag_der_arbeit pfingstmontag fronleichnam unabhaengigkeit_ju mariae_himmelfahrt allerheiligen',
+        'LU':'karfreitag fronleichnam mariae_himmelfahrt allerheiligen mariae_empfaengnis stephanstag',
+        'NE':'berchtoldstag republik_ne karfreitag tag_der_arbeit stephanstag',
+        'NE-LL':'berchtoldstag republik_ne karfreitag tag_der_arbeit fronleichnam stephanstag',
+        'NW':'josefstag karfreitag fronleichnam mariae_himmelfahrt allerheiligen mariae_empfaengnis',
+        'OW':'karfreitag fronleichnam mariae_himmelfahrt bruder_klaus allerheiligen mariae_empfaengnis',
+        'SH':'karfreitag ostermontag tag_der_arbeit pfingstmontag stephanstag',
+        'SZ':'heilige_drei_koenige josefstag karfreitag ostermontag pfingstmontag fronleichnam mariae_himmelfahrt allerheiligen mariae_empfaengnis stephanstag',
+        'SO':'karfreitag fronleichnam mariae_himmelfahrt allerheiligen',
+        'SO-BU':'karfreitag',
+        'SG':'karfreitag ostermontag pfingstmontag allerheiligen stephanstag',
+        'TG':'berchtoldstag karfreitag ostermontag tag_der_arbeit pfingstmontag stephanstag',
+        'TI':'heilige_drei_koenige josefstag ostermontag tag_der_arbeit pfingstmontag fronleichnam peter_und_paul mariae_himmelfahrt allerheiligen mariae_empfaengnis stephanstag',
+        'UR':'heilige_drei_koenige josefstag karfreitag ostermontag pfingstmontag fronleichnam mariae_himmelfahrt allerheiligen mariae_empfaengnis stephanstag',
+        'VS':'josefstag fronleichnam mariae_himmelfahrt allerheiligen mariae_empfaengnis',
+        'VD':'berchtoldstag karfreitag ostermontag pfingstmontag bettagsmontag',
+        'ZG':'karfreitag fronleichnam mariae_himmelfahrt allerheiligen mariae_empfaengnis',
+        'ZH':'karfreitag ostermontag tag_der_arbeit pfingstmontag stephanstag'
+      };
+      /* feste Daten [Monat, Tag] und Abstand zu Ostern */
+      var FIX={berchtoldstag:[1,2],heilige_drei_koenige:[1,6],republik_ne:[3,1],josefstag:[3,19],
+               tag_der_arbeit:[5,1],unabhaengigkeit_ju:[6,23],peter_und_paul:[6,29],mariae_himmelfahrt:[8,15],
+               mauritiustag:[9,22],bruder_klaus:[9,25],allerheiligen:[11,1],mariae_empfaengnis:[12,8],
+               stephanstag:[12,26],restauration_ge:[12,31]};
+      var OST={karfreitag:-2,ostermontag:1,pfingstmontag:50,fronleichnam:60};
+      a(1,1,'neujahr');a(8,1,'bundesfeier');a(12,25,'weihnachten');rel(39,'auffahrt');
+      String(CH[bl]||'').split(' ').forEach(function(id){
+        if(!id) return;
+        if(FIX[id]){
+          var f=FIX[id], wd=new Date(year,f[0]-1,f[1],12,0,0).getDay();
+          // AR/AI: Stephanstag nicht am Di/Sa (sonst drei Ruhetage am Stück)
+          if(id==='stephanstag'&&/^(AR|AI|AI-OB)$/.test(bl)&&(wd===2||wd===6)) return;
+          // NE: 2.1. und 26.12. nur, wenn sie auf einen Montag fallen
+          if(/^NE/.test(bl)&&(id==='berchtoldstag'||id==='stephanstag')&&wd!==1) return;
+          a(f[0],f[1],id);
+        } else if(OST[id]!==undefined) rel(OST[id],id);
+        else if(id==='naefelser_fahrt'){
+          var nf=nth(4,4,1);
+          if(Math.round((os.getTime()-nf.getTime())/864e5)===3) nf.setDate(nf.getDate()+7);  // Gründonnerstag → +1 Woche
+          at(nf,id);
+        }
+        else if(id==='jeune_genevois'){ var jg=nth(9,0,1); jg.setDate(jg.getDate()+4); at(jg,id); }
+        else if(id==='bettagsmontag'){ var bm=nth(9,0,3); bm.setDate(bm.getDate()+1); at(bm,id); }
+      });
+    } else {
+      /* DEUTSCHLAND – Werte = Kennung, Anzeige über t('holiday.<kennung>') */
+      a(1,1,'neujahr');a(5,1,'tag_der_arbeit');a(10,3,'einheit');
+      a(12,25,'weihnacht1');a(12,26,'weihnacht2');
+      rel(-2,'karfreitag');rel(1,'ostermontag');rel(39,'himmelfahrt');rel(50,'pfingstmontag');
+      if(['BW','BY','ST'].includes(bl)) a(1,6,'heilige_drei_koenige');
+      if(['BE','MV'].includes(bl)) a(3,8,'frauentag');
+      if(['BW','BY','HE','NW','RP','SL'].includes(bl)) rel(60,'fronleichnam');
+      if(['BW','BY','NW','RP','SL'].includes(bl)) a(11,1,'allerheiligen');
+      if(bl==='TH') a(9,20,'weltkindertag');
+      if(bl==='SL') a(8,15,'mariae_himmelfahrt');
+      if(['BB','HB','HH','MV','NI','SN','SH','ST','TH'].includes(bl)) a(10,31,'reformationstag');
+      if(bl==='SN'){
+        /* Buß- und Bettag: Mittwoch vor Totensonntag (letzter So vor 1. Advent) → 16.–22.11.
+           Startpunkt 22.11. = spätestes mögliches Datum, rückwärts zum Mittwoch. */
+        var x=new Date(year,10,22,12,0,0);
+        while(x.getDay()!==3) x.setDate(x.getDate()-1);
+        a(x.getMonth()+1,x.getDate(),'buss_und_bettag');
+      }
     }
     return h;
   }
+  /* Feiertage für das gewählte Land/Region (Kalender) */
+  function holidaysFor(year){ return holidays(year,S.bundesland||DEFAULT_REGION[countryOf(S.country)],countryOf(S.country)); }
 
   /* ── SCHICHT ────────────────────────────── */
   function mondayOf(d){
@@ -415,8 +580,8 @@ window.onerror=function(msg,src,line,col,err){
   var HORIZON_DAYS=370;
   var _holCache={};
   function holidayName(ds){
-    var bl=S.bundesland||'NW', y=Number(ds.slice(0,4)), ck=y+bl;
-    if(!_holCache[ck]) _holCache[ck]=holidays(y,bl);
+    var c=countryOf(S.country), bl=S.bundesland||DEFAULT_REGION[c], y=Number(ds.slice(0,4)), ck=y+'|'+c+'|'+bl;
+    if(!_holCache[ck]) _holCache[ck]=holidays(y,bl,c);
     return _holCache[ck][ds];
   }
   function isFuture(ds,time){
@@ -811,9 +976,9 @@ window.onerror=function(msg,src,line,col,err){
   /* ── KALENDER ───────────────────────────── */
   function renderCal(){
     var year=viewDate.getFullYear(), month=viewDate.getMonth();
-    var hols=holidays(year,S.bundesland||'NW');
-    if(month===0) Object.assign(hols,holidays(year-1,S.bundesland||'NW'));
-    if(month===11) Object.assign(hols,holidays(year+1,S.bundesland||'NW'));
+    var hols=holidaysFor(year);
+    if(month===0) Object.assign(hols,holidaysFor(year-1));
+    if(month===11) Object.assign(hols,holidaysFor(year+1));
     $('mTitle').textContent=t('format.month_year',{month:monthLong(month),year:year});
     var grid=document.createElement('div'); grid.className='cgrid';
     // Header: KW-Ecke + Mo-So
@@ -1262,7 +1427,10 @@ window.onerror=function(msg,src,line,col,err){
   function applyState(s){
     if(typeof s.startDate==='string'&&(s.startDate===''||/^\d{4}-\d{2}-\d{2}$/.test(s.startDate))) S.startDate=s.startDate;
     if(typeof s.weeksCount==='number')  S.weeksCount=Math.max(1,Math.min(6,s.weeksCount));
-    if(typeof s.bundesland==='string'&&/^(BW|BY|BE|BB|HB|HH|HE|MV|NI|NW|RP|SL|SN|ST|SH|TH)$/.test(s.bundesland)) S.bundesland=s.bundesland;
+    // Land fehlt (Altdaten, alte Profile) → Deutschland; Region muss zum Land passen
+    var land=countryOf(s.country);
+    if(regionOk(land,s.bundesland)){ S.country=land; S.bundesland=s.bundesland; }
+    else if(land!==S.country||!regionOk(S.country,S.bundesland)){ S.country=land; S.bundesland=DEFAULT_REGION[land]; }
     if(Array.isArray(s.pattern))        S.pattern=s.pattern.map(function(t){return (typeof t==='number'&&t>=0&&t<=4&&t%1===0)?t:0;});
     if(Array.isArray(s.exceptions))     S.exceptions=s.exceptions.filter(function(e){
       return e&&/^\d{4}-\d{2}-\d{2}$/.test(e.start)&&/^\d{4}-\d{2}-\d{2}$/.test(e.end)&&typeof e.type==='string';
@@ -1352,7 +1520,7 @@ window.onerror=function(msg,src,line,col,err){
      werden nicht gespeichert, sondern beim Laden per resyncAlarms() neu berechnet. */
   var PROFILE_FORMAT=1;
   function buildProfile(){
-    var keys=['startDate','weeksCount','bundesland','pattern','exceptions','alarmTimes','alarmEnabled',
+    var keys=['startDate','weeksCount','country','bundesland','pattern','exceptions','alarmTimes','alarmEnabled',
               'freeAlarm','autoSchedule','skipHolidaysShift','suppressed','overrides','preAlarmMin','startMode','design'];
     var data={};
     keys.forEach(function(k){ data[k]=S[k]; });
@@ -1465,12 +1633,38 @@ window.onerror=function(msg,src,line,col,err){
     if(ok===false) toast(t('error.option_save'),true);
   }
 
+  /* ── LAND/REGION-AUSWAHL (Bereich Schichtplan + Einrichtung) ── */
+  function fillCountrySelect(sel,c){
+    sel.innerHTML=COUNTRIES.map(function(x){ return '<option value="'+x+'">'+esc(t(COUNTRY_KEYS[x]))+'</option>'; }).join('');
+    sel.value=c;
+  }
+  function fillRegionSelect(sel,c,r){
+    sel.innerHTML=REGIONS[c].map(function(x){ return '<option value="'+x[0]+'">'+esc(regionLabel(c,x[0]))+'</option>'; }).join('');
+    sel.value=regionOk(c,r)?r:DEFAULT_REGION[c];
+  }
+  /* Feldname: Bundesland (DE/AT) bzw. Kanton (CH); Hinweis zur Zählweise (AT/CH) */
+  function regionLabelKey(c,wiz){ return c==='CH'?(wiz?'wiz.canton_label':'holidays.canton_label'):(wiz?'wiz.state_label':'holidays.state_label'); }
+  function holHintText(c){ return c==='AT'?t('holidays.hint_at'):(c==='CH'?t('holidays.hint_ch'):''); }
+  function renderRegionUi(){
+    var c=countryOf(S.country);
+    fillCountrySelect($('country'),c);
+    fillRegionSelect($('bundesland'),c,S.bundesland);
+    var lb=$('blLabel'); lb.setAttribute('data-i18n',regionLabelKey(c)); lb.textContent=t(regionLabelKey(c));
+    var hh=$('holHint'), tx=holHintText(c); hh.textContent=tx; hh.hidden=!tx;
+  }
+  function renderWizRegion(){
+    fillCountrySelect($('wizCountry'),W.country);
+    fillRegionSelect($('wizBl'),W.country,W.bl);
+    $('wizBlLabel').textContent=t(regionLabelKey(W.country,true));
+    var hh=$('wizHolHint'), tx=holHintText(W.country); hh.textContent=tx; hh.hidden=!tx;
+  }
+
   /* Alle Einstellungs-Elemente neu aus S befüllen (nach Reset oder Profil-Import) */
   function refreshAllUi(){
     updateAlarmOptionsUi();
     renderStartPicker();
     $('weeksVal').textContent=S.weeksCount;
-    $('bundesland').value=S.bundesland;
+    renderRegionUi();
     $('skipHolShift').checked=S.skipHolidaysShift;
     renderAlarmSettings(); renderFreeAlarmSettings(); renderPat(); renderEx(); renderCal(); updateRingtoneUI();
     applyDesign();
@@ -1507,7 +1701,8 @@ window.onerror=function(msg,src,line,col,err){
       auto[t]=S.pattern.indexOf(t)!==-1?wizAutoNow(t):t!==1;
     });
     W={step:0, kwYear:isoWeekYear(mo), kwNum:getISOWeek(mo), weeks:S.weeksCount,
-       pattern:S.pattern.slice(0,S.weeksCount*7), tpl:null, times:times, auto:auto, bl:S.bundesland};
+       pattern:S.pattern.slice(0,S.weeksCount*7), tpl:null, times:times, auto:auto,
+       country:countryOf(S.country), bl:S.bundesland};
     while(W.pattern.length<W.weeks*7) W.pattern.push(0);
     renderWiz();
     $('wizBg').classList.add('open'); $('wizBg').setAttribute('aria-hidden','false'); $('wizBg').scrollTop=0;
@@ -1560,7 +1755,7 @@ window.onerror=function(msg,src,line,col,err){
     if(isNaN(cur)||toYmd(mondayOf(cur))!==mo){ S.startMode='kw'; applyStartDate(mo); }
     if(W.weeks!==S.weeksCount) setWeeksCount(W.weeks);
     for(var i=0;i<W.pattern.length;i++) if(S.pattern[i]!==W.pattern[i]) setPatternDay(i,W.pattern[i]);
-    if(W.bl!==S.bundesland){ S.bundesland=W.bl; save(); }
+    if(W.country!==S.country||W.bl!==S.bundesland){ S.country=W.country; S.bundesland=W.bl; save(); }
     var types=wizTypes();
     types.forEach(function(t){ if(/^\d{2}:\d{2}$/.test(W.times[t])&&W.times[t]!==S.alarmTimes[t]) setShiftTime(t,W.times[t]); });
     // nur umschalten, was sich ändert – setShiftAuto(t,true) holt sonst gelöschte Wecker zurück
@@ -1605,14 +1800,13 @@ window.onerror=function(msg,src,line,col,err){
     var times=wizTypes().filter(function(tp){return tp!==1||W.auto[tp];}).map(function(tp){
       return esc(shiftLabel(tp))+' '+esc(S.alarmTimes[tp])+(wizAutoNow(tp)?'':' '+esc(t('wiz.sum_off')));
     }).join(' · ')||esc(t('wiz.sum_none'));
-    var bl=$('bundesland').querySelector('option[value="'+S.bundesland+'"]');
     var row=function(k,v){ return '<div class="wiz-sumrow"><span class="muted">'+esc(t(k))+'</span><span>'+v+'</span></div>'; };
     return '<div class="wiz-stat" id="wizSummary">'+esc(head)+'</div>'
       +'<div class="wiz-sum">'
       +row('wiz.sum_start',esc(t('start.kw',{n:getISOWeek(mo)}))+' · '+esc(wizRange(mondayOf(mo))))
       +row('wiz.sum_pattern',esc(t('wiz.sum_weeks',{n:S.weeksCount})))
       +row('wiz.sum_alarms',times)
-      +row('wiz.sum_holidays',esc(bl?bl.textContent:S.bundesland))
+      +row('wiz.sum_holidays',esc(t(COUNTRY_KEYS[countryOf(S.country)]))+' · '+esc(regionLabel(countryOf(S.country),S.bundesland)))
       +'</div>'
       +'<div class="wiz-tip">'+tHtml('wiz.tip')+'</div>'
       +'<div class="small muted" style="margin-top:12px;">'+esc(t('wiz.later'))+'</div>';
@@ -1676,9 +1870,11 @@ window.onerror=function(msg,src,line,col,err){
     } else if(st===3){
       $('wizTitle').textContent=t('wiz.s4_title');
       $('wizSub').textContent=t('wiz.s4_sub');
-      b.innerHTML='<label for="wizBl">'+esc(t('wiz.state_label'))+'</label><select id="wizBl">'+$('bundesland').innerHTML+'</select>'
+      b.innerHTML='<label for="wizCountry">'+esc(t('wiz.country_label'))+'</label><select id="wizCountry"></select>'
+        +'<label for="wizBl" id="wizBlLabel" style="margin-top:12px;"></label><select id="wizBl"></select>'
+        +'<div class="small muted" id="wizHolHint" style="margin-top:8px;"></div>'
         +'<div class="small muted" style="margin-top:8px;">'+esc(t('wiz.apply_hint'))+'</div>';
-      $('wizBl').value=W.bl;
+      renderWizRegion();
     } else {
       $('wizTitle').textContent=t('wiz.done_title');
       $('wizSub').textContent=t('wiz.done_sub');
@@ -1702,7 +1898,8 @@ window.onerror=function(msg,src,line,col,err){
     var el=e.target, id=el.id||'';
     if(id==='wizKwYear'){ W.kwYear=Number(el.value); wizFillKw(); }
     else if(id==='wizKwNum'){ W.kwNum=Number(el.value); $('wizKwInfo').textContent=wizRange(wizMonday())+' '+W.kwYear; }
-    else if(id==='wizBl'){ W.bl=el.value; }
+    else if(id==='wizCountry'){ W.country=countryOf(el.value); W.bl=DEFAULT_REGION[W.country]; renderWizRegion(); }
+    else if(id==='wizBl'){ if(regionOk(W.country,el.value)) W.bl=el.value; }
     else if(el.dataset.wt){ if(/^\d{2}:\d{2}$/.test(el.value)) W.times[el.dataset.wt]=el.value; }
     else if(el.dataset.wa){ W.auto[el.dataset.wa]=el.checked; }
   });
@@ -1752,7 +1949,16 @@ window.onerror=function(msg,src,line,col,err){
     if(S.startMode==='kw'&&S.startDate) S.startDate=toYmd(mondayOf(parseYmd(S.startDate)));
     renderStartPicker(); save();
   };
-  $('bundesland').addEventListener('change',function(e){S.bundesland=e.target.value;renderCal();save();scheduleResync();});
+  /* Land/Region ändern: Kalender neu, speichern, Wecker-Abgleich (Feiertage ändern sich).
+     Bei neuem Land gilt dessen Standard-Region, bis der Nutzer eine wählt. */
+  function setRegion(c,r){
+    c=countryOf(c);
+    if(!regionOk(c,r)) r=c===S.country&&regionOk(c,S.bundesland)?S.bundesland:DEFAULT_REGION[c];
+    S.country=c; S.bundesland=r;
+    renderRegionUi(); renderCal(); save(); scheduleResync();
+  }
+  $('country').addEventListener('change',function(e){ setRegion(e.target.value,null); });
+  $('bundesland').addEventListener('change',function(e){ setRegion(S.country,e.target.value); });
   $('decWeeks').onclick=function(){
     if(S.weeksCount<=1)return; S.weeksCount--;
     $('weeksVal').textContent=S.weeksCount; initPat();renderPat();renderCal();save();scheduleResync();
@@ -2019,7 +2225,7 @@ window.onerror=function(msg,src,line,col,err){
   initDateSelects();
   renderStartPicker();
   $('weeksVal').textContent=S.weeksCount;
-  $('bundesland').value=S.bundesland;
+  renderRegionUi();
   $('skipHolShift').checked=S.skipHolidaysShift;
   syncWithNative(); resyncAlarms({quiet:true}); showAppVersion(); updateAlarmOptionsUi(); renderPermWarn();
   renderAlarmSettings(); renderFreeAlarmSettings(); renderPat(); renderPatHint(); renderEx(); renderCal(); updateRingtoneUI();

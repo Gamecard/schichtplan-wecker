@@ -201,25 +201,11 @@
 
     <div class="card">
       <div class="ctitle"><span class="stepno">3</span><span data-i18n="holidays.title">Feiertage</span></div>
-      <label for="bundesland" data-i18n="holidays.state_label">Bundesland (Feiertage)</label>
-            <select id="bundesland">
-              <option value="NW">Nordrhein-Westfalen</option>
-              <option value="BW">Baden-W&uuml;rttemberg</option>
-              <option value="BY">Bayern</option>
-              <option value="BE">Berlin</option>
-              <option value="BB">Brandenburg</option>
-              <option value="HB">Bremen</option>
-              <option value="HH">Hamburg</option>
-              <option value="HE">Hessen</option>
-              <option value="MV">Mecklenburg-Vorpommern</option>
-              <option value="NI">Niedersachsen</option>
-              <option value="RP">Rheinland-Pfalz</option>
-              <option value="SL">Saarland</option>
-              <option value="SN">Sachsen</option>
-              <option value="ST">Sachsen-Anhalt</option>
-              <option value="SH">Schleswig-Holstein</option>
-              <option value="TH">Th&uuml;ringen</option>
-            </select>
+      <label for="country" data-i18n="holidays.country_label">Land</label>
+      <select id="country"></select>
+      <label for="bundesland" id="blLabel" data-i18n="holidays.state_label" style="margin-top:.6rem;">Bundesland (Feiertage)</label>
+      <select id="bundesland"></select>
+      <div class="small muted" id="holHint" style="margin-top:.5rem;" hidden></div>
     </div>
 
     <div class="card">

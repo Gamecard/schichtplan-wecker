@@ -3,6 +3,7 @@
 const { JSDOM } = require('jsdom');
 const fs = require('fs');
 const path = require('path');
+const { withLang } = require('./lang-bridge');
 const ASSETS = process.argv[2] || path.join(__dirname, '..', 'app', 'src', 'main', 'assets');
 // index.html lädt app.css/app.js – für jsdom direkt einbetten
 const html = fs.readFileSync(path.join(ASSETS, 'index.html'), 'utf8')
@@ -16,7 +17,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // Nachgebaute Android-Bridge (wie in webapp.test.js)
 function makeBridge(native) {
-  return {
+  return withLang({
     store: native, migrated: true,
     setAlarmForDateSilent(y, mo, d, h, mi, key) {
       const t = new Date(y, mo - 1, d, h, mi).getTime();
@@ -40,7 +41,7 @@ function makeBridge(native) {
     setStoreMigrated() { this.migrated = true; },
     usesCustomRingtone() { return false; }, getCustomRingtoneName() { return ''; },
     testAlarm() {}, pickRingtone() {}, resetRingtone() {}
-  };
+  }, ASSETS);
 }
 // wizardSeen=false → localStorage-Merker fehlt (Erststart-Verhalten)
 function open(storage, bridge, wizardSeen = true) {

@@ -73,7 +73,8 @@ class AlarmService : Service() {
         when (intent?.action) {
             ACTION_START -> start(
                 intent.getStringExtra(AlarmScheduler.EXTRA_KEY) ?: "unbekannt",
-                intent.getStringExtra(AlarmScheduler.EXTRA_MESSAGE) ?: "Zeit aufzustehen!"
+                intent.getStringExtra(AlarmScheduler.EXTRA_MESSAGE)
+                    ?: I18n.t(this, "native.alarm.defaultMessage")
             )
             ACTION_SNOOZE -> snooze()
             ACTION_DISMISS -> stopRinging()
@@ -173,7 +174,7 @@ class AlarmService : Service() {
         )
         return NotificationCompat.Builder(this, AlarmReceiver.CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle("⏰ Schicht-Wecker")
+            .setContentTitle(I18n.t(this, "native.notification.title"))
             .setContentText(message)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
@@ -181,8 +182,11 @@ class AlarmService : Service() {
             .setFullScreenIntent(fullScreen, true)
             .setContentIntent(fullScreen)
             .setOngoing(true)
-            .addAction(0, "Aus", servicePi(ACTION_DISMISS, 1))
-            .addAction(0, "Schlummern ${AlarmOptions.snoozeMinutes(this)} Min", servicePi(ACTION_SNOOZE, 2))
+            .addAction(0, I18n.t(this, "native.alarm.dismiss"), servicePi(ACTION_DISMISS, 1))
+            .addAction(
+                0, I18n.plural(this, "native.alarm.snooze", AlarmOptions.snoozeMinutes(this)),
+                servicePi(ACTION_SNOOZE, 2)
+            )
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .build()
     }

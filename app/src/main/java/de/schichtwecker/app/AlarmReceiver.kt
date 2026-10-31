@@ -40,16 +40,28 @@ class AlarmReceiver : BroadcastReceiver() {
         /**
          * Ein einziger Kanal OHNE Sound/Vibration: den Ton spielt [AlarmService] selbst
          * (looping MediaPlayer) – sonst doppelter Alarm-Ton.
+         * Name/Beschreibung folgen der App-Sprache: Gibt es den Kanal schon, werden nur diese
+         * beiden aktualisiert (gleiche ID – Ton, Wichtigkeit und Nutzer-Einstellungen bleiben).
          */
         fun ensureNotificationChannel(context: Context) {
             val nm = context.getSystemService(NotificationManager::class.java)
             listOf("alarm_channel", "schichtplan_alarm_v2", "schichtplan_alarm_v3", "schichtplan_alarm_custom")
                 .forEach { nm.deleteNotificationChannel(it) }
-            if (nm.getNotificationChannel(CHANNEL_ID) != null) return
+            val name = I18n.t(context, "native.channel.name")
+            val desc = I18n.t(context, "native.channel.description")
+            val existing = nm.getNotificationChannel(CHANNEL_ID)
+            if (existing != null) {
+                if (existing.name?.toString() != name || existing.description != desc) {
+                    existing.name = name
+                    existing.description = desc
+                    nm.createNotificationChannel(existing)
+                }
+                return
+            }
             val channel = NotificationChannel(
-                CHANNEL_ID, "Schichtplan Wecker", NotificationManager.IMPORTANCE_HIGH
+                CHANNEL_ID, name, NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Wecker bei Schichtbeginn"
+                description = desc
                 setSound(null, null)
                 enableVibration(false)
                 lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
@@ -60,7 +72,8 @@ class AlarmReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val key = intent.getStringExtra(AlarmScheduler.EXTRA_KEY)
-        val message = intent.getStringExtra(AlarmScheduler.EXTRA_MESSAGE) ?: "Zeit aufzustehen!"
+        val message = intent.getStringExtra(AlarmScheduler.EXTRA_MESSAGE)
+            ?: I18n.t(context, "native.alarm.defaultMessage")
         val requestCode = intent.getIntExtra(AlarmScheduler.EXTRA_REQUEST_CODE, 0)
         Log.d(TAG, "AlarmReceiver.onReceive() key=$key rc=$requestCode")
 
@@ -93,7 +106,7 @@ class AlarmReceiver : BroadcastReceiver() {
         )
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle("⏰ Schicht-Wecker")
+            .setContentTitle(I18n.t(context, "native.notification.title"))
             .setContentText(message)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)

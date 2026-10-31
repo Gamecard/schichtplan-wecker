@@ -9,6 +9,8 @@ import android.util.Log
  * Android löscht alle AlarmManager-Wecker beim Neustart. Dieser Receiver plant sie aus dem
  * [AlarmStore] neu ein – ebenso nach App-Update und Zeit-/Zeitzonenwechsel.
  * LOCKED_BOOT_COMPLETED kommt schon vor dem ersten Entsperren (Direct Boot).
+ * LOCALE_CHANGED (Systemsprache gewechselt): bei Sprache „automatisch“ Kanal-Namen und Widget
+ * in der neuen Sprache – Wecker bleiben unberührt.
  */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -22,6 +24,7 @@ class BootReceiver : BroadcastReceiver() {
                 ShiftWidget.refresh(context)
                 Log.d("SchichtplanAlarm", "BootReceiver (${intent.action}): $n Wecker eingeplant")
             }
+            Intent.ACTION_LOCALE_CHANGED -> I18n.onLanguageChanged(context)
         }
     }
 }

@@ -4,6 +4,7 @@
 const { JSDOM } = require('jsdom');
 const fs = require('fs');
 const path = require('path');
+const { withLang } = require('./lang-bridge');
 const ASSETS = process.argv[2] || path.join(__dirname, '..', 'app', 'src', 'main', 'assets');
 const html = fs.readFileSync(path.join(ASSETS, 'index.html'), 'utf8')
   .replace('<link rel="stylesheet" href="app.css">', () => '<style>' + fs.readFileSync(path.join(ASSETS, 'app.css'), 'utf8') + '</style>')
@@ -15,7 +16,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // ── Hilfsfunktionen (aus webapp.test.js übernommen)
 function makeBridge(native) {
-  return {
+  return withLang({
     store: native, migrated: true, exported: null, importCalls: 0,
     setAlarmForDateSilent(y, mo, d, h, mi, key) {
       const t = new Date(y, mo - 1, d, h, mi).getTime();
@@ -43,7 +44,7 @@ function makeBridge(native) {
     importProfile() { this.importCalls++; },
     usesCustomRingtone() { return false; }, getCustomRingtoneName() { return ''; },
     testAlarm() {}, pickRingtone() {}, resetRingtone() {}
-  };
+  }, ASSETS);
 }
 function open(storage, bridge) {
   const dom = new JSDOM(html, {

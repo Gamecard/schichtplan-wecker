@@ -1,4 +1,4 @@
-# Projekt: Mein Schichtplan (Android WebView App)
+# Projekt: Schichtwecker (Android WebView App)
 
 ## WebView Overlay/Sheet Pattern (WICHTIG - NICHT ANDERS MACHEN)
 
@@ -25,6 +25,25 @@
 - **Paket**: `de.schichtwecker.app`
 - **App-Name**: Schichtwecker
 - **Theme**: `Theme.Schichtwecker` (res/values, res/values-night), Compose: `SchichtweckerTheme` in `ui/theme/`
+
+## Mehrsprachigkeit (seit 1.12)
+
+- **Eine Datei pro Sprache:** `app/src/main/assets/lang/<code>.json` (de, en, tr, ru, pl). Flaches JSON, `_meta` = `{code, name (in der eigenen Sprache), englishName, version}`. Web-Oberfläche UND Kotlin lesen dieselben Dateien.
+- **Neue Sprache:** `en.json` kopieren, `_meta` anpassen, Werte übersetzen – fertig (wird automatisch in der Sprachauswahl gelistet). Danach `cd tests && npm test`.
+- **Schlüssel:** Punkt-Namensräume; `native.*` = Texte des Kotlin-Teils (Benachrichtigung, Wecker-Bildschirm, Widget, Toasts). Gemeinsam genutzt: `shift.1–4`, `weekday.short.0–6`, `month.long.0–11`.
+- **Platzhalter** `{name}` müssen je Schlüssel in allen Sprachen gleich sein – Ausnahme Datumsvorlagen (`format.*`, `native.format.date`, `native.widget.date`).
+- **Mehrzahl:** Suffixe `_zero/_one/_two/_few/_many/_other` nach CLDR (Web: `Intl.PluralRules`, Kotlin: `android.icu.text.PluralRules`). Russisch/Polnisch brauchen `_one/_few/_many/_other`.
+- **Auflösung:** gewählte Sprache → en → de → Schlüssel. Einstellung „auto“ = Systemsprache, sonst en. „custom“ = vom Nutzer importierte Datei (gerätegeschützter Speicher, `filesDir/lang/custom.json`).
+- **Sicherheit:** Sprachtexte werden escapt, nur `<b>` erlaubt (eigene Übersetzungen kommen von außen).
+- **Interne Datenwerte bleiben deutsch** (`shiftName`, Ausnahme-Typen `Urlaub/Krank/Schulung`, AlarmKeys, Profilformat) – übersetzt wird nur die Anzeige. Feiertage intern als Kennung (`neujahr` …), Anzeige über `holiday.<id>`.
+- **Kotlin:** `I18n.kt` (`I18n.t`, `I18n.plural`, `I18n.formatDate`); Spracheinstellung in `ui_prefs`/`language` im gerätegeschützten Speicher (Direct Boot).
+- **JS-Brücke:** `listLanguages`, `getLanguageFile`, `getLanguageSetting`, `setLanguageSetting`, `getSystemLanguage`, `importLanguageFile` → Rückruf `window.onLanguageImported(ok, name)`.
+- **Tests:** `tests/lang-bridge.js` (Mock der Sprach-Brücke), `tests/sprache.test.js`.
+
+## Design-Umschalter (seit 1.12)
+
+- Antippen der Versionsnummer `#appVersion` wechselt klassisch ↔ Anime (`S.design = 'classic'|'anime'`, Attribut `data-design="anime"` auf `<html>`).
+- Anime-Design steht komplett in `app/src/main/assets/anime.css`, ALLE Regeln unter `html[data-design="anime"]`. Keine Dauer-Animationen (Akku).
 
 ## Build & Lint
 

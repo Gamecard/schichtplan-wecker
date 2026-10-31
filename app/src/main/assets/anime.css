@@ -1,0 +1,724 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   DESIGN „ANIME“ – verspielter Kawaii-Look (Sakura-Rosa, Lavendel,
+   Himmelblau, Mint) als zweites Design neben dem klassischen M3-Design.
+
+   Aktiv nur, wenn <html data-design="anime"> gesetzt ist. JEDE Regel in
+   dieser Datei steht unter html[data-design="anime"], das klassische
+   Design bleibt dadurch unverändert. Wird NACH app.css eingebunden.
+
+   Grundsätze:
+   - Umfärben vor allem über die vorhandenen Tokens (--md-*, --bg, --card,
+     Schichtfarben, --shape-*, --elev-*). Bauteile lesen diese Tokens ohnehin.
+   - Hell/Dunkel folgt denselben Selektoren wie app.css:
+       hell   = Standard
+       dunkel = data-theme="dark"  ODER  data-theme="system" + System dunkel
+   - Deko (Sakura-Blüten, Funkeln) nur als STATISCHE Inline-SVGs (data:-URI),
+     keine externen Dateien/Schriften (App hat kein Internet).
+   - Strom sparen: KEINE Dauer-Animationen, nur kurze Übergänge bei
+     Interaktion; bei prefers-reduced-motion gar keine Bewegung.
+   - Layout bleibt gleich: keine anderen Abstände/Größen, die Inhalte
+     verschieben; am Overlay-/Sheet-Muster (position/overflow/transform)
+     wird NICHTS geändert (siehe AGENTS.md).
+   - Kein color-mix() (alte WebViews), nur feste Farben/rgba.
+
+   Gliederung:
+     1. Farben hell (Tokens + Deko-Grafiken)
+     2. Farben dunkel („Nacht-Sakura“)
+     3. Hintergrund & Deko
+     4. Kopf
+     5. Karten & Überschriften
+     6. Knöpfe, Schalter, Chips, Eingabefelder
+     7. Kalender & Wochenrhythmus
+     8. Navigation unten
+     9. Sheets, Zeit-Fenster, Dialoge, Einrichtung
+    10. Sonstiges (Toast, Listen, Hinweise, Bewegung)
+
+   Kontrast (WCAG, geprüft): Fließtext ≥ 4.5:1 in allen Kombinationen –
+   hell u. a. Text/Hintergrund 13.2, gedämpfter Text auf allen Schicht-
+   farben ≥ 5.6, Weiß auf Primär 5.8; dunkel Text/Hintergrund 15.5,
+   gedämpfter Text auf Schichtfarben ≥ 7.3, Primär auf Heute-Feld 5.9.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+
+/* ═══════════════════════════════════════════════════════
+   1. FARBEN HELL („Sakura-Tag“)
+   ═══════════════════════════════════════════════════════ */
+html[data-design="anime"] {
+  color-scheme:light;
+
+  /* Primär: Sakura-Rosa (kräftig genug für weiße Schrift, 5.8:1) */
+  --md-primary:#B5306F;
+  --md-on-primary:#FFFFFF;
+  --md-primary-container:#FFD9EA;
+  --md-on-primary-container:#4A0D2D;
+  /* Sekundär: Lavendel */
+  --md-secondary:#6B55A8;
+  --md-on-secondary:#FFFFFF;
+  --md-secondary-container:#E8DEFF;
+  --md-on-secondary-container:#28194F;
+  /* Tertiär: Flieder-Violett = Ausnahmen (Urlaub/Krank/Schulung),
+     passt zur festen Legendenfarbe #a855f7 in index.html */
+  --md-tertiary:#8A35BE;
+  --md-on-tertiary:#FFFFFF;
+  --md-tertiary-container:#F3DCFF;
+  --md-on-tertiary-container:#300A4A;
+  --md-error:#B3261E;
+  --md-on-error:#FFFFFF;
+  --md-error-container:#FFDAD8;
+  --md-on-error-container:#410007;
+  /* Flächen: zartes Rosé */
+  --md-background:#FFF6FA;
+  --md-on-background:#3B2340;
+  --md-surface:#FFFAFD;
+  --md-on-surface:#3B2340;
+  --md-surface-variant:#F3DDEA;
+  --md-on-surface-variant:#6A4C64;
+  --md-outline:#9A7891;
+  --md-outline-variant:#EFCFE1;
+  --md-surface-container-lowest:#FFFFFF;
+  --md-surface-container-low:#FFF0F7;
+  --md-surface-container:#FBE7F2;
+  --md-surface-container-high:#F6E0EE;
+  --md-surface-container-highest:#F0D8E7;
+  --md-inverse-surface:#3B2340;
+  --md-inverse-on-surface:#FFF0F7;
+
+  /* App-Tokens (wie app.css, nur neu verdrahtet) */
+  --bg:var(--md-background);
+  --fg:var(--md-on-background);
+  --muted:var(--md-on-surface-variant);
+  --primary:var(--md-primary);
+  --primary-fg:var(--md-on-primary);
+  --primary-container:var(--md-primary-container);
+  --card:var(--md-surface-container-low);
+  --border:var(--md-outline-variant);
+  --chip:var(--md-surface-container);
+  --chip-hover:var(--md-surface-container-high);
+  --danger:var(--md-error);
+
+  /* Schichtfarben: pastellig, aber klar getrennt
+     Frei = Mint, Früh = Zitrone, Spät = Pfirsich/Koralle, Nacht = Lavendel,
+     Feiertag = Himmelblau, Ausnahme = Flieder (Tertiär), Heute = Sakura */
+  --accent:#1C7F52;   --free-bg:#D3F4E3;
+  --frueh:#9A6A00;    --frueh-bg:#FFF0B8;  --frueh-light:#FFD95A;
+  --spaet:#C2461F;    --spaet-bg:#FFDCCC;  --spaet-light:#FFA27D;
+  --nacht:#5E45B8;    --nacht-bg:#E4DCFF;  --nacht-light:#A592F0;
+  --hol:#D2ECFF;      --hol-b:#1B659C;
+  --anime-on-hol:#FFFFFF;          /* Text auf der Feiertags-Pille (6.2:1) */
+
+  /* Formen: alles runder („Bubble“) */
+  --shape-xs:8px; --shape-sm:12px; --shape-md:18px; --shape-lg:24px; --shape-xl:32px;
+
+  /* Schatten: weich und rosa getönt statt grau */
+  --elev-1:0 2px 6px rgba(181,48,111,.10),0 1px 2px rgba(107,85,168,.08);
+  --elev-2:0 4px 12px rgba(181,48,111,.12),0 1px 3px rgba(107,85,168,.08);
+  --elev-3:0 8px 22px rgba(181,48,111,.16),0 2px 6px rgba(107,85,168,.10);
+  --elev-4:0 10px 26px rgba(181,48,111,.18),0 3px 8px rgba(107,85,168,.10);
+  --elev-5:0 14px 32px rgba(181,48,111,.20),0 4px 10px rgba(107,85,168,.12);
+
+  /* Eigene Anime-Tokens */
+  --anime-verlauf-primaer:linear-gradient(135deg,#B5306F 0%,#7A4FC0 100%);  /* Weiß darauf ≥ 5.6:1 */
+  --anime-verlauf-zart:linear-gradient(135deg,#FFD9EA 0%,#E8DEFF 55%,#D2ECFF 100%);
+  --anime-verlauf-kopf:linear-gradient(100deg,#FFE3F0 0%,#EDE4FF 55%,#DDF0FF 100%);
+  --anime-verlauf-nav:linear-gradient(180deg,#FFF0F7 0%,#F6E9FF 100%);
+  --anime-nav-aktiv:linear-gradient(135deg,#F7C9DE 0%,#DCCFFF 100%);
+  --anime-rand:#F4C6DC;                          /* Bubble-Rand der Karten */
+  --anime-schatten-karte:0 6px 18px rgba(181,48,111,.12),0 1px 3px rgba(122,79,192,.08);
+  --anime-schatten-knopf:0 3px 10px rgba(181,48,111,.28);
+  --anime-textschatten:0 2px 0 rgba(244,154,193,.35);
+  --anime-overlay:rgba(74,24,72,.42);           /* Abdunkelung hinter Sheets */
+  --anime-dialog-hg:rgba(74,24,72,.40);
+
+  /* ── Deko-Grafiken (statisch, eigene generische Motive) ──
+     Blüte: 5 Blütenblätter + Mitte; Funkeln: 4-zackiger Stern */
+  --anime-bluete-hell:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='%23F49AC1'%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5'/%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5' transform='rotate(72 12 12)'/%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5' transform='rotate(144 12 12)'/%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5' transform='rotate(216 12 12)'/%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5' transform='rotate(288 12 12)'/%3E%3C/g%3E%3Ccircle cx='12' cy='12' r='2.4' fill='%23FFD95A'/%3E%3C/svg%3E");
+  --anime-bluete-dunkel:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='%23FF8FC2'%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5'/%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5' transform='rotate(72 12 12)'/%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5' transform='rotate(144 12 12)'/%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5' transform='rotate(216 12 12)'/%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5' transform='rotate(288 12 12)'/%3E%3C/g%3E%3Ccircle cx='12' cy='12' r='2.4' fill='%238FE3FF'/%3E%3C/svg%3E");
+  --anime-funkel-hell:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 1C12.9 8 16 11.1 23 12C16 12.9 12.9 16 12 23C11.1 16 8 12.9 1 12C8 11.1 11.1 8 12 1Z' fill='%23A88BF0'/%3E%3C/svg%3E");
+  --anime-funkel-dunkel:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 1C12.9 8 16 11.1 23 12C16 12.9 12.9 16 12 23C11.1 16 8 12.9 1 12C8 11.1 11.1 8 12 1Z' fill='%238FE3FF'/%3E%3C/svg%3E");
+  /* Funkeln im Schalter-Knopf (rosa auf weißem bzw. dunklem Knopf) */
+  --anime-funkel-knopf-hell:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2C12.8 8.4 15.6 11.2 22 12C15.6 12.8 12.8 15.6 12 22C11.2 15.6 8.4 12.8 2 12C8.4 11.2 11.2 8.4 12 2Z' fill='%23E05A9A'/%3E%3C/svg%3E");
+  --anime-funkel-knopf-dunkel:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2C12.8 8.4 15.6 11.2 22 12C15.6 12.8 12.8 15.6 12 22C11.2 15.6 8.4 12.8 2 12C8.4 11.2 11.2 8.4 12 2Z' fill='%23FF9FCB'/%3E%3C/svg%3E");
+  /* Hintergrund-Kachel: wenige, sehr zarte Blüten/Funkeln/Punkte */
+  --anime-muster-hell:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 220 220'%3E%3Cdefs%3E%3Cg id='b'%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5'/%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5' transform='rotate(72 12 12)'/%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5' transform='rotate(144 12 12)'/%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5' transform='rotate(216 12 12)'/%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5' transform='rotate(288 12 12)'/%3E%3C/g%3E%3Cpath id='s' d='M12 1C12.9 8 16 11.1 23 12C16 12.9 12.9 16 12 23C11.1 16 8 12.9 1 12C8 11.1 11.1 8 12 1Z'/%3E%3C/defs%3E%3Cg fill='%23F49AC1' fill-opacity='.22'%3E%3Cuse href='%23b' transform='translate(18 26) scale(.9)'/%3E%3Cuse href='%23b' transform='translate(140 128) rotate(25 12 12) scale(.6)'/%3E%3Cuse href='%23b' transform='translate(176 22) scale(.45)'/%3E%3C/g%3E%3Cg fill='%23A88BF0' fill-opacity='.28'%3E%3Cuse href='%23s' transform='translate(110 52) scale(.55)'/%3E%3Cuse href='%23s' transform='translate(36 150) scale(.7)'/%3E%3C/g%3E%3Cg fill='%2380C8F5' fill-opacity='.3'%3E%3Ccircle cx='86' cy='184' r='2.2'/%3E%3Ccircle cx='196' cy='92' r='1.8'/%3E%3Ccircle cx='70' cy='98' r='1.5'/%3E%3C/g%3E%3C/svg%3E");
+  --anime-muster-dunkel:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 220 220'%3E%3Cdefs%3E%3Cg id='b'%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5'/%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5' transform='rotate(72 12 12)'/%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5' transform='rotate(144 12 12)'/%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5' transform='rotate(216 12 12)'/%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5' transform='rotate(288 12 12)'/%3E%3C/g%3E%3Cpath id='s' d='M12 1C12.9 8 16 11.1 23 12C16 12.9 12.9 16 12 23C11.1 16 8 12.9 1 12C8 11.1 11.1 8 12 1Z'/%3E%3C/defs%3E%3Cg fill='%23FF8FC2' fill-opacity='.10'%3E%3Cuse href='%23b' transform='translate(18 26) scale(.9)'/%3E%3Cuse href='%23b' transform='translate(140 128) rotate(25 12 12) scale(.6)'/%3E%3Cuse href='%23b' transform='translate(176 22) scale(.45)'/%3E%3C/g%3E%3Cg fill='%238FE3FF' fill-opacity='.16'%3E%3Cuse href='%23s' transform='translate(110 52) scale(.55)'/%3E%3Cuse href='%23s' transform='translate(36 150) scale(.7)'/%3E%3C/g%3E%3Cg fill='%23E9DDFF' fill-opacity='.22'%3E%3Ccircle cx='86' cy='184' r='1.6'/%3E%3Ccircle cx='196' cy='92' r='1.3'/%3E%3Ccircle cx='70' cy='98' r='1.1'/%3E%3Ccircle cx='150' cy='200' r='1.2'/%3E%3C/g%3E%3C/svg%3E");
+  /* Kopf-Deko: Blütenzweig mit Funkeln (rechts neben dem Titel) */
+  --anime-kopf-hell:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='40' viewBox='0 0 96 40'%3E%3Cdefs%3E%3Cg id='b'%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5'/%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5' transform='rotate(72 12 12)'/%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5' transform='rotate(144 12 12)'/%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5' transform='rotate(216 12 12)'/%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5' transform='rotate(288 12 12)'/%3E%3C/g%3E%3Cpath id='s' d='M12 1C12.9 8 16 11.1 23 12C16 12.9 12.9 16 12 23C11.1 16 8 12.9 1 12C8 11.1 11.1 8 12 1Z'/%3E%3C/defs%3E%3Cpath d='M4 34C22 30 40 22 58 12' stroke='%23C79AB4' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3Cg fill='%23F49AC1'%3E%3Cuse href='%23b' transform='translate(40 4) scale(.95)'/%3E%3Cuse href='%23b' transform='translate(16 18) scale(.7)'/%3E%3C/g%3E%3Cg fill='%23FFD95A'%3E%3Ccircle cx='51.4' cy='15.4' r='2.2'/%3E%3Ccircle cx='24.4' cy='26.4' r='1.6'/%3E%3C/g%3E%3Cg fill='%23A88BF0'%3E%3Cuse href='%23s' transform='translate(70 4) scale(.6)'/%3E%3Cuse href='%23s' transform='translate(80 22) scale(.38)'/%3E%3C/g%3E%3Ccircle cx='66' cy='30' r='1.6' fill='%2380C8F5'/%3E%3C/svg%3E");
+  --anime-kopf-dunkel:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='40' viewBox='0 0 96 40'%3E%3Cdefs%3E%3Cg id='b'%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5'/%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5' transform='rotate(72 12 12)'/%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5' transform='rotate(144 12 12)'/%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5' transform='rotate(216 12 12)'/%3E%3Cellipse cx='12' cy='6.2' rx='3.5' ry='5' transform='rotate(288 12 12)'/%3E%3C/g%3E%3Cpath id='s' d='M12 1C12.9 8 16 11.1 23 12C16 12.9 12.9 16 12 23C11.1 16 8 12.9 1 12C8 11.1 11.1 8 12 1Z'/%3E%3C/defs%3E%3Cpath d='M4 34C22 30 40 22 58 12' stroke='%237A5F95' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3Cg fill='%23FF8FC2'%3E%3Cuse href='%23b' transform='translate(40 4) scale(.95)'/%3E%3Cuse href='%23b' transform='translate(16 18) scale(.7)'/%3E%3C/g%3E%3Cg fill='%23FFE08A'%3E%3Ccircle cx='51.4' cy='15.4' r='2.2'/%3E%3Ccircle cx='24.4' cy='26.4' r='1.6'/%3E%3C/g%3E%3Cg fill='%238FE3FF'%3E%3Cuse href='%23s' transform='translate(70 4) scale(.6)'/%3E%3Cuse href='%23s' transform='translate(80 22) scale(.38)'/%3E%3C/g%3E%3Ccircle cx='66' cy='30' r='1.6' fill='%23CDBDFF'/%3E%3C/svg%3E");
+
+  /* Aktive Auswahl der Deko je Modus (dunkel schaltet nur diese Zeiger um) */
+  --anime-bluete:var(--anime-bluete-hell);
+  --anime-funkel:var(--anime-funkel-hell);
+  --anime-funkel-knopf:var(--anime-funkel-knopf-hell);
+  --anime-muster:var(--anime-muster-hell);
+  --anime-kopf:var(--anime-kopf-hell);
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   2. FARBEN DUNKEL („Nacht-Sakura“: tiefes Violett/Navy,
+      rosa und cyane Akzente)
+   Gleiche Selektor-Logik wie app.css: Einstellung „dunkel“
+   ODER „System“ bei dunklem System. Beide Blöcke identisch.
+   ═══════════════════════════════════════════════════════ */
+html[data-design="anime"][data-theme="dark"] {
+  color-scheme:dark;
+
+  --md-primary:#FF9FCB;
+  --md-on-primary:#4A0A2B;
+  --md-primary-container:#6A1B47;
+  --md-on-primary-container:#FFD9EA;
+  --md-secondary:#CDBDFF;
+  --md-on-secondary:#33246A;
+  --md-secondary-container:#43367A;
+  --md-on-secondary-container:#EAE0FF;
+  --md-tertiary:#E3B2FF;
+  --md-on-tertiary:#3A0A5C;
+  --md-tertiary-container:#5E2585;
+  --md-on-tertiary-container:#F6E1FF;
+  --md-error:#FFB4B0;
+  --md-on-error:#680014;
+  --md-error-container:#8C1D2A;
+  --md-on-error-container:#FFDAD8;
+  --md-background:#17122B;
+  --md-on-background:#F4EAF8;
+  --md-surface:#1B1531;
+  --md-on-surface:#F4EAF8;
+  --md-surface-variant:#3D3358;
+  --md-on-surface-variant:#CFC0DD;
+  --md-outline:#9C8FB5;
+  --md-outline-variant:#463B66;
+  --md-surface-container-lowest:#120E22;
+  --md-surface-container-low:#1F1838;
+  --md-surface-container:#251D42;
+  --md-surface-container-high:#2E254F;
+  --md-surface-container-highest:#382E5C;
+  --md-inverse-surface:#F4EAF8;
+  --md-inverse-on-surface:#2A2142;
+
+  --bg:var(--md-background);
+  --fg:var(--md-on-surface);
+  --muted:var(--md-on-surface-variant);
+  --primary:var(--md-primary);
+  --primary-fg:var(--md-on-primary);
+  --primary-container:var(--md-primary-container);
+  --card:var(--md-surface-container-low);
+  --border:var(--md-outline-variant);
+  --chip:var(--md-surface-container-high);
+  --chip-hover:var(--md-surface-container-highest);
+  --danger:var(--md-error);
+
+  --accent:#62DDA6;   --free-bg:#123A2D;
+  --frueh:#FFD866;    --frueh-bg:#3A2E05;  --frueh-light:#B08A10;
+  --spaet:#FFA27D;    --spaet-bg:#47200F;  --spaet-light:#B5532E;
+  --nacht:#BBA8FF;    --nacht-bg:#2F2462;  --nacht-light:#6C58C4;
+  --hol:#0E2F4C;      --hol-b:#7FCBFF;
+  --anime-on-hol:#08263F;
+
+  --elev-1:0 2px 6px rgba(0,0,0,.35),0 0 0 1px rgba(255,159,203,.04);
+  --elev-2:0 4px 12px rgba(0,0,0,.40),0 0 10px rgba(255,159,203,.06);
+  --elev-3:0 8px 22px rgba(0,0,0,.45),0 0 14px rgba(255,159,203,.08);
+  --elev-4:0 10px 26px rgba(0,0,0,.48),0 0 16px rgba(255,159,203,.08);
+  --elev-5:0 14px 32px rgba(0,0,0,.50),0 0 18px rgba(255,159,203,.10);
+
+  --anime-verlauf-primaer:linear-gradient(135deg,#FF9FCB 0%,#C9B4FF 100%);  /* dunkle Schrift darauf ≥ 8:1 */
+  --anime-verlauf-zart:linear-gradient(135deg,#6A1B47 0%,#43367A 55%,#123A5C 100%);
+  --anime-verlauf-kopf:linear-gradient(100deg,#2A1C48 0%,#22204A 55%,#172A48 100%);
+  --anime-verlauf-nav:linear-gradient(180deg,#221A3E 0%,#1B1634 100%);
+  --anime-nav-aktiv:linear-gradient(135deg,#6A1B47 0%,#43367A 100%);
+  --anime-rand:#3E3266;
+  --anime-schatten-karte:0 6px 18px rgba(0,0,0,.38),0 0 12px rgba(255,159,203,.06);
+  --anime-schatten-knopf:0 3px 12px rgba(255,159,203,.30);
+  --anime-textschatten:0 0 10px rgba(255,159,203,.35);
+  --anime-overlay:rgba(8,5,20,.60);
+  --anime-dialog-hg:rgba(8,5,20,.58);
+
+  --anime-bluete:var(--anime-bluete-dunkel);
+  --anime-funkel:var(--anime-funkel-dunkel);
+  --anime-funkel-knopf:var(--anime-funkel-knopf-dunkel);
+  --anime-muster:var(--anime-muster-dunkel);
+  --anime-kopf:var(--anime-kopf-dunkel);
+}
+@media (prefers-color-scheme:dark) {
+  html[data-design="anime"][data-theme="system"] {
+    color-scheme:dark;
+
+    --md-primary:#FF9FCB;
+    --md-on-primary:#4A0A2B;
+    --md-primary-container:#6A1B47;
+    --md-on-primary-container:#FFD9EA;
+    --md-secondary:#CDBDFF;
+    --md-on-secondary:#33246A;
+    --md-secondary-container:#43367A;
+    --md-on-secondary-container:#EAE0FF;
+    --md-tertiary:#E3B2FF;
+    --md-on-tertiary:#3A0A5C;
+    --md-tertiary-container:#5E2585;
+    --md-on-tertiary-container:#F6E1FF;
+    --md-error:#FFB4B0;
+    --md-on-error:#680014;
+    --md-error-container:#8C1D2A;
+    --md-on-error-container:#FFDAD8;
+    --md-background:#17122B;
+    --md-on-background:#F4EAF8;
+    --md-surface:#1B1531;
+    --md-on-surface:#F4EAF8;
+    --md-surface-variant:#3D3358;
+    --md-on-surface-variant:#CFC0DD;
+    --md-outline:#9C8FB5;
+    --md-outline-variant:#463B66;
+    --md-surface-container-lowest:#120E22;
+    --md-surface-container-low:#1F1838;
+    --md-surface-container:#251D42;
+    --md-surface-container-high:#2E254F;
+    --md-surface-container-highest:#382E5C;
+    --md-inverse-surface:#F4EAF8;
+    --md-inverse-on-surface:#2A2142;
+
+    --bg:var(--md-background);
+    --fg:var(--md-on-surface);
+    --muted:var(--md-on-surface-variant);
+    --primary:var(--md-primary);
+    --primary-fg:var(--md-on-primary);
+    --primary-container:var(--md-primary-container);
+    --card:var(--md-surface-container-low);
+    --border:var(--md-outline-variant);
+    --chip:var(--md-surface-container-high);
+    --chip-hover:var(--md-surface-container-highest);
+    --danger:var(--md-error);
+
+    --accent:#62DDA6;   --free-bg:#123A2D;
+    --frueh:#FFD866;    --frueh-bg:#3A2E05;  --frueh-light:#B08A10;
+    --spaet:#FFA27D;    --spaet-bg:#47200F;  --spaet-light:#B5532E;
+    --nacht:#BBA8FF;    --nacht-bg:#2F2462;  --nacht-light:#6C58C4;
+    --hol:#0E2F4C;      --hol-b:#7FCBFF;
+    --anime-on-hol:#08263F;
+
+    --elev-1:0 2px 6px rgba(0,0,0,.35),0 0 0 1px rgba(255,159,203,.04);
+    --elev-2:0 4px 12px rgba(0,0,0,.40),0 0 10px rgba(255,159,203,.06);
+    --elev-3:0 8px 22px rgba(0,0,0,.45),0 0 14px rgba(255,159,203,.08);
+    --elev-4:0 10px 26px rgba(0,0,0,.48),0 0 16px rgba(255,159,203,.08);
+    --elev-5:0 14px 32px rgba(0,0,0,.50),0 0 18px rgba(255,159,203,.10);
+
+    --anime-verlauf-primaer:linear-gradient(135deg,#FF9FCB 0%,#C9B4FF 100%);
+    --anime-verlauf-zart:linear-gradient(135deg,#6A1B47 0%,#43367A 55%,#123A5C 100%);
+    --anime-verlauf-kopf:linear-gradient(100deg,#2A1C48 0%,#22204A 55%,#172A48 100%);
+    --anime-verlauf-nav:linear-gradient(180deg,#221A3E 0%,#1B1634 100%);
+    --anime-nav-aktiv:linear-gradient(135deg,#6A1B47 0%,#43367A 100%);
+    --anime-rand:#3E3266;
+    --anime-schatten-karte:0 6px 18px rgba(0,0,0,.38),0 0 12px rgba(255,159,203,.06);
+    --anime-schatten-knopf:0 3px 12px rgba(255,159,203,.30);
+    --anime-textschatten:0 0 10px rgba(255,159,203,.35);
+    --anime-overlay:rgba(8,5,20,.60);
+    --anime-dialog-hg:rgba(8,5,20,.58);
+
+    --anime-bluete:var(--anime-bluete-dunkel);
+    --anime-funkel:var(--anime-funkel-dunkel);
+    --anime-funkel-knopf:var(--anime-funkel-knopf-dunkel);
+    --anime-muster:var(--anime-muster-dunkel);
+    --anime-kopf:var(--anime-kopf-dunkel);
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   3. HINTERGRUND & DEKO
+   Zarte Kachel aus Blüten/Funkeln, scrollt normal mit
+   (kein background-attachment:fixed – das kostet beim
+   Scrollen in der WebView Leistung/Akku).
+   ═══════════════════════════════════════════════════════ */
+html[data-design="anime"] body {
+  background-color:var(--bg);
+  background-image:var(--anime-muster);
+  background-size:220px 220px;
+  background-repeat:repeat;
+}
+/* Vollbild-Ebenen („Alle Wecker“, Einrichtung) bekommen dasselbe Muster.
+   Nur Hintergrund – position/overflow/transform bleiben aus app.css. */
+html[data-design="anime"] .settings-overlay,
+html[data-design="anime"] .wiz-ov {
+  background-color:var(--bg);
+  background-image:var(--anime-muster);
+  background-size:220px 220px;
+}
+/* Links (Datenschutz) in Akzentfarbe statt Browser-Blau */
+html[data-design="anime"] a { color:var(--md-primary); font-weight:600; }
+/* Tipp-Hervorhebung der WebView sanft rosa statt grau-blau */
+html[data-design="anime"] body { -webkit-tap-highlight-color:rgba(244,154,193,.25); }
+
+
+/* ═══════════════════════════════════════════════════════
+   4. KOPF
+   ═══════════════════════════════════════════════════════ */
+html[data-design="anime"] header {
+  /* Blütenzweig rechts (vor dem Theme-Knopf), darunter Pastell-Verlauf */
+  background:var(--anime-kopf) no-repeat right 56px center / 96px 40px,
+             var(--anime-verlauf-kopf);
+  border-bottom:2px solid var(--anime-rand);
+  box-shadow:0 4px 14px rgba(181,48,111,.10);
+}
+html[data-design="anime"] .hdr-title {
+  font-weight:800; letter-spacing:.02em;
+  color:var(--md-primary);
+  text-shadow:var(--anime-textschatten);
+}
+html[data-design="anime"] .hdr-btns button.icon:hover { background:rgba(255,255,255,.35); }
+
+
+/* ═══════════════════════════════════════════════════════
+   5. KARTEN & ÜBERSCHRIFTEN („Bubble“-Karten)
+   ═══════════════════════════════════════════════════════ */
+html[data-design="anime"] .card {
+  border:1.5px solid var(--anime-rand);
+  border-radius:var(--shape-lg);
+  /* kleine Blüte in der Ecke oben rechts, sehr dezent */
+  background:var(--anime-bluete) no-repeat right 12px top 12px / 16px 16px,
+             var(--card);
+  box-shadow:var(--anime-schatten-karte);
+}
+html[data-design="anime"] .ctitle {
+  font-weight:800; letter-spacing:.02em;
+  color:var(--md-primary);
+}
+/* Bereichs-Überschriften mit Funkeln dahinter */
+html[data-design="anime"] .tabtitle {
+  font-weight:800; letter-spacing:.03em;
+  color:var(--md-primary);
+  text-shadow:var(--anime-textschatten);
+}
+html[data-design="anime"] .tabtitle::after {
+  content:""; display:inline-block; width:.75em; height:.75em;
+  margin-left:.35em; vertical-align:.05em;
+  background:var(--anime-funkel) no-repeat center / contain;
+}
+html[data-design="anime"] .mtitle {
+  font-weight:800; letter-spacing:.02em; color:var(--md-primary);
+}
+/* Schrittnummern 1–4 als Bonbon-Kreis */
+html[data-design="anime"] .stepno {
+  background:var(--anime-verlauf-primaer); color:var(--md-on-primary);
+  box-shadow:0 2px 6px rgba(181,48,111,.25);
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   6. KNÖPFE, SCHALTER, CHIPS, EINGABEFELDER
+   ═══════════════════════════════════════════════════════ */
+/* kurzer „Hüpfer“ beim Antippen (nur Transform, kein Layout) */
+html[data-design="anime"] button {
+  transition:background var(--motion-duration-short) var(--motion-easing-standard),
+             box-shadow var(--motion-duration-short) var(--motion-easing-standard),
+             color var(--motion-duration-short) var(--motion-easing-standard),
+             transform 120ms var(--motion-easing-standard);
+}
+html[data-design="anime"] button:active { transform:scale(.96); }
+html[data-design="anime"] button:focus-visible {
+  outline:2px solid var(--md-primary); outline-offset:2px;
+}
+/* Gefüllt: Bonbon-Verlauf Rosa → Lavendel mit farbigem Schatten */
+html[data-design="anime"] button.primary {
+  background:var(--anime-verlauf-primaer); color:var(--md-on-primary);
+  box-shadow:var(--anime-schatten-knopf);
+}
+html[data-design="anime"] button.danger {
+  background:var(--md-error); color:var(--md-on-error);
+  box-shadow:0 3px 10px rgba(179,38,30,.25);
+}
+/* kleine Knöpfe ebenfalls als Pille (gleiche Maße, nur runder) */
+html[data-design="anime"] button.sm { border-radius:var(--shape-full); }
+/* Text-Knöpfe ohne Klasse (z. B. Monat vor/zurück, „Alle Wecker ›“) */
+html[data-design="anime"] button:not(.primary):not(.danger):not(.icon):not(.navbtn):not(.tchip):not(.tsdigits):not(.sftbtn):not(.pick):not(.wiz-tpl):not(.adel) {
+  color:var(--md-primary);
+}
+html[data-design="anime"] .sbtns button:not(.primary):not(.danger),
+html[data-design="anime"] #wizPrev {
+  border:1.5px solid var(--anime-rand); background:var(--md-surface-container-lowest);
+  color:var(--md-primary);
+}
+/* Test-Alarm-Knopf hat in index.html feste Inline-Farben (Weiß auf Orange,
+   zu wenig Kontrast) – im Anime-Design Pfirsich-Verlauf mit dunkler Schrift */
+html[data-design="anime"] #testAlarmBtn {
+  background:linear-gradient(135deg,#FFC9A8 0%,#FFE08A 100%) !important;
+  color:#4A2200 !important; border-color:transparent !important;
+  box-shadow:0 3px 10px rgba(194,70,31,.22);
+}
+
+/* Schalter: Spur im Verlauf, Knopf mit kleinem Funkeln */
+html[data-design="anime"] .sl {
+  background:var(--md-surface-container-highest);
+  border-color:var(--md-outline);
+}
+html[data-design="anime"] .sw input:checked + .sl {
+  background:var(--anime-verlauf-primaer);
+  border-color:transparent;
+  box-shadow:0 2px 8px rgba(181,48,111,.25);
+}
+html[data-design="anime"] .sw input:checked + .sl::before {
+  background:var(--anime-funkel-knopf) no-repeat center / 14px 14px, var(--md-on-primary);
+  box-shadow:0 2px 5px rgba(74,13,45,.25);
+}
+html[data-design="anime"] .sw input:focus-visible + .sl {
+  outline:2px solid var(--md-primary); outline-offset:2px;
+}
+
+/* Auswahl-Chips (Wochentage, Art im Tages-Sheet) */
+html[data-design="anime"] .sftbtn {
+  /* 18px statt voller Pille: einzeilig wirkt es wie eine Pille, zweizeilige
+     Chips („Wie Plan“ auf schmalen Handys) werden kein runder Klecks */
+  border-radius:var(--shape-md);
+  border:1.5px solid var(--anime-rand);
+  background:var(--md-surface-container-lowest);
+}
+html[data-design="anime"] .sftbtn.sftbtn-active {
+  background:var(--anime-verlauf-primaer); color:var(--md-on-primary);
+  border-color:transparent; box-shadow:var(--anime-schatten-knopf);
+}
+
+/* Uhrzeit-Chip */
+html[data-design="anime"] .tchip {
+  border:1.5px solid var(--anime-rand);
+  border-radius:var(--shape-md);
+  background:var(--md-surface-container-lowest);
+  color:var(--md-primary);
+  box-shadow:0 2px 8px rgba(181,48,111,.10);
+}
+html[data-design="anime"] .tchip:active { background:var(--md-primary-container); }
+
+/* Eingabefelder & Auswahllisten */
+html[data-design="anime"] input:not([type="checkbox"]),
+html[data-design="anime"] select {
+  border-radius:var(--shape-sm);
+  border-color:var(--anime-rand);
+  background-color:var(--md-surface-container-lowest);
+}
+html[data-design="anime"] input:focus,
+html[data-design="anime"] select:focus {
+  border-color:var(--md-primary);
+  box-shadow:0 0 0 3px var(--md-primary-container);
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   7. KALENDER & WOCHENRHYTHMUS
+   Zellen sind schmal: nur Farben/Rundungen/Schatten ändern,
+   keine Abstände. Kategorien:
+     Frei = Mint · Früh = Zitrone · Spät = Pfirsich · Nacht = Lavendel
+     Feiertag = Himmelblau · Ausnahme = Flieder-Ring + Pille
+     Heute = Sakura-Rahmen + rosa Fläche
+   ═══════════════════════════════════════════════════════ */
+html[data-design="anime"] .cgrid {
+  border-radius:22px;
+  /* Ring über box-shadow statt border → Breite bleibt exakt gleich */
+  box-shadow:0 0 0 2px var(--anime-rand), var(--elev-3);
+}
+/* Wochentag-Kopf als ruhige Lavendel-Fläche (ein Verlauf je Zelle wirkte fleckig) */
+html[data-design="anime"] .dow {
+  background:var(--md-secondary-container);
+  color:var(--muted); font-weight:700;
+}
+html[data-design="anime"] .kw { background:var(--md-surface-container); }
+/* Heute: Sakura-Rahmen (wie klassisch über outline, ohne Layoutänderung) */
+html[data-design="anime"] .cday.today {
+  outline:3px solid var(--md-primary); outline-offset:-3px;
+  background:var(--md-primary-container);
+}
+html[data-design="anime"] .dtbadge { color:var(--md-primary); font-weight:800; }
+html[data-design="anime"] .dnum.tc { color:var(--md-primary); font-weight:800; }
+/* Schicht-Pillen in der Zelle: runder */
+html[data-design="anime"] .dpill { border-radius:var(--shape-full); }
+/* Feiertags-Pille: Himmelblau mit passender Schrift */
+html[data-design="anime"] .hp { background:var(--hol-b); color:var(--anime-on-hol); }
+/* Ausnahme-Pille: Flieder */
+html[data-design="anime"] .ep { background:var(--md-tertiary); color:var(--md-on-tertiary); }
+/* Wecker-Punkt als kleines Funkeln (4-zackig) statt Kreis – absolut
+   positioniert, verschiebt nichts */
+html[data-design="anime"] .aind {
+  width:10px; height:10px; top:4px; right:4px; border-radius:0;
+  background:var(--md-primary);
+  -webkit-clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);
+  clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);
+}
+@media (max-width:420px) {
+  html[data-design="anime"] .aind { width:9px; height:9px; top:3px; right:3px; }
+}
+
+/* Wochenrhythmus-Raster */
+html[data-design="anime"] .pday {
+  border-radius:10px;   /* Zellen sind schmal – nicht runder, sonst wird Text an den Ecken angeschnitten */
+  border-color:var(--anime-rand);
+}
+html[data-design="anime"] .pday:active { transform:scale(.92); }   /* wie app.css, sonst greift der allgemeine Knopf-Hüpfer */
+html[data-design="anime"] .pday.free  { border-color:var(--accent); }
+html[data-design="anime"] .pday.frueh { border-color:var(--frueh); }
+html[data-design="anime"] .pday.spaet { border-color:var(--spaet); }
+html[data-design="anime"] .pday.nacht { border-color:var(--nacht); }
+/* Legende: runde Farbpunkte; Schnellauswahl als Pille */
+html[data-design="anime"] .ld { border-radius:50%; }
+html[data-design="anime"] .legend { border-top:1.5px dashed var(--anime-rand); }
+html[data-design="anime"] .li.pick { border-color:var(--anime-rand); }
+html[data-design="anime"] .li.pick.active {
+  border-color:var(--md-primary);
+  background:var(--md-primary-container); color:var(--md-on-primary-container);
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   8. NAVIGATION UNTEN
+   ═══════════════════════════════════════════════════════ */
+html[data-design="anime"] .bottomnav {
+  background:var(--anime-verlauf-nav);
+  border-top:2px solid var(--anime-rand);
+  border-radius:22px 22px 0 0;
+  box-shadow:0 -4px 16px rgba(181,48,111,.10);
+}
+html[data-design="anime"] .navbtn { color:var(--muted); }
+html[data-design="anime"] .navbtn.active { color:var(--fg); font-weight:700; }
+html[data-design="anime"] .navbtn.active .navico {
+  background:var(--anime-nav-aktiv);
+  color:var(--md-primary);
+  box-shadow:0 2px 8px rgba(181,48,111,.18);
+}
+/* kein Hüpfen der ganzen Navigation, nur das Symbol */
+html[data-design="anime"] .navbtn:active { transform:none; }
+html[data-design="anime"] .navbtn .navico {
+  transition:background var(--motion-duration-short) var(--motion-easing-standard),
+             transform 120ms var(--motion-easing-standard);
+}
+html[data-design="anime"] .navbtn:active .navico { transform:scale(.92); }
+
+
+/* ═══════════════════════════════════════════════════════
+   9. SHEETS, ZEIT-FENSTER, DIALOGE, EINRICHTUNG
+   WICHTIG: nur Farben/Rundungen/Schatten – position, overflow,
+   transform und .open-Mechanik aus app.css bleiben unangetastet.
+   ═══════════════════════════════════════════════════════ */
+html[data-design="anime"] .overlay { background:var(--anime-overlay); }
+html[data-design="anime"] .sheet {
+  border-radius:var(--shape-xl) var(--shape-xl) 0 0;
+  /* Blüte + Funkeln in den oberen Ecken */
+  background:var(--anime-bluete) no-repeat right 20px top 18px / 20px 20px,
+             var(--anime-funkel) no-repeat left 22px top 20px / 12px 12px,
+             var(--md-surface-container-low);
+  border-top:2px solid var(--anime-rand);
+  box-shadow:var(--elev-4);
+}
+html[data-design="anime"] .shandle {
+  background:var(--anime-verlauf-primaer); opacity:.75;
+}
+html[data-design="anime"] .sdate {
+  font-weight:800; letter-spacing:.02em; color:var(--md-primary);
+}
+/* links kleine Rundung, sonst bildet der dicke Farbrand eine Sichel */
+html[data-design="anime"] .sbar { border-radius:6px var(--shape-md) var(--shape-md) 6px; }
+html[data-design="anime"] .sinfo {
+  border-radius:var(--shape-md);
+  background:var(--md-surface-container);
+  border:1px dashed var(--anime-rand);
+}
+
+/* Zeit-Fenster: große Uhrzeit als Pastell-Bubble */
+html[data-design="anime"] .tsdigits {
+  background:var(--anime-verlauf-zart);
+  color:var(--md-on-secondary-container);
+  border-radius:var(--shape-xl);
+  box-shadow:var(--anime-schatten-karte);
+}
+html[data-design="anime"] .tsquick button {
+  border-color:var(--anime-rand);
+  background:var(--md-surface-container-lowest);
+  color:var(--md-primary);
+}
+html[data-design="anime"] .tsquick button:active { background:var(--md-primary-container); }
+
+/* Bestätigungsdialog */
+html[data-design="anime"] .cdlg-bg { background:var(--anime-dialog-hg); }
+html[data-design="anime"] .cdlg {
+  border-radius:var(--shape-xl);
+  border:2px solid var(--anime-rand);
+  background:var(--anime-bluete) no-repeat right 16px top 14px / 18px 18px,
+             var(--md-surface-container-high);
+  box-shadow:var(--elev-5);
+}
+
+/* Geführte Einrichtung */
+html[data-design="anime"] .wiz-title {
+  font-weight:800; letter-spacing:.02em; color:var(--md-primary);
+  text-shadow:var(--anime-textschatten);
+}
+html[data-design="anime"] .wiz-bar span { border-radius:var(--shape-full); }
+html[data-design="anime"] .wiz-bar span.on { background:var(--anime-verlauf-primaer); }
+html[data-design="anime"] .wiz-info,
+html[data-design="anime"] .wiz-stat {
+  background:var(--anime-verlauf-zart);
+  color:var(--md-on-secondary-container);
+}
+html[data-design="anime"] button.wiz-tpl,
+html[data-design="anime"] .wiz-shift,
+html[data-design="anime"] .wiz-sum {
+  border-color:var(--anime-rand);
+  border-radius:var(--shape-md);
+}
+html[data-design="anime"] button.wiz-tpl.active {
+  border-color:var(--md-primary);
+  background:var(--md-primary-container); color:var(--md-on-primary-container);
+}
+html[data-design="anime"] button.wiz-tpl.active span { color:var(--md-on-primary-container); }
+html[data-design="anime"] .wiz-tip { border-color:var(--anime-rand); border-style:dashed; }
+html[data-design="anime"] .wiz-nav { border-top:2px solid var(--anime-rand); }
+
+
+/* ═══════════════════════════════════════════════════════
+   10. SONSTIGES (Toast, Listen, Hinweise, Bewegung)
+   ═══════════════════════════════════════════════════════ */
+/* Toast/Snackbar als weiche Sprechblase (Position/Animation wie app.css) */
+html[data-design="anime"] #toast {
+  border-radius:var(--shape-md);
+  box-shadow:var(--elev-4);
+  font-weight:600;
+}
+
+/* Nächster Wecker: Pastell-Verlauf Lavendel → Himmelblau */
+html[data-design="anime"] .nextalarm {
+  background:linear-gradient(135deg,var(--md-secondary-container) 0%,var(--hol) 100%);
+  color:var(--md-on-secondary-container);
+  border-radius:var(--shape-md);
+  box-shadow:var(--anime-schatten-karte);
+}
+html[data-design="anime"] .nextalarm b { font-weight:700; }
+html[data-design="anime"] .permwarn { border-radius:var(--shape-md); }
+
+/* Wecker-Listen */
+html[data-design="anime"] .arow,
+html[data-design="anime"] .wkrow { border-bottom-color:var(--anime-rand); }
+html[data-design="anime"] .arow .at { color:var(--md-primary); font-weight:700; }
+html[data-design="anime"] #alarmBox {
+  border:1.5px solid var(--anime-rand);
+  border-radius:var(--shape-md);
+  background:var(--md-surface-container-lowest);
+}
+html[data-design="anime"] .amonth {
+  border:1.5px solid var(--anime-rand);
+  border-radius:var(--shape-md);
+  box-shadow:var(--elev-1);
+}
+html[data-design="anime"] .amonth > summary { color:var(--md-primary); }
+html[data-design="anime"] .amonth > summary::after { color:var(--md-primary); }
+html[data-design="anime"] .amonth .adel { border-color:var(--anime-rand); }
+html[data-design="anime"] .exitem {
+  border-radius:var(--shape-md);
+  border:1px solid var(--anime-rand);
+}
+
+/* Bewegung reduzieren: Anime-Design komplett ohne Übergänge/Animationen.
+   (Der Toast verschwindet dann ohne Ausblenden – JS blendet ihn nach
+   ~3 s per Klasse aus, das funktioniert weiterhin.) */
+@media (prefers-reduced-motion:reduce) {
+  html[data-design="anime"] *,
+  html[data-design="anime"] *::before,
+  html[data-design="anime"] *::after {
+    transition:none !important;
+    animation:none !important;
+  }
+  html[data-design="anime"] button:active,
+  html[data-design="anime"] .pday:active,
+  html[data-design="anime"] .navbtn:active .navico { transform:none; }
+}

@@ -1,4 +1,9 @@
 <resources>
-    <string name="app_name">Schichtwecker</string>
+    <string name="app_name" translatable="false">Schichtwecker</string>
+    <!-- Texte, die Android selbst anzeigt (Widget-Auswahl) – folgen der Systemsprache.
+         Alles andere kommt aus assets/lang/<code>.json (I18n.kt). -->
     <string name="widget_description">Heutige Schicht und nächster Wecker</string>
+    <string name="widget_preview_today">Heute: Früh</string>
+    <string name="widget_preview_tomorrow">Morgen: Spät</string>
+    <string name="widget_preview_alarm">⏰ morgen 05:30 – Früh</string>
 </resources>

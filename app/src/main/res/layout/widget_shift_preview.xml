@@ -10,7 +10,7 @@
 
     <TextView
         android:id="@+id/widget_today"
-        android:text="Heute: Früh"
+        android:text="@string/widget_preview_today"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textColor="@color/widget_fg"
@@ -21,7 +21,7 @@
 
     <TextView
         android:id="@+id/widget_tomorrow"
-        android:text="Morgen: Spät"
+        android:text="@string/widget_preview_tomorrow"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
@@ -32,7 +32,7 @@
 
     <TextView
         android:id="@+id/widget_alarm"
-        android:text="⏰ morgen 05:30 – Früh"
+        android:text="@string/widget_preview_alarm"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"

@@ -69,9 +69,11 @@ class AlarmActivity : ComponentActivity() {
 
         setContent {
             val ringing by AlarmService.ringing.collectAsState()
+            val snooze = ringing?.snoozeMinutes ?: AlarmOptions.snoozeMinutes(this)
             AlarmScreen(
-                message = ringing?.message ?: fallbackMessage ?: "Wecker!",
-                snoozeMinutes = ringing?.snoozeMinutes ?: AlarmOptions.snoozeMinutes(this),
+                message = ringing?.message ?: fallbackMessage ?: I18n.t(this, "native.alarm.fallbackTitle"),
+                dismissLabel = I18n.t(this, "native.alarm.dismiss").uppercase(I18n.locale(this)),
+                snoozeLabel = I18n.plural(this, "native.alarm.snooze", snooze),
                 onDismiss = { sendAction(AlarmService.ACTION_DISMISS) },
                 onSnooze = { sendAction(AlarmService.ACTION_SNOOZE) }
             )
@@ -95,7 +97,13 @@ class AlarmActivity : ComponentActivity() {
 }
 
 @Composable
-fun AlarmScreen(message: String, snoozeMinutes: Int, onDismiss: () -> Unit, onSnooze: () -> Unit) {
+fun AlarmScreen(
+    message: String,
+    dismissLabel: String,
+    snoozeLabel: String,
+    onDismiss: () -> Unit,
+    onSnooze: () -> Unit
+) {
     val pulse = rememberInfiniteTransition(label = "pulse")
     val scale by pulse.animateFloat(
         initialValue = 0.95f,
@@ -180,7 +188,7 @@ fun AlarmScreen(message: String, snoozeMinutes: Int, onDismiss: () -> Unit, onSn
                 shape = CircleShape,
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFBA1A1A))
             ) {
-                Text("AUS", fontSize = 20.sp, fontWeight = FontWeight.W500, letterSpacing = (0.5).sp)
+                Text(dismissLabel, fontSize = 20.sp, fontWeight = FontWeight.W500, letterSpacing = (0.5).sp)
             }
 
             OutlinedButton(
@@ -193,7 +201,7 @@ fun AlarmScreen(message: String, snoozeMinutes: Int, onDismiss: () -> Unit, onSn
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFB8C5FF)),
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF45464F))
             ) {
-                Text("Schlummern  $snoozeMinutes Min", fontSize = 14.sp, fontWeight = FontWeight.W500)
+                Text(snoozeLabel, fontSize = 14.sp, fontWeight = FontWeight.W500)
             }
         }
     }

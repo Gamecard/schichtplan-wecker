@@ -95,14 +95,14 @@ class MainActivity : ComponentActivity() {
                 it, Intent.FLAG_GRANT_READ_URI_PERMISSION
             )
             val prefs = getRingtonePrefs(this)
-            val fileName = getFileNameFromUri(this, it) ?: "Eigener Klingelton"
+            val fileName = getFileNameFromUri(this, it) ?: I18n.t(this, "native.ringtone.customName")
             prefs.edit()
                 .putString(KEY_RINGTONE_URI, it.toString())
                 .putString(KEY_RINGTONE_NAME, fileName)
                 .putBoolean(KEY_USE_CUSTOM_RINGTONE, true)
                 .apply()
             Log.d("SchichtplanAlarm", "Klingelton gespeichert: $fileName ($it)")
-            toast("Klingelton gesetzt: $fileName")
+            toast(I18n.t(this, "native.toast.ringtoneSet", "name" to fileName))
             pendingWebView?.let { wv ->
                 wv.post {
                     val safeName = fileName
@@ -137,41 +137,27 @@ class MainActivity : ComponentActivity() {
             toast(successText)
         } catch (e: Exception) {
             Log.e("SchichtplanAlarm", "Datei speichern fehlgeschlagen", e)
-            toast("Datei konnte nicht gespeichert werden")
+            toast(I18n.t(this, "native.toast.fileSaveFailed"))
         }
     }
 
     // CreateDocument legt den MIME-Typ bei der Registrierung fest → ein Dialog je Dateiart
     private val profileSaver = registerForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
-    ) { uri: Uri? -> writePendingExport(uri, "Profil gespeichert") }
+    ) { uri: Uri? -> writePendingExport(uri, I18n.t(this, "native.toast.profileSaved")) }
 
     private val calendarSaver = registerForActivityResult(
         ActivityResultContracts.CreateDocument("text/calendar")
-    ) { uri: Uri? -> writePendingExport(uri, "Kalender-Datei gespeichert") }
+    ) { uri: Uri? -> writePendingExport(uri, I18n.t(this, "native.toast.calendarSaved")) }
 
     private val profileOpener = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         if (uri == null) return@registerForActivityResult
-        val text = try {
-            contentResolver.openInputStream(uri)?.use { input ->
-                // Profile sind wenige KB groß – alles über 1 MB ist keine Profil-Datei
-                val out = java.io.ByteArrayOutputStream()
-                val buf = ByteArray(8192)
-                while (out.size() <= 1_000_000) {
-                    val n = input.read(buf)
-                    if (n < 0) break
-                    out.write(buf, 0, n)
-                }
-                if (out.size() > 1_000_000) null else out.toString("UTF-8")
-            }
-        } catch (e: Exception) {
-            Log.e("SchichtplanAlarm", "Profil lesen fehlgeschlagen", e)
-            null
-        }
+        // Profile sind wenige KB groß – alles über 1 MB ist keine Profil-Datei
+        val text = readLimited(uri, 1_000_000)
         if (text == null) {
-            toast("Datei konnte nicht gelesen werden")
+            toast(I18n.t(this, "native.toast.fileReadFailed"))
             return@registerForActivityResult
         }
         pendingWebView?.let { wv ->
@@ -184,13 +170,58 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /** Liest höchstens [maxBytes] aus der Datei; null bei Fehler oder zu großer Datei. */
+    private fun readLimited(uri: Uri, maxBytes: Int): String? = try {
+        contentResolver.openInputStream(uri)?.use { input ->
+            val out = java.io.ByteArrayOutputStream()
+            val buf = ByteArray(8192)
+            while (out.size() <= maxBytes) {
+                val n = input.read(buf)
+                if (n < 0) break
+                out.write(buf, 0, n)
+            }
+            if (out.size() > maxBytes) null else out.toString("UTF-8")
+        }
+    } catch (e: Exception) {
+        Log.e("SchichtplanAlarm", "Datei lesen fehlgeschlagen", e)
+        null
+    }
+
+    /* ── Eigene Sprachdatei: prüfen, speichern, Ergebnis per onLanguageImported(ok, name) ── */
+    private val languageOpener = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        // Abbrechen im Dialog = keine Rückmeldung (wie beim Profil-Import)
+        if (uri == null) return@registerForActivityResult
+        val name = readLimited(uri, I18n.MAX_FILE_BYTES)?.let { I18n.importCustom(this, it) }
+        if (name == null) Log.w("SchichtplanAlarm", "Sprachdatei abgelehnt (kein gültiges Sprach-JSON)")
+        pendingWebView?.let { wv ->
+            wv.post {
+                val js = if (name != null) "true,${JSONObject.quote(name)}" else "false,\"\""
+                wv.evaluateJavascript(
+                    "if(typeof onLanguageImported==='function')onLanguageImported($js);",
+                    null
+                )
+            }
+        }
+    }
+
+    fun launchLanguageImport() {
+        try {
+            languageOpener.launch(arrayOf("application/json", "text/plain", "*/*"))
+        } catch (e: Exception) {
+            Log.e("SchichtplanAlarm", "Öffnen-Dialog fehlgeschlagen", e)
+            toast(I18n.t(this, "native.toast.fileDialogUnavailable"))
+        }
+    }
+
     fun launchExport(text: String, fileName: String, mimeType: String) {
         pendingExportText = text
         try {
             (if (mimeType == "text/calendar") calendarSaver else profileSaver).launch(fileName)
         } catch (e: Exception) {
             Log.e("SchichtplanAlarm", "Speichern-Dialog fehlgeschlagen", e)
-            toast("Datei-Dialog nicht verfügbar")
+            toast(I18n.t(this, "native.toast.fileDialogUnavailable"))
         }
     }
 
@@ -199,7 +230,7 @@ class MainActivity : ComponentActivity() {
             profileOpener.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
         } catch (e: Exception) {
             Log.e("SchichtplanAlarm", "Öffnen-Dialog fehlgeschlagen", e)
-            toast("Datei-Dialog nicht verfügbar")
+            toast(I18n.t(this, "native.toast.fileDialogUnavailable"))
         }
     }
 
@@ -270,18 +301,14 @@ class MainActivity : ComponentActivity() {
         if (!nm.canUseFullScreenIntent()) {
             Log.w("SchichtplanAlarm", "USE_FULL_SCREEN_INTENT not granted")
             AlertDialog.Builder(this)
-                .setTitle("Vollbild-Wecker erlauben")
-                .setMessage(
-                    "Damit der Wecker auch bei gesperrtem Bildschirm als Vollbild erscheint, " +
-                    "braucht die App die Berechtigung \u201EVollbild-Benachrichtigungen\u201C. " +
-                    "Ohne sie klingelt der Wecker trotzdem, zeigt sich aber nur als Benachrichtigung."
-                )
-                .setPositiveButton("Einstellungen \u00F6ffnen") { _, _ ->
+                .setTitle(I18n.t(this, "native.fullscreen.title"))
+                .setMessage(I18n.t(this, "native.fullscreen.message"))
+                .setPositiveButton(I18n.t(this, "native.fullscreen.openSettings")) { _, _ ->
                     startActivity(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
                         data = "package:$packageName".toUri()
                     })
                 }
-                .setNegativeButton("Sp\u00E4ter", null)
+                .setNegativeButton(I18n.t(this, "native.fullscreen.later"), null)
                 .show()
         }
     }
@@ -291,7 +318,7 @@ class MainActivity : ComponentActivity() {
             ringtonePicker.launch(arrayOf("audio/*"))
         } catch (e: Exception) {
             Log.e("SchichtplanAlarm", "Ringtone picker fehlgeschlagen", e)
-            toast("Datei-Auswahl nicht verfügbar")
+            toast(I18n.t(this, "native.toast.filePickerUnavailable"))
         }
     }
 }
@@ -302,7 +329,11 @@ class WebAppInterface(private val mContext: Context, private val activity: MainA
         const val STATE_PREFS = "app_state"
         const val STATE_KEY = "state"
         const val PRIVACY_POLICY_URL = "https://gamecard.github.io/schichtplan-wecker/datenschutz.html"
+        /** Englische Fassung für alle Sprachen außer Deutsch. */
+        const val PRIVACY_POLICY_URL_EN = "https://gamecard.github.io/schichtplan-wecker/privacy.html"
     }
+
+    private fun tr(key: String, vararg args: Pair<String, Any?>) = I18n.t(mContext, key, *args)
 
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -337,17 +368,21 @@ class WebAppInterface(private val mContext: Context, private val activity: MainA
         silent: Boolean
     ): Boolean {
         Log.d("SchichtplanAlarm", "setAlarmForDate: $day.$month.$year $hour:$minute key=$alarmKey silent=$silent")
-        val time = String.format(Locale.GERMAN, "%02d:%02d", hour, minute)
-        val dayText = String.format(Locale.GERMAN, "%02d.%02d.%04d", day, month, year)
+        val time = String.format(Locale.ROOT, "%02d:%02d", hour, minute)
+        val dayText = I18n.formatDate(
+            mContext, "native.format.date",
+            java.util.Calendar.getInstance().apply { clear(); set(year, month - 1, day) }
+        )
         val ok = AlarmScheduler.schedule(mContext, alarmKey, year, month, day, hour, minute, message)
         if (!silent) {
             if (ok) {
                 val millis = AlarmStore.get(mContext, alarmKey)?.millis ?: 0L
                 val diffMin = (millis - System.currentTimeMillis()) / 60_000
-                val diffText = if (diffMin < 60) "$diffMin Min." else "${diffMin / 60} Std. ${diffMin % 60} Min."
-                toast("\u23F0 Wecker: $dayText $time (in $diffText)")
+                val diffText = if (diffMin < 60) I18n.plural(mContext, "native.duration.minutes", diffMin)
+                else tr("native.duration.hoursMinutes", "h" to diffMin / 60, "m" to diffMin % 60)
+                toast(tr("native.toast.alarmSet", "date" to dayText, "time" to time, "duration" to diffText))
             } else {
-                toast("Wecker $time Uhr am $dayText konnte nicht gesetzt werden (Vergangenheit?)")
+                toast(tr("native.toast.alarmFailed", "date" to dayText, "time" to time))
             }
         }
         return ok
@@ -464,9 +499,9 @@ class WebAppInterface(private val mContext: Context, private val activity: MainA
         Log.d("SchichtplanAlarm", "testAlarm() aufgerufen – Alarm in 15 Sekunden")
         val ok = AlarmScheduler.scheduleAt(
             mContext, "test-alarm", System.currentTimeMillis() + 15_000L,
-            "TEST \u2013 Der Wecker funktioniert!"
+            tr("native.alarm.testMessage")
         )
-        toast(if (ok) "\u23F0 TEST-Wecker in 15 Sekunden!" else "Fehler: Wecker konnte nicht geplant werden")
+        toast(if (ok) tr("native.toast.testAlarm") else tr("native.toast.testAlarmFailed"))
     }
 
     @JavascriptInterface
@@ -508,17 +543,55 @@ class WebAppInterface(private val mContext: Context, private val activity: MainA
         mainHandler.post { activity.launchProfileImport() }
     }
 
-    /** Öffnet die Datenschutzerklärung im Browser (feste Adresse, kein Internet in der App nötig). */
+    /**
+     * Öffnet die Datenschutzerklärung im Browser (feste Adresse, kein Internet in der App nötig).
+     * Deutsch → datenschutz.html, jede andere Sprache → englische Fassung privacy.html.
+     */
     @JavascriptInterface
     @Keep
     fun openPrivacyPolicy() {
+        val url = if (I18n.baseLanguage(mContext) == "de") PRIVACY_POLICY_URL else PRIVACY_POLICY_URL_EN
         mainHandler.post {
             try {
-                activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PRIVACY_POLICY_URL)))
+                activity.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
             } catch (_: Exception) {
-                toast("Kein Browser gefunden: $PRIVACY_POLICY_URL")
+                toast(tr("native.toast.noBrowser", "url" to url))
             }
         }
+    }
+
+    /* ── Sprache ── */
+
+    /** JSON-Array `[{"code":"de","name":"Deutsch"}, …]`, plus `{"code":"custom",…}` nach einem Import. */
+    @JavascriptInterface
+    @Keep
+    fun listLanguages(): String = I18n.listLanguagesJson(mContext)
+
+    /** Inhalt der Sprachdatei (eingebaut oder "custom"); "" wenn unbekannt oder Code unzulässig. */
+    @JavascriptInterface
+    @Keep
+    fun getLanguageFile(code: String): String = I18n.languageFile(mContext, code)
+
+    /** "auto" (Systemsprache), "custom" oder ein Sprachcode. */
+    @JavascriptInterface
+    @Keep
+    fun getLanguageSetting(): String = I18n.languageSetting(mContext)
+
+    /** Speichert die Sprache; Benachrichtigungskanal und Widget folgen sofort. */
+    @JavascriptInterface
+    @Keep
+    fun setLanguageSetting(code: String): Boolean = I18n.setLanguageSetting(mContext, code)
+
+    /** Sprache des Systems, z. B. "de" (für „automatisch“). */
+    @JavascriptInterface
+    @Keep
+    fun getSystemLanguage(): String = I18n.systemLanguage()
+
+    /** Datei-Dialog für eine eigene Sprachdatei; Ergebnis per onLanguageImported(ok, name). */
+    @JavascriptInterface
+    @Keep
+    fun importLanguageFile() {
+        mainHandler.post { activity.launchLanguageImport() }
     }
 
     @JavascriptInterface
@@ -529,7 +602,7 @@ class WebAppInterface(private val mContext: Context, private val activity: MainA
             .remove(MainActivity.KEY_RINGTONE_URI)
             .remove(MainActivity.KEY_RINGTONE_NAME)
             .apply()
-        toast("Klingelton zurückgesetzt auf Standard")
+        toast(tr("native.toast.ringtoneReset"))
     }
 }
 

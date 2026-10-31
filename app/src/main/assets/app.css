@@ -510,7 +510,10 @@ label {
 .dtbadge {
   font-size:.55rem; font-weight:700; color:var(--md-primary);
   text-transform:uppercase; letter-spacing:.08em; line-height:1; margin-bottom:1px;
+  max-width:100%; overflow:hidden; white-space:nowrap;
 }
+/* lange Wörter (z. B. ru „СЕГОДНЯ“) ohne Sperrung, damit sie in die schmale Zelle passen */
+html[lang="ru"] .dtbadge { letter-spacing:0; }
 .dpill {
   font-size:.6rem; padding:2px 6px; border-radius:var(--shape-xs);
   font-weight:600; margin-top:auto; white-space:nowrap;

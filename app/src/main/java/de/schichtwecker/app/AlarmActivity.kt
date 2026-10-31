@@ -56,6 +56,23 @@ import java.util.Locale
 
 class AlarmActivity : ComponentActivity() {
 
+    companion object {
+        /** true, solange der Wecker-Bildschirm im Vordergrund ist (für den Tonstart im AlarmService). */
+        @Volatile var isVisible = false
+            private set
+    }
+
+    override fun onResume() {
+        super.onResume()
+        isVisible = true
+        AlarmService.onAlarmScreenVisible()
+    }
+
+    override fun onPause() {
+        isVisible = false
+        super.onPause()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d("SchichtplanAlarm", "AlarmActivity.onCreate()")

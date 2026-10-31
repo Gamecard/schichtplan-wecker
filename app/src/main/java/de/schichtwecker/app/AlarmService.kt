@@ -7,6 +7,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.os.Handler
@@ -41,6 +43,18 @@ class AlarmService : Service() {
         private var notificationCounter = 0
         private const val AUTO_DISMISS_MS = 15 * 60 * 1000L
         private const val RISING_START = 0.05f
+        /** Spätester Tonstart, falls der Wecker-Bildschirm nicht erscheint (z. B. Handy in Benutzung). */
+        private const val SOUND_FALLBACK_MS = 1500L
+
+        /** Laufender Dienst – damit [onAlarmScreenVisible] den Ton ohne Intent anstoßen kann. */
+        private var instance: AlarmService? = null
+
+        /**
+         * Vom Wecker-Bildschirm aufgerufen, sobald er sichtbar ist (onResume). Der Ton startet
+         * erst dann: Android 16 („Audio-Härtung“) behandelt Wiedergabe einer App, die nicht im
+         * Vordergrund ist, als Hintergrund-Ton und will sie künftig stummschalten.
+         */
+        fun onAlarmScreenVisible() { instance?.startSoundIfPending() }
 
         private val _ringing = MutableStateFlow<Ringing?>(null)
         /** Aktuell klingelnder Wecker (null = Ruhe) – die AlarmActivity beobachtet das. */
@@ -59,6 +73,10 @@ class AlarmService : Service() {
     }
 
     private var mediaPlayer: MediaPlayer? = null
+    private var focusRequest: AudioFocusRequest? = null
+    /** true, solange ein Wecker klingeln soll, der Ton aber noch nicht gestartet ist. */
+    private var soundPending = false
+    private val soundFallback = Runnable { startSoundIfPending() }
     private var vibrator: Vibrator? = null
     private var wakeLock: PowerManager.WakeLock? = null
     private val handler = Handler(Looper.getMainLooper())
@@ -68,6 +86,11 @@ class AlarmService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onCreate() {
+        super.onCreate()
+        instance = this
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -114,8 +137,6 @@ class AlarmService : Service() {
                 .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "schichtplan:alarm")
                 .apply { acquire(AUTO_DISMISS_MS + 60_000L) }
         }
-        // „Nur Vibration“: kein Ton (Vibration läuft immer)
-        if (!AlarmOptions.vibrateOnly(this)) startSound()
         startVibration()
         handler.removeCallbacks(autoDismiss)
         handler.postDelayed(autoDismiss, AUTO_DISMISS_MS)
@@ -126,7 +147,51 @@ class AlarmService : Service() {
             // Kein Problem: Die Vollbild-Benachrichtigung zeigt die Activity bzw. Heads-up.
             Log.w(TAG, "AlarmActivity nicht direkt startbar: ${e.message}")
         }
+        // Ton erst, wenn der Wecker-Bildschirm sichtbar ist (onAlarmScreenVisible) – spätestens
+        // nach SOUND_FALLBACK_MS. „Nur Vibration“: kein Ton (Vibration läuft immer).
+        if (!AlarmOptions.vibrateOnly(this)) {
+            soundPending = true
+            handler.postDelayed(soundFallback, SOUND_FALLBACK_MS)
+            // Bildschirm schon sichtbar (z. B. zweiter Wecker, während der erste klingelt)?
+            if (_ringing.value != null && AlarmActivity.isVisible) startSoundIfPending()
+        }
     }
+
+    /** Startet den Ton genau einmal pro Wecker (Bildschirm sichtbar oder Ersatz-Zeitpunkt). */
+    private fun startSoundIfPending() {
+        if (!soundPending || _ringing.value == null) return
+        soundPending = false
+        handler.removeCallbacks(soundFallback)
+        requestAlarmFocus()
+        startSound()
+    }
+
+    /** Meldet den Ton als Wecker-Ton an (Audio-Fokus) – andere Wiedergabe pausiert solange. */
+    private fun requestAlarmFocus() {
+        try {
+            val req = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                .setAudioAttributes(alarmAttributes())
+                .setOnAudioFocusChangeListener { }
+                .build()
+            val result = getSystemService(AudioManager::class.java).requestAudioFocus(req)
+            focusRequest = req
+            if (result != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) Log.w(TAG, "Audio-Fokus nicht erteilt ($result) – Ton läuft trotzdem")
+        } catch (e: Exception) {
+            Log.w(TAG, "Audio-Fokus nicht anforderbar: ${e.message}")
+        }
+    }
+
+    private fun abandonAlarmFocus() {
+        focusRequest?.let {
+            try { getSystemService(AudioManager::class.java).abandonAudioFocusRequest(it) } catch (_: Exception) {}
+        }
+        focusRequest = null
+    }
+
+    private fun alarmAttributes(): AudioAttributes = AudioAttributes.Builder()
+        .setUsage(AudioAttributes.USAGE_ALARM)
+        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+        .build()
 
     private fun snooze() {
         val current = _ringing.value
@@ -153,6 +218,7 @@ class AlarmService : Service() {
     }
 
     override fun onDestroy() {
+        if (instance === this) instance = null
         handler.removeCallbacks(autoDismiss)
         stopSound()
         _ringing.value = null
@@ -192,12 +258,7 @@ class AlarmService : Service() {
     }
 
     private fun createPlayer(uri: android.net.Uri) = MediaPlayer().apply {
-        setAudioAttributes(
-            AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ALARM)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build()
-        )
+        setAudioAttributes(alarmAttributes())
         setDataSource(this@AlarmService, uri)
         isLooping = true
         val rising = AlarmOptions.risingVolume(this@AlarmService)
@@ -255,5 +316,7 @@ class AlarmService : Service() {
         mediaPlayer = null
         try { vibrator?.cancel() } catch (_: Exception) {}
         vibrator = null
+        soundPending = false
+        abandonAlarmFocus()
     }
 }

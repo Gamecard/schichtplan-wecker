@@ -12,8 +12,9 @@
    - Hell/Dunkel folgt denselben Selektoren wie app.css:
        hell   = Standard
        dunkel = data-theme="dark"  ODER  data-theme="system" + System dunkel
-   - Deko (Sakura-Blüten, Funkeln) nur als STATISCHE Inline-SVGs (data:-URI),
-     keine externen Dateien/Schriften (App hat kein Internet).
+   - Deko (Sakura-Blüten, Funkeln) als STATISCHE Inline-SVGs (data:-URI);
+     Maskottchen, Schicht-Symbole und Schrift liegen lokal unter anime/
+     (App hat kein Internet – nichts wird von außen geladen).
    - Strom sparen: KEINE Dauer-Animationen, nur kurze Übergänge bei
      Interaktion; bei prefers-reduced-motion gar keine Bewegung.
    - Layout bleibt gleich: keine anderen Abstände/Größen, die Inhalte
@@ -32,6 +33,8 @@
      8. Navigation unten
      9. Sheets, Zeit-Fenster, Dialoge, Einrichtung
     10. Sonstiges (Toast, Listen, Hinweise, Bewegung)
+    11. Kawaii: runde Schrift, Maskottchen „Weckerchen“, Sprechblasen,
+        Schicht-Symbole mit Gesicht
 
    Kontrast (WCAG, geprüft): Fließtext ≥ 4.5:1 in allen Kombinationen –
    hell u. a. Text/Hintergrund 13.2, gedämpfter Text auf allen Schicht-
@@ -123,6 +126,7 @@ html[data-design="anime"] {
   --anime-verlauf-nav:linear-gradient(180deg,#FFF0F7 0%,#F6E9FF 100%);
   --anime-nav-aktiv:linear-gradient(135deg,#F7C9DE 0%,#DCCFFF 100%);
   --anime-rand:#F4C6DC;                          /* Bubble-Rand der Karten */
+  --anime-rand-stark:#EE9CC3;                    /* Rand der Sprechblasen */
   --anime-schatten-karte:0 6px 18px rgba(181,48,111,.12),0 1px 3px rgba(122,79,192,.08);
   --anime-schatten-knopf:0 3px 10px rgba(181,48,111,.28);
   --anime-textschatten:0 2px 0 rgba(244,154,193,.35);
@@ -226,6 +230,7 @@ html[data-design="anime"][data-theme="dark"] {
   --anime-verlauf-nav:linear-gradient(180deg,#221A3E 0%,#1B1634 100%);
   --anime-nav-aktiv:linear-gradient(135deg,#6A1B47 0%,#43367A 100%);
   --anime-rand:#3E3266;
+  --anime-rand-stark:#8A5BA8;
   --anime-schatten-karte:0 6px 18px rgba(0,0,0,.38),0 0 12px rgba(255,159,203,.06);
   --anime-schatten-knopf:0 3px 12px rgba(255,159,203,.30);
   --anime-textschatten:0 0 10px rgba(255,159,203,.35);
@@ -305,6 +310,7 @@ html[data-design="anime"][data-theme="dark"] {
     --anime-verlauf-nav:linear-gradient(180deg,#221A3E 0%,#1B1634 100%);
     --anime-nav-aktiv:linear-gradient(135deg,#6A1B47 0%,#43367A 100%);
     --anime-rand:#3E3266;
+    --anime-rand-stark:#8A5BA8;
     --anime-schatten-karte:0 6px 18px rgba(0,0,0,.38),0 0 12px rgba(255,159,203,.06);
     --anime-schatten-knopf:0 3px 12px rgba(255,159,203,.30);
     --anime-textschatten:0 0 10px rgba(255,159,203,.35);
@@ -350,8 +356,10 @@ html[data-design="anime"] body { -webkit-tap-highlight-color:rgba(244,154,193,.2
    4. KOPF
    ═══════════════════════════════════════════════════════ */
 html[data-design="anime"] header {
-  /* Blütenzweig rechts (vor dem Theme-Knopf), darunter Pastell-Verlauf */
-  background:var(--anime-kopf) no-repeat right 56px center / 96px 40px,
+  /* rechts sitzt das Maskottchen (#hdrMascot); daneben nur zwei kleine
+     Funkel/Blüten-Tupfer, darunter der Pastell-Verlauf */
+  background:var(--anime-funkel) no-repeat right 104px top 9px / 11px 11px,
+             var(--anime-bluete) no-repeat right 98px bottom 8px / 12px 12px,
              var(--anime-verlauf-kopf);
   border-bottom:2px solid var(--anime-rand);
   box-shadow:0 4px 14px rgba(181,48,111,.10);
@@ -669,12 +677,7 @@ html[data-design="anime"] .wiz-nav { border-top:2px solid var(--anime-rand); }
 /* ═══════════════════════════════════════════════════════
    10. SONSTIGES (Toast, Listen, Hinweise, Bewegung)
    ═══════════════════════════════════════════════════════ */
-/* Toast/Snackbar als weiche Sprechblase (Position/Animation wie app.css) */
-html[data-design="anime"] #toast {
-  border-radius:var(--shape-md);
-  box-shadow:var(--elev-4);
-  font-weight:600;
-}
+/* Toast/Snackbar: siehe Abschnitt 11 (Sprechblase mit Maskottchen-Gesicht) */
 
 /* Nächster Wecker: Pastell-Verlauf Lavendel → Himmelblau */
 html[data-design="anime"] .nextalarm {
@@ -721,4 +724,191 @@ html[data-design="anime"] .exitem {
   html[data-design="anime"] button:active,
   html[data-design="anime"] .pday:active,
   html[data-design="anime"] .navbtn:active .navico { transform:none; }
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   11. KAWAII: SCHRIFT, MASKOTTCHEN, SPRECHBLASEN, SCHICHT-SYMBOLE
+   Maskottchen = eigene, frei erfundene Figur („Weckerchen“: Wecker
+   mit Gesicht, Glöckchen als Ohren), Dateien anime/mascot-<gesicht>.svg
+   (happy, sleepy, excited, wink, oops). Schicht-Symbole mit Gesicht:
+   anime/shift-{free,early,late,night}.svg. Elemente mit .an-only sind
+   im klassischen Design per app.css ausgeblendet.
+   ═══════════════════════════════════════════════════════ */
+
+/* Runde Schrift „M PLUS Rounded 1c“ (SIL OFL 1.1, anime/fonts/OFL.txt), als
+   Teilmenge (Latein inkl. tr/pl, Kyrillisch, Satzzeichen), ~22 KB je Schnitt.
+   @font-face kann nicht unter einem Selektor stehen; die Dateien lädt die
+   WebView aber erst, wenn ein Element die Schrift benutzt – das passiert
+   nur unter html[data-design="anime"]. Fehlende Zeichen (Emoji) kommen aus
+   der Systemschrift. */
+@font-face {
+  font-family:"SW Rund"; font-style:normal; font-weight:400; font-display:swap;
+  src:url("anime/fonts/mplusrounded1c-400.woff2") format("woff2");
+}
+@font-face {
+  font-family:"SW Rund"; font-style:normal; font-weight:700; font-display:swap;
+  src:url("anime/fonts/mplusrounded1c-700.woff2") format("woff2");
+}
+@font-face {
+  font-family:"SW Rund"; font-style:normal; font-weight:800; font-display:swap;
+  src:url("anime/fonts/mplusrounded1c-800.woff2") format("woff2");
+}
+html[data-design="anime"] body {
+  font-family:"SW Rund",'Roboto','Segoe UI',system-ui,sans-serif;
+  letter-spacing:.01em;
+}
+
+/* ── Maskottchen ── */
+html[data-design="anime"] .an-masc {
+  display:inline-block; flex-shrink:0;
+  width:52px; height:49px;              /* Seitenverhältnis der SVGs 128:120 */
+  background:no-repeat center / contain;
+  -webkit-tap-highlight-color:transparent;
+}
+html[data-design="anime"] .an-masc[data-face="happy"]   { background-image:url("anime/mascot-happy.svg"); }
+html[data-design="anime"] .an-masc[data-face="sleepy"]  { background-image:url("anime/mascot-sleepy.svg"); }
+html[data-design="anime"] .an-masc[data-face="excited"] { background-image:url("anime/mascot-excited.svg"); }
+html[data-design="anime"] .an-masc[data-face="wink"]    { background-image:url("anime/mascot-wink.svg"); }
+html[data-design="anime"] .an-masc[data-face="oops"]    { background-image:url("anime/mascot-oops.svg"); }
+/* einmaliger Hüpfer (Antippen / Design eingeschaltet), keine Schleife */
+@keyframes an-hop {
+  0%   { transform:translateY(0) rotate(0); }
+  30%  { transform:translateY(-9px) rotate(-7deg); }
+  55%  { transform:translateY(0) rotate(5deg); }
+  78%  { transform:translateY(-3px) rotate(-2deg); }
+  100% { transform:none; }
+}
+html[data-design="anime"] .an-masc.an-hop { animation:an-hop .6s var(--motion-easing-emphasized) 1; }
+
+/* Kopf: Maskottchen rechts vor dem Theme-Knopf */
+html[data-design="anime"] .hdr-btns { align-items:center; }
+html[data-design="anime"] .an-hdr-masc { display:inline-block; width:44px; height:41px; margin-right:2px; cursor:pointer; }
+
+/* ── Sprechblase (Maskottchen links, Zipfel zeigt auf die Figur) ── */
+html[data-design="anime"] .an-say { display:flex; align-items:center; gap:12px; margin:0 0 14px; }
+html[data-design="anime"] .an-bubble {
+  position:relative; flex:1; min-width:0;
+  background:var(--md-surface-container-lowest); color:var(--fg);
+  border:2px solid var(--anime-rand-stark); border-radius:20px;
+  padding:9px 14px; font-size:var(--t-body-md); line-height:1.45;
+  box-shadow:var(--anime-schatten-karte);
+}
+html[data-design="anime"] .an-bubble::before,
+html[data-design="anime"] .an-bubble::after {
+  content:""; position:absolute; top:50%; border-style:solid;
+}
+html[data-design="anime"] .an-bubble::before {
+  left:-12px; margin-top:-8px; border-width:8px 10px 8px 0;
+  border-color:transparent var(--anime-rand-stark) transparent transparent;
+}
+html[data-design="anime"] .an-bubble::after {
+  left:-8px; margin-top:-5.5px; border-width:5.5px 7px 5.5px 0;
+  border-color:transparent var(--md-surface-container-lowest) transparent transparent;
+}
+html[data-design="anime"] .an-greet {
+  display:block; font-weight:800; color:var(--md-primary); margin-bottom:1px;
+}
+html[data-design="anime"] .an-soon {
+  display:block; margin-top:3px; font-weight:700; color:var(--md-secondary);
+}
+
+/* „Nächster Wecker“ als Sprechblase: Karte selbst wird durchsichtig */
+html[data-design="anime"] .nextalarm.an-next {
+  background:none; box-shadow:none; border-radius:0;
+  padding:4px 0 2px; gap:12px; color:var(--fg); opacity:1;
+}
+html[data-design="anime"] .nextalarm.an-next .an-masc { width:66px; height:62px; }
+html[data-design="anime"] .an-wiz-say { margin:6px 0 16px; }
+html[data-design="anime"] .an-wiz-say .an-masc { width:66px; height:62px; }
+html[data-design="anime"] .an-empty { margin:10px 0 4px; }
+html[data-design="anime"] .an-empty .an-masc { width:60px; height:56px; }
+
+/* Toast als Sprechblase mit kleinem Gesicht (Text bleibt reiner Text) */
+html[data-design="anime"] #toast {
+  display:flex; align-items:center; gap:10px; text-align:left;
+  padding:8px 18px 8px 10px; border-radius:24px;
+  background:var(--md-surface-container-lowest); color:var(--fg);
+  border:2px solid var(--anime-rand-stark);
+  box-shadow:var(--elev-4); font-weight:600;
+}
+html[data-design="anime"] #toast::before {
+  content:""; flex-shrink:0; width:38px; height:36px;
+  background:url("anime/mascot-happy.svg") no-repeat center / contain;
+}
+html[data-design="anime"] #toast.err {
+  background:var(--md-error-container); color:var(--md-on-error-container);
+  border-color:var(--md-error);
+}
+html[data-design="anime"] #toast.err::before { background-image:url("anime/mascot-oops.svg"); }
+
+/* ── Schicht-Symbole mit Gesicht ──
+   Farbpunkte .ld[data-shift] (Legende, Wecker pro Schicht, Einrichtung)
+   tragen ihre Farbe als Inline-Stil → hier mit !important überschrieben */
+html[data-design="anime"] .ld[data-shift] {
+  width:22px; height:22px; border-radius:0;
+  background-color:transparent !important;
+  background-repeat:no-repeat !important;
+  background-position:center !important;
+  background-size:contain !important;
+}
+html[data-design="anime"] .ld[data-shift="1"] { background-image:url("anime/shift-free.svg") !important; }
+html[data-design="anime"] .ld[data-shift="2"] { background-image:url("anime/shift-early.svg") !important; }
+html[data-design="anime"] .ld[data-shift="3"] { background-image:url("anime/shift-late.svg") !important; }
+html[data-design="anime"] .ld[data-shift="4"] { background-image:url("anime/shift-night.svg") !important; }
+html[data-design="anime"] .wkname .slbl .ld[data-shift] { width:28px; height:28px; margin:-4px 0; }
+html[data-design="anime"] .wiz-sname .ld[data-shift] { width:26px; height:26px; }
+
+/* Schichtauswahl im Tages-Sheet (Einzelwecker-Art + Schichttausch) */
+html[data-design="anime"] .sftbtn[data-st="1"]::before, html[data-design="anime"] .sftbtn[data-swap="1"]::before,
+html[data-design="anime"] .sftbtn[data-st="2"]::before, html[data-design="anime"] .sftbtn[data-swap="2"]::before,
+html[data-design="anime"] .sftbtn[data-st="3"]::before, html[data-design="anime"] .sftbtn[data-swap="3"]::before,
+html[data-design="anime"] .sftbtn[data-st="4"]::before, html[data-design="anime"] .sftbtn[data-swap="4"]::before,
+html[data-design="anime"] .sbar.free::before, html[data-design="anime"] .sbar.frueh::before,
+html[data-design="anime"] .sbar.spaet::before, html[data-design="anime"] .sbar.nacht::before {
+  content:""; display:inline-block; width:18px; height:18px;
+  margin:-4px 5px -4px -2px; vertical-align:middle;
+  background:no-repeat center / contain;
+}
+html[data-design="anime"] .sbar.free::before, html[data-design="anime"] .sbar.frueh::before,
+html[data-design="anime"] .sbar.spaet::before, html[data-design="anime"] .sbar.nacht::before {
+  width:26px; height:26px; margin:-6px 8px -6px 0;
+}
+html[data-design="anime"] .sftbtn[data-st="1"]::before, html[data-design="anime"] .sftbtn[data-swap="1"]::before,
+html[data-design="anime"] .sbar.free::before  { background-image:url("anime/shift-free.svg"); }
+html[data-design="anime"] .sftbtn[data-st="2"]::before, html[data-design="anime"] .sftbtn[data-swap="2"]::before,
+html[data-design="anime"] .sbar.frueh::before { background-image:url("anime/shift-early.svg"); }
+html[data-design="anime"] .sftbtn[data-st="3"]::before, html[data-design="anime"] .sftbtn[data-swap="3"]::before,
+html[data-design="anime"] .sbar.spaet::before { background-image:url("anime/shift-late.svg"); }
+html[data-design="anime"] .sftbtn[data-st="4"]::before, html[data-design="anime"] .sftbtn[data-swap="4"]::before,
+html[data-design="anime"] .sbar.nacht::before { background-image:url("anime/shift-night.svg"); }
+
+/* Schichttausch: Beschriftung bekommt eine eigene Zeile, damit die fünf
+   Chips samt Symbol nebeneinander passen (sonst wird „Wie Plan“ abgeschnitten) */
+html[data-design="anime"] .sswap .lbl:first-child { flex-basis:100%; }
+
+/* Kalender: kleines Symbol rechts in der Zellenmitte (absolut, verschiebt
+   nichts; Tageszahl oben links, Pille unten, Wecker-Funkeln oben rechts) */
+html[data-design="anime"] .cday.free::after,
+html[data-design="anime"] .cday.frueh::after,
+html[data-design="anime"] .cday.spaet::after,
+html[data-design="anime"] .cday.nacht::after {
+  content:""; position:absolute; right:3px; top:50%;
+  width:20px; height:20px; margin-top:-13px;
+  background:no-repeat center / contain; pointer-events:none;
+}
+html[data-design="anime"] .cday.free::after  { background-image:url("anime/shift-free.svg"); }
+html[data-design="anime"] .cday.frueh::after { background-image:url("anime/shift-early.svg"); }
+html[data-design="anime"] .cday.spaet::after { background-image:url("anime/shift-late.svg"); }
+html[data-design="anime"] .cday.nacht::after { background-image:url("anime/shift-night.svg"); }
+@media (max-width:420px) {
+  html[data-design="anime"] .cday.free::after,
+  html[data-design="anime"] .cday.frueh::after,
+  html[data-design="anime"] .cday.spaet::after,
+  html[data-design="anime"] .cday.nacht::after { width:16px; height:16px; right:2px; margin-top:-10px; }
+}
+
+/* Bewegung reduzieren: auch kein Hüpfer (zusätzlich zur Sammelregel oben) */
+@media (prefers-reduced-motion:reduce) {
+  html[data-design="anime"] .an-masc.an-hop { animation:none !important; }
 }

@@ -101,6 +101,33 @@ object I18n {
         return ok
     }
 
+    /* ── Erscheinungsbild (klassisch/Anime) ──
+       Liegt hier, weil es dieselben gerätegeschützten "ui_prefs" nutzt: Der Wecker-Bildschirm
+       kann vor dem ersten Entsperren erscheinen und soll dann schon das gewählte Design zeigen. */
+    private const val KEY_DESIGN = "design"
+    const val DESIGN_CLASSIC = "classic"
+    const val DESIGN_ANIME = "anime"
+
+    /** "classic" oder "anime" (verstecktes Extra der Web-Oberfläche). */
+    fun design(context: Context): String = try {
+        if (prefs(context).getString(KEY_DESIGN, DESIGN_CLASSIC) == DESIGN_ANIME) DESIGN_ANIME else DESIGN_CLASSIC
+    } catch (e: Exception) {
+        Log.w(TAG, "Design-Einstellung nicht lesbar", e)
+        DESIGN_CLASSIC
+    }
+
+    /** Merkt sich das Design der Web-Oberfläche (nur bekannte Werte, synchron). */
+    fun setDesign(context: Context, design: String): Boolean {
+        if (design != DESIGN_CLASSIC && design != DESIGN_ANIME) return false
+        return try {
+            if (design(context) != design) prefs(context).edit(commit = true) { putString(KEY_DESIGN, design) }
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Design-Einstellung nicht speicherbar", e)
+            false
+        }
+    }
+
     /**
      * Nach einem Sprachwechsel: Cache leeren, Namen des Benachrichtigungskanals in der neuen
      * Sprache setzen (gleiche ID → nur Name/Beschreibung ändern sich) und das Widget neu zeichnen.

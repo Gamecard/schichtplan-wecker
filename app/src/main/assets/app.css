@@ -768,3 +768,7 @@ button.wiz-tpl.active { border-color:var(--md-primary); background:var(--md-seco
 }
 .wiz-nav button { flex:1; padding:14px 16px; font-size:var(--t-title-sm); }
 #wizPrev { border:1px solid var(--md-outline); }
+
+/* Elemente nur für das Anime-Design (Maskottchen, Sprechblasen): im klassischen Design
+   unsichtbar und ohne Platzbedarf; anime.css blendet sie unter html[data-design="anime"] ein */
+.an-only { display:none; }

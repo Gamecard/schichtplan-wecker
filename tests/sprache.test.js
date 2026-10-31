@@ -317,6 +317,62 @@ const base = {
   wD4.close();
   ok(/<link rel="stylesheet" href="app\.css">\s*<link rel="stylesheet" href="anime\.css">/.test(HTML_SRC), 'anime.css wird nach app.css eingebunden');
 
+  // ── 7) Anime-Design: Maskottchen, Sprechblasen, Schicht-Symbole, Schrift
+  const ANIME_CSS = fs.readFileSync(path.join(ASSETS, 'anime.css'), 'utf8');
+  const htmlA = html.replace('</head>', () => '<style>' + ANIME_CSS + '</style></head>');   // wie in der App: anime.css nach app.css
+  const openA = (storage, bridge) => new JSDOM(htmlA, {
+    runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://localhost/',
+    beforeParse(w) { for (const k in storage) w.localStorage.setItem(k, storage[k]); w.localStorage.setItem('schichtplan-wizard-done', '1'); w.Android = bridge; w.scrollTo = () => {}; }
+  }).window;
+  const nA = {}; const brA = makeBridge(nA); const designCalls = [];
+  brA.setDesign = d => { designCalls.push(d); return true; };
+  const wA = openA({ [LS]: JSON.stringify(base) }, brA); await sleep(50);
+  const dA = wA.document, disp = el => wA.getComputedStyle(el).display;
+  const anOnly = [...dA.querySelectorAll('.an-only')];
+  ok(anOnly.length >= 3 && dA.getElementById('hdrMascot') && dA.getElementById('wizMascot'), 'Maskottchen-Elemente vorhanden (Kopf, Wecker-Bereich, Einrichtung): ' + anOnly.length);
+  ok(anOnly.every(el => disp(el) === 'none'), 'klassisch: alle .an-only-Elemente ausgeblendet');
+  ok(!dA.querySelector('#nextAlarm .an-masc') && /^⏰ /.test(dA.getElementById('nextAlarm').textContent), 'klassisch: „Nächster Wecker“ unverändert ohne Maskottchen');
+  ok(dA.querySelector('#alarmBox .ld[data-shift="2"]').getAttribute('style') === 'background:var(--frueh)' && dA.querySelectorAll('#patLegend .ld[data-shift]').length === 4, 'Farbpunkte tragen data-shift, Inline-Farbe unverändert');
+  ok(designCalls[designCalls.length - 1] === 'classic', 'Design wird beim Start nativ gemeldet (setDesign)');
+  dA.getElementById('appVersion').click();
+  ok(designCalls[designCalls.length - 1] === 'anime', 'Umschalten meldet „anime“ an die Brücke');
+  ok(anOnly.every(el => disp(el) !== 'none'), 'Anime: .an-only-Elemente sichtbar');
+  const nx = dA.getElementById('nextAlarm'), face = nx.querySelector('.an-masc');
+  ok(face && ['happy', 'sleepy', 'excited', 'wink', 'oops'].includes(face.dataset.face) && face.getAttribute('aria-hidden') === 'true', 'Anime: Maskottchen im Hinweis „nächster Wecker“ (Gesicht ' + (face && face.dataset.face) + ')');
+  const greets = ['anime.greet.morning', 'anime.greet.day', 'anime.greet.evening', 'anime.greet.night'].map(k => de[k]);
+  ok(greets.includes(nx.querySelector('.an-greet').textContent) && nx.querySelector('.an-bubble').textContent.includes('Dein nächster Wecker:') && nx.querySelector('.an-bubble b'), 'Anime: Sprechblase mit Begrüßung und nächstem Wecker (übersetzt, <b> erhalten)');
+  ok(dA.querySelector('#tabWecker .an-bubble').textContent === de['anime.wecker_tip'], 'Anime: Tipp des Maskottchens im Bereich Wecker');
+  dA.getElementById('startWizBtn').click();
+  ok(dA.getElementById('wizMascotTxt').textContent === de['anime.wiz.s1'] && dA.getElementById('wizMascot').dataset.face === 'wink', 'Einrichtung: Begrüßung des Maskottchens');
+  dA.getElementById('wizSkip').click();
+  dA.getElementById('appVersion').click();
+  ok(!dA.querySelector('#nextAlarm .an-masc') && /^⏰ /.test(dA.getElementById('nextAlarm').textContent) && anOnly.every(el => disp(el) === 'none'), 'zurück auf klassisch: Maskottchen wieder weg');
+  wA.close();
+  // leere Wecker-Liste: Maskottchen schläft
+  const empty0 = Object.assign({}, base, { alarmEnabled: { 1: false, 2: false, 3: false, 4: false }, autoSchedule: { 1: false, 2: false, 3: false, 4: false, free: false }, design: 'anime' });
+  const wLeer = openA({ [LS]: JSON.stringify(empty0) }, makeBridge({})); await sleep(50);
+  ok(wLeer.document.querySelector('#nextAlarm .an-masc').dataset.face === 'sleepy' && wLeer.document.getElementById('nextAlarm').textContent.includes(de['anime.next_none']), 'kein Wecker: schläfriges Maskottchen mit Hinweis');
+  wLeer.document.getElementById('allAlarmsBtn2').click();
+  ok(wLeer.document.querySelector('#allAlarmList .an-empty .an-bubble').textContent === de['anime.empty_alarms'], '„Alle Wecker“ leer: Maskottchen-Sprechblase');
+  wLeer.close();
+  // Texte: in allen Sprachen übersetzt, Mehrzahl vollständig
+  const animeKeys = keysOf(en).filter(k => k.startsWith('anime.'));
+  ok(animeKeys.length >= 15, 'anime.*-Texte vorhanden: ' + animeKeys.length);
+  for (const code of ['tr', 'ru', 'pl']) {
+    const o = LANG(code), same = animeKeys.filter(k => k in o && o[k] === en[k]);
+    ok(!same.length, code + '.json: anime.* übersetzt ' + same.join(', '));
+  }
+  ok(['ru', 'pl'].every(c => ['one', 'few', 'many', 'other'].every(f => ['anime.soon_hours', 'anime.soon_minutes'].every(b => LANG(c)[b + '_' + f]))), 'ru/pl: anime.soon_* mit _one/_few/_many/_other');
+  // Dateien: jede url() in anime.css existiert, Schrift klein und lizenziert, Maskottchen-SVGs ohne Fremdbezug
+  const urls = [...new Set([...ANIME_CSS.matchAll(/url\("(anime\/[^"]+)"\)/g)].map(m => m[1]))];
+  ok(urls.length >= 10 && urls.every(u => fs.existsSync(path.join(ASSETS, u))), 'alle Anime-Dateien aus anime.css vorhanden (' + urls.length + ')');
+  const fontDir = path.join(ASSETS, 'anime', 'fonts');
+  const fontBytes = fs.readdirSync(fontDir).filter(f => f.endsWith('.woff2')).reduce((n, f) => n + fs.statSync(path.join(fontDir, f)).size, 0);
+  ok(fontBytes > 0 && fontBytes < 250 * 1024 && /SIL Open Font License/.test(fs.readFileSync(path.join(fontDir, 'OFL.txt'), 'utf8')), 'Schrift lokal, < 250 KB (' + Math.round(fontBytes / 1024) + ' KB), OFL.txt dabei');
+  const svgs = fs.readdirSync(path.join(ASSETS, 'anime')).filter(f => f.endsWith('.svg'));
+  ok(svgs.length >= 9 && svgs.every(f => !/(https?:|<script|<image|<text)/i.test(fs.readFileSync(path.join(ASSETS, 'anime', f), 'utf8').replace('http://www.w3.org/2000/svg', ''))), 'SVGs ohne Skripte/externe Bezüge/Text (' + svgs.length + ')');
+  ok(!/@import|https?:\/\//.test(ANIME_CSS.replace(/http:\/\/www\.w3\.org\/2000\/svg/g, '')), 'anime.css lädt nichts von außen');
+
   console.log(fails ? `\n${fails} FEHLER` : '\nalle Tests bestanden');
   process.exit(fails ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(2); });

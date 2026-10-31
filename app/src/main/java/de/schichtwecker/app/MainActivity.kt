@@ -582,6 +582,11 @@ class WebAppInterface(private val mContext: Context, private val activity: MainA
     @Keep
     fun setLanguageSetting(code: String): Boolean = I18n.setLanguageSetting(mContext, code)
 
+    /** Design der Oberfläche ("classic"/"anime") – der Wecker-Bildschirm folgt ihm. */
+    @JavascriptInterface
+    @Keep
+    fun setDesign(design: String): Boolean = I18n.setDesign(mContext, design)
+
     /** Sprache des Systems, z. B. "de" (für „automatisch“). */
     @JavascriptInterface
     @Keep

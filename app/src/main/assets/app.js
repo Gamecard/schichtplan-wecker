@@ -695,11 +695,12 @@ window.onerror=function(msg,src,line,col,err){
   }
   var KIND_COLORS={1:'var(--accent)',2:'var(--frueh)',3:'var(--spaet)',4:'var(--nacht)'};
   /* eine kompakte Zeile: Name + Stand | Uhrzeit-Chip | Schalter */
-  function buildWeckerRow(name,color,picker,switchEl,stateId){
+  function buildWeckerRow(name,color,picker,switchEl,stateId,kind){
     var r=document.createElement('div'); r.className='wkrow';
     var nm=document.createElement('div'); nm.className='wkname';
     var lbl=document.createElement('span'); lbl.className='slbl';
-    lbl.innerHTML=(color?'<span class="ld" style="background:'+color+'"></span>':'')+esc(name);
+    // data-shift: im Anime-Design ersetzt das Schicht-Symbol (anime/shift-*.svg) den Farbpunkt
+    lbl.innerHTML=(color?'<span class="ld"'+(kind?' data-shift="'+kind+'"':'')+' style="background:'+color+'"></span>':'')+esc(name);
     var st=document.createElement('span'); st.className='wkstate small muted'; st.id=stateId;
     nm.appendChild(lbl); nm.appendChild(st);
     r.appendChild(nm); r.appendChild(picker); r.appendChild(switchEl);
@@ -712,7 +713,7 @@ window.onerror=function(msg,src,line,col,err){
       var pick=buildTimePicker(S.alarmTimes[sm.t],function(v){ setShiftTime(sm.t,v); },{label:name,id:'tp'+sm.t});
       shiftPickers[sm.t]=pick;
       c.appendChild(buildWeckerRow(name,KIND_COLORS[sm.t],pick,
-        buildSwitch('ae'+sm.t,t('wecker.auto_aria',{name:name}),isAutoOn(sm.t)),'aeState'+sm.t));
+        buildSwitch('ae'+sm.t,t('wecker.auto_aria',{name:name}),isAutoOn(sm.t)),'aeState'+sm.t,sm.t));
     });
     renderWeckerStatus();
   }
@@ -900,6 +901,7 @@ window.onerror=function(msg,src,line,col,err){
   function renderAllAlarms(){
     var box=$('allAlarmList'), entries=upcomingAlarms(); box.innerHTML='';
     $('allSummary').textContent=entries.length?t('alarm.set_count',{n:entries.length}):t('alarm.none_set');
+    if(!entries.length&&isAnime()) box.innerHTML='<div class="an-say an-empty">'+mascotHtml('sleepy')+'<span class="an-bubble">'+esc(t('anime.empty_alarms'))+'</span></div>';
     var groups={}, order=[];
     entries.forEach(function(a){ var m=a.ds.slice(0,7); if(!groups[m]){groups[m]=[];order.push(m);} groups[m].push(a); });
     if(openMonths===null) openMonths=order.length?[order[0]]:[];
@@ -936,11 +938,33 @@ window.onerror=function(msg,src,line,col,err){
     var el=$('nextAlarm'); if(!el) return;
     var next=(S.activeAlarms||[]).filter(function(a){return isFuture(a.ds,a.time);})
       .sort(function(a,b){return (a.ds+a.time).localeCompare(b.ds+b.time);})[0];
+    if(isAnime()){ renderNextAnime(el,next); return; }
     if(!next){ el.className='nextalarm none'; el.textContent='⏰ '+t('next.none'); return; }
-    var rel=next.ds===todayYmd()?t('next.today'):(next.ds===toYmd(new Date(Date.now()+864e5))?t('next.tomorrow'):dayLabel(next.ds));
+    var rel=nextRelLabel(next);
     el.className='nextalarm';
     // ein einziges Kind-Element, sonst verteilt Flexbox die Textteile auf Spalten
     el.innerHTML='<span>⏰ '+tHtml('next.label',{when:esc(rel),time:esc(fmtTime(next.time)),name:esc(alarmName(next))})+'</span>';
+  }
+
+  function nextRelLabel(next){
+    return next.ds===todayYmd()?t('next.today'):(next.ds===toYmd(new Date(Date.now()+864e5))?t('next.tomorrow'):dayLabel(next.ds));
+  }
+  /* Anime-Design: „Nächster Wecker“ als Sprechblase des Maskottchens. Gesicht passend:
+     schläfrig ohne Wecker oder vor der Nachtschicht, aufgeregt wenn es bald (< 12 h) klingelt */
+  function renderNextAnime(el,next){
+    var face='sleepy', txt, soon='';
+    if(!next) txt=esc(t('anime.next_none'));
+    else{
+      var p=next.ds.split('-').map(Number), tm=String(next.time).split(':').map(Number);
+      var mins=Math.max(1,Math.round((new Date(p[0],p[1]-1,p[2],tm[0]||0,tm[1]||0,0,0).getTime()-Date.now())/60000));
+      var night=/-t4$/.test(String(next.alarmKey).replace(/#snooze$/,''));
+      face=night?'sleepy':(mins<12*60?'excited':'happy');
+      if(mins<12*60) soon=mins<60?t('anime.soon_minutes',{n:mins}):t('anime.soon_hours',{n:Math.round(mins/60)});
+      txt=tHtml('anime.next',{when:esc(nextRelLabel(next)),time:esc(fmtTime(next.time)),name:esc(alarmName(next))});
+    }
+    el.className='nextalarm an-next'+(next?'':' none');
+    el.innerHTML=mascotHtml(face)+'<span class="an-bubble"><span class="an-greet">'+esc(animeGreeting())+'</span>'
+      +txt+(soon?'<span class="an-soon">'+esc(soon)+'</span>':'')+'</span>';
   }
 
   /* Schichttausch im Tages-Sheet: Schicht nur für diesen Tag ändern */
@@ -1559,6 +1583,9 @@ window.onerror=function(msg,src,line,col,err){
     $('wizPrev').style.display=done?'none':'';
     $('wizPrev').style.visibility=st===0?'hidden':'visible';   // Schritt 1: Schließen geht über „Überspringen“
     $('wizNext').textContent=t(done?'wiz.to_plan':(st===WIZ_STEPS-1?'wiz.apply':'wiz.next'));
+    // Maskottchen-Begrüßung (nur im Anime-Design sichtbar, .an-only)
+    $('wizMascotTxt').textContent=t(done?'anime.wiz.done':['anime.wiz.s1','anime.wiz.s2','anime.wiz.s3','anime.wiz.s4'][st]);
+    $('wizMascot').setAttribute('data-face',done?'excited':(st===0?'wink':'happy'));
     if(st===0){
       $('wizTitle').textContent=t('wiz.s1_title');
       $('wizSub').textContent=t('wiz.s1_sub');
@@ -1591,7 +1618,7 @@ window.onerror=function(msg,src,line,col,err){
       $('wizSub').textContent=t('wiz.s3_sub');
       var types=wizTypes(), autoTxt=esc(t('wiz.auto'));
       h=types.length?types.map(function(tp){
-        return '<div class="wiz-shift"><div class="wiz-sname"><span class="ld" style="background:'+WIZ_COLORS[tp]+'"></span>'+esc(shiftLabel(tp))+'</div>'
+        return '<div class="wiz-shift"><div class="wiz-sname"><span class="ld" data-shift="'+tp+'" style="background:'+WIZ_COLORS[tp]+'"></span>'+esc(shiftLabel(tp))+'</div>'
           +'<div class="wiz-time" data-wtbox="'+tp+'"></div>'
           +'<div class="wiz-chk"><label class="sw" title="'+autoTxt+'"><input type="checkbox" id="wizAuto'+tp+'" data-wa="'+tp+'"'+(W.auto[tp]?' checked':'')
           +' aria-label="'+esc(t('wiz.auto_aria',{name:shiftLabel(tp)}))+'"><span class="sl"></span></label><span>'+autoTxt+'</span></div></div>';
@@ -1819,12 +1846,49 @@ window.onerror=function(msg,src,line,col,err){
   function applyDesign(){
     if(S.design==='anime') document.documentElement.setAttribute('data-design','anime');
     else document.documentElement.removeAttribute('data-design');
+    // Kopf-Maskottchen: nachts schläfrig
+    var h=new Date().getHours();
+    $('hdrMascot').setAttribute('data-face',h>=22||h<5?'sleepy':'happy');
+    if(hasBridge('setDesign')){ try{ window.Android.setDesign(S.design); }catch(e){} }   // Wecker-Bildschirm (nativ)
   }
   $('appVersion').onclick=function(){
     S.design=S.design==='anime'?'classic':'anime';
     applyDesign(); save();
+    renderNextAlarm(); if(isAlarmsOpen()) renderAllAlarms();
     toast(t(S.design==='anime'?'design.anime_on':'design.classic_on'));
+    if(isAnime()){ mascotHop($('hdrMascot')); mascotHop(document.querySelector('#nextAlarm .an-masc')); }
   };
+
+  /* ── ANIME-MASKOTTCHEN ────────────────────
+     Eigene Figur („Weckerchen“, anime/mascot-<gesicht>.svg), nur im Anime-Design. Dynamische
+     Teile werden nur dann erzeugt; feste Elemente in index.html tragen .an-only (app.css blendet
+     sie aus, anime.css ein). Strom: keine Dauer-Animation, nur ein kurzer Hüpfer beim Antippen
+     bzw. Einschalten des Designs (bei prefers-reduced-motion gar keiner). */
+  function isAnime(){ return S.design==='anime'; }
+  var MASCOT_FACES=['happy','sleepy','excited','wink','oops'];
+  function mascotHtml(face){
+    return '<span class="an-masc" data-face="'+(MASCOT_FACES.indexOf(face)!==-1?face:'happy')+'" aria-hidden="true"></span>';
+  }
+  function animeGreeting(){
+    var h=new Date().getHours();
+    return t(h>=5&&h<11?'anime.greet.morning':(h>=11&&h<18?'anime.greet.day':(h>=18&&h<22?'anime.greet.evening':'anime.greet.night')));
+  }
+  function mascotHop(el){
+    if(!el) return;
+    el.classList.remove('an-hop'); void el.offsetWidth; el.classList.add('an-hop');
+  }
+  document.addEventListener('animationend',function(e){
+    if(e.target&&e.target.classList&&e.target.classList.contains('an-hop')) e.target.classList.remove('an-hop');
+  });
+  /* Antippen: einmal hüpfen und kurz zwinkern */
+  document.addEventListener('click',function(e){
+    var m=e.target&&e.target.closest&&e.target.closest('.an-masc');
+    if(!m||!isAnime()) return;
+    mascotHop(m);
+    if(m._face) return;   // zwinkert schon
+    m._face=m.getAttribute('data-face'); m.setAttribute('data-face','wink');
+    setTimeout(function(){ m.setAttribute('data-face',m._face); m._face=null; },1400);
+  });
 
   /* ── SPRACHE: Auswahl, Wechsel, eigene Übersetzung ── */
   function renderOptionLabels(){

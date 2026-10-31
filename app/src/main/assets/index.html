@@ -12,6 +12,8 @@
 <header>
   <div class="hdr-title"><span id="hdrCalIcon" style="display:inline-flex;align-items:center;justify-content:center;position:relative;width:1.6em;height:1.6em;vertical-align:middle;margin-right:8px"><svg viewBox="0 0 32 32" width="1.6em" height="1.6em" style="position:absolute;top:0;left:0"><rect x="1" y="5" width="30" height="25" rx="4" fill="var(--md-primary-container)" stroke="var(--border)" stroke-width=".8"/><rect x="1" y="5" width="30" height="7" rx="4" fill="var(--md-primary)"/><rect x="1" y="10" width="30" height="2" fill="var(--md-primary)"/><rect x="8.5" y="2" width="2.4" height="5.5" rx="1.2" fill="var(--muted)"/><rect x="21.1" y="2" width="2.4" height="5.5" rx="1.2" fill="var(--muted)"/><text id="hdrCalDay" x="16" y="24" text-anchor="middle" font-size="12" font-weight="500" fill="var(--md-on-primary-container)"></text><text id="hdrCalMon" x="16" y="10" text-anchor="middle" font-size="5" font-weight="500" fill="var(--md-on-primary)"></text></svg></span>Schichtwecker</div>
   <div class="hdr-btns">
+    <!-- Anime-Design: Maskottchen (eigene Figur, im klassischen Design ausgeblendet) -->
+    <span class="an-only an-masc an-hdr-masc" id="hdrMascot" data-face="happy" aria-hidden="true"></span>
     <button class="icon" id="themeBtn" title="Farbschema wechseln" data-i18n-attr="title:header.theme;aria-label:header.theme">&#x1F5A5;&#xFE0F;</button>
   </div>
 </header>
@@ -63,6 +65,7 @@
   <!-- ======= BEREICH: WECKER ======= -->
   <section class="tab" id="tabWecker" hidden>
     <h2 class="tabtitle">&#x23F0; <span data-i18n="nav.wecker">Wecker</span></h2>
+    <div class="an-only an-say"><span class="an-masc" data-face="wink" aria-hidden="true"></span><span class="an-bubble" data-i18n="anime.wecker_tip">Schalte eine Schicht ein &ndash; dann klingle ich an jedem dieser Tage von selbst!</span></div>
     <div class="card">
       <div class="ctitle">&#x23F0;&nbsp;<span data-i18n="wecker.per_shift_title">Wecker pro Schicht</span></div>
       <p class="small muted wkintro" data-i18n="wecker.per_shift_intro">
@@ -174,10 +177,10 @@
       </div>
       <div id="patGrid"></div>
       <div class="legend" id="patLegend">
-        <button type="button" class="li pick" data-pick="1"><div class="ld" style="background:var(--accent)"></div><span data-i18n="shift.1">Frei</span></button>
-        <button type="button" class="li pick" data-pick="2"><div class="ld" style="background:var(--frueh)"></div><span data-i18n="shift.2">Fr&uuml;h</span></button>
-        <button type="button" class="li pick" data-pick="3"><div class="ld" style="background:var(--spaet)"></div><span data-i18n="shift.3">Sp&auml;t</span></button>
-        <button type="button" class="li pick" data-pick="4"><div class="ld" style="background:var(--nacht)"></div><span data-i18n="shift.4">Nacht</span></button>
+        <button type="button" class="li pick" data-pick="1"><div class="ld" data-shift="1" style="background:var(--accent)"></div><span data-i18n="shift.1">Frei</span></button>
+        <button type="button" class="li pick" data-pick="2"><div class="ld" data-shift="2" style="background:var(--frueh)"></div><span data-i18n="shift.2">Fr&uuml;h</span></button>
+        <button type="button" class="li pick" data-pick="3"><div class="ld" data-shift="3" style="background:var(--spaet)"></div><span data-i18n="shift.3">Sp&auml;t</span></button>
+        <button type="button" class="li pick" data-pick="4"><div class="ld" data-shift="4" style="background:var(--nacht)"></div><span data-i18n="shift.4">Nacht</span></button>
         <div class="li"><div class="ld" style="background:#a855f7"></div><span data-i18n="legend.exception">Ausnahme</span></div>
         <div class="li"><div class="ld" style="background:var(--hol-b)"></div><span data-i18n="legend.holiday">Feiertag</span></div>
       </div>
@@ -324,6 +327,7 @@
       <button type="button" class="sm" id="wizSkip" data-i18n="wiz.skip">&Uuml;berspringen</button>
     </div>
     <div class="wiz-bar" id="wizBar"></div>
+    <div class="an-only an-say an-wiz-say"><span class="an-masc" id="wizMascot" data-face="happy" aria-hidden="true"></span><span class="an-bubble" id="wizMascotTxt"></span></div>
     <h2 class="wiz-title" id="wizTitle"></h2>
     <div class="wiz-sub" id="wizSub"></div>
     <div class="wiz-body" id="wizBody"></div>

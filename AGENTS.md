@@ -43,7 +43,11 @@
 ## Design-Umschalter (seit 1.12)
 
 - Antippen der Versionsnummer `#appVersion` wechselt klassisch ↔ Anime (`S.design = 'classic'|'anime'`, Attribut `data-design="anime"` auf `<html>`).
-- Anime-Design steht komplett in `app/src/main/assets/anime.css`, ALLE Regeln unter `html[data-design="anime"]`. Keine Dauer-Animationen (Akku).
+- Anime-Design steht komplett in `app/src/main/assets/anime.css`, ALLE Regeln unter `html[data-design="anime"]` (Ausnahme: `@font-face`/`@keyframes`, die nur dort benutzt werden). Keine Dauer-Animationen (Akku), nur ein einmaliger Hüpfer des Maskottchens (Antippen/Einschalten), bei `prefers-reduced-motion` keiner.
+- Kawaii-Teil (seit 1.12): eigenes, frei erfundenes Maskottchen „Weckerchen“ (Wecker mit Gesicht) als `assets/anime/mascot-{happy,sleepy,excited,wink,oops}.svg`, Schicht-Symbole mit Gesicht `assets/anime/shift-{free,early,late,night}.svg`. Runde Schrift „M PLUS Rounded 1c“ (OFL, `assets/anime/fonts/` inkl. `OFL.txt`) als WOFF2-Teilmenge (Latein inkl. tr/pl, Kyrillisch, Satzzeichen; ohne U+2026, das Zeichen ist dort japanisch mittig) – neue Zeichen in Sprachdateien ggf. nachsubsetten
+- Auftritte: Kopf (`#hdrMascot`), „Nächster Wecker“ als Sprechblase (`renderNextAnime`: schläfrig ohne Wecker/vor Nachtschicht, aufgeregt < 12 h), Tipp im Bereich Wecker, leere „Alle Wecker“-Liste, Toast (nur CSS `::before`, Text bleibt reiner Text), Einrichtung (`#wizMascot`/`#wizMascotTxt`). Texte unter `anime.*` in allen Sprachdateien
+- Feste Anime-Elemente in index.html tragen `.an-only` (app.css: `display:none`, anime.css blendet ein); dynamische nur bei `isAnime()` erzeugen. Farbpunkte `.ld` tragen `data-shift="1–4"` (Anime: Symbol statt Punkt). Das klassische Design bleibt dadurch pixelgleich
+- Nativ: `Android.setDesign('classic'|'anime')` (beim Start und Umschalten) → `I18n.design()` in den gerätegeschützten `ui_prefs`; `AlarmActivity` zeigt dann `AnimeAlarmScreen` mit `R.drawable.mascot_excited` (VectorDrawable, aus `mascot-excited.svg` erzeugt)
 
 ## Build & Lint
 

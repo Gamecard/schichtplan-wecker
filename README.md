@@ -1,4 +1,4 @@
-# Schichtwecker (Mein Schichtplan)
+# Schichtwecker
 
 Eine Android-App zur Verwaltung von Schichtplänen mit Wecker-Funktion.
 

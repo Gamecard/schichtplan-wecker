@@ -301,6 +301,7 @@ class WebAppInterface(private val mContext: Context, private val activity: MainA
     private companion object {
         const val STATE_PREFS = "app_state"
         const val STATE_KEY = "state"
+        const val PRIVACY_POLICY_URL = "https://gamecard.github.io/schichtplan-wecker/datenschutz.html"
     }
 
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -505,6 +506,19 @@ class WebAppInterface(private val mContext: Context, private val activity: MainA
     @Keep
     fun importProfile() {
         mainHandler.post { activity.launchProfileImport() }
+    }
+
+    /** Öffnet die Datenschutzerklärung im Browser (feste Adresse, kein Internet in der App nötig). */
+    @JavascriptInterface
+    @Keep
+    fun openPrivacyPolicy() {
+        mainHandler.post {
+            try {
+                activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PRIVACY_POLICY_URL)))
+            } catch (_: Exception) {
+                toast("Kein Browser gefunden: $PRIVACY_POLICY_URL")
+            }
+        }
     }
 
     @JavascriptInterface

@@ -1468,6 +1468,7 @@ window.onerror=function(msg,src,line,col,err){
   /* ── EVENTS ─────────────────────────────── */
   $('themeBtn').onclick=cycleTheme;
   $('startWizBtn').onclick=function(){openWiz();};
+  $('privacyLink').onclick=function(e){e.preventDefault();if(window.Android&&Android.openPrivacyPolicy)Android.openPrivacyPolicy();};
   $('tsDigits').onclick=function(){
     var n=$('tsNative'); n.value=TS.value;
     try{ if(typeof n.showPicker==='function'){ n.showPicker(); return; } }catch(e){}

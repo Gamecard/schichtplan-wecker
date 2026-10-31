@@ -407,6 +407,9 @@ function openDay(w, ds) {
   ok(/Urlaub \(17\.11\.2026\)/.test(d15.getElementById('sSwap').textContent), 'Sheet zeigt die Ausnahme an');
   d15.getElementById('exDelBtn').click();
   ok(!state(w15).exceptions.length && !!n15['shift-2026-11-17-t2'], 'Ausnahme entfernen stellt den Wecker wieder her');
+  let privacyOpened = 0; w15.Android.openPrivacyPolicy = () => { privacyOpened++; };
+  d15.getElementById('privacyLink').click();
+  ok(privacyOpened === 1 && d15.getElementById('tabSchicht').contains(d15.getElementById('privacyLink')), 'Datenschutz-Link im Bereich Schichtplan öffnet die Erklärung');
   w15.close();
 
   console.log(fails ? `\n${fails} FEHLER` : '\nalle Tests bestanden');

@@ -76,6 +76,8 @@
   <!-- ======= BEREICH: WECKER ======= -->
   <section class="tab" id="tabWecker" hidden>
     <h2 class="tabtitle">&#x23F0; <span data-i18n="nav.wecker">Wecker</span></h2>
+    <!-- dezenter Hinweis, wenn eine Einstellung Wecker verhindert (renderReliability) -->
+    <button type="button" class="relbadge" id="relBadge" hidden><span class="relico" aria-hidden="true">&#x26A0;</span><span data-i18n="rel.badge">Deine Wecker sind gefährdet – Zuverlässigkeit prüfen ›</span></button>
     <div class="an-only an-say"><span class="an-masc" data-face="wink" aria-hidden="true"></span><span class="an-bubble" data-i18n="anime.wecker_tip">Schalte eine Schicht ein &ndash; dann klingle ich an jedem dieser Tage von selbst!</span></div>
     <div class="card">
       <div class="ctitle">&#x23F0;&nbsp;<span data-i18n="wecker.per_shift_title">Wecker pro Schicht</span></div>
@@ -139,6 +141,18 @@
         <button class="primary sm" id="pickRingtoneBtn">&#x1F4C1; <span data-i18n="ringtone.pick">Klingelton w&auml;hlen</span></button>
         <button class="sm" id="resetRingtoneBtn" style="display:none;">&#x27F3; <span data-i18n="ringtone.reset_btn">Standard</span></button>
         <span class="small muted" id="ringtoneName" style="flex:1;">Standard-Klingelton</span>
+      </div>
+    </div>
+
+    <!-- Zuverlässigkeits-Check: Systemeinstellungen, die Wecker verhindern (Android.getReliabilityStatus) -->
+    <div class="card" id="relCard">
+      <div class="ctitle">&#x1F6E1;&#xFE0F;&nbsp;<span data-i18n="rel.title">Zuverl&auml;ssigkeit</span></div>
+      <p class="small muted wkintro" data-i18n="rel.intro">Android kann Wecker durch Energiespar- und Berechtigungs-Einstellungen ausbremsen. Hier siehst du, ob alles passt.</p>
+      <div id="relStatus" hidden></div>
+      <div class="relextreme">
+        <div class="relx-title">&#x1F50B;&nbsp;<span data-i18n="rel.extreme_title">Extremer Energiesparmodus</span></div>
+        <div class="small" data-i18n-html="rel.extreme_text"></div>
+        <button type="button" class="sm" id="relExtremeBtn" data-rel-target="battery_saver" data-i18n="rel.extreme_btn">Energiesparmodus &ouml;ffnen</button>
       </div>
     </div>
 

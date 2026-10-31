@@ -3,7 +3,6 @@ package de.schichtwecker.app
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
-import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -14,7 +13,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.OpenableColumns
-import android.provider.Settings
 import android.util.Log
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
@@ -278,7 +276,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        pendingWebView?.onResume()
+        pendingWebView?.let { wv ->
+            wv.onResume()
+            // Zurück aus den Systemeinstellungen: Zuverlässigkeits-Check/Hinweise neu abfragen
+            wv.evaluateJavascript("if(typeof window.onAppResumed==='function')window.onAppResumed();", null)
+        }
     }
 
     override fun onDestroy() {
@@ -297,16 +299,13 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkFullScreenIntentPermission() {
-        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        if (!nm.canUseFullScreenIntent()) {
+        if (!Reliability.canUseFullScreenIntent(this)) {
             Log.w("SchichtplanAlarm", "USE_FULL_SCREEN_INTENT not granted")
             AlertDialog.Builder(this)
                 .setTitle(I18n.t(this, "native.fullscreen.title"))
                 .setMessage(I18n.t(this, "native.fullscreen.message"))
                 .setPositiveButton(I18n.t(this, "native.fullscreen.openSettings")) { _, _ ->
-                    startActivity(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
-                        data = "package:$packageName".toUri()
-                    })
+                    Reliability.open(this, "full_screen")
                 }
                 .setNegativeButton(I18n.t(this, "native.fullscreen.later"), null)
                 .show()
@@ -431,32 +430,39 @@ class WebAppInterface(private val mContext: Context, private val activity: MainA
      */
     @JavascriptInterface
     @Keep
-    fun getAlarmPermissionIssue(): String {
-        if (!mContext.getSystemService(android.app.AlarmManager::class.java).canScheduleExactAlarms()
-        ) return "exact"
-        if (!mContext.getSystemService(NotificationManager::class.java).canUseFullScreenIntent()
-        ) return "fullscreen"
-        return ""
-    }
+    fun getAlarmPermissionIssue(): String = try {
+        Reliability.alarmPermissionIssue(mContext)
+    } catch (_: Exception) { "" }
 
     /** Öffnet die passende Systemeinstellung zu [getAlarmPermissionIssue]. */
     @JavascriptInterface
     @Keep
     fun openAlarmPermissionSettings(issue: String) {
-        val action = when {
-            issue == "exact" ->
-                Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM
-            issue == "fullscreen" ->
-                Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT
-            else -> return
-        }
-        mainHandler.post {
-            try {
-                activity.startActivity(Intent(action).apply { data = "package:${mContext.packageName}".toUri() })
-            } catch (e: Exception) {
-                Log.e("SchichtplanAlarm", "Einstellungen nicht verfügbar", e)
-            }
-        }
+        ReliabilityTargets.fromPermissionIssue(issue)?.let { openSystemSettings(it) }
+    }
+
+    /**
+     * Zuverlässigkeits-Check als JSON (Karte „Zuverlässigkeit“ im Bereich Wecker):
+     * {powerSave, ignoringBatteryOptimizations, backgroundRestricted, standbyBucket,
+     *  standbyBucketName, canScheduleExactAlarms, appNotificationsEnabled, alarmChannelEnabled,
+     *  notificationsEnabled, fullScreenIntentAllowed}. Nicht lesbare Punkte fehlen.
+     */
+    @JavascriptInterface
+    @Keep
+    fun getReliabilityStatus(): String = try {
+        Reliability.statusJson(mContext)
+    } catch (_: Exception) { "{}" }
+
+    /**
+     * Öffnet eine Systemseite aus der festen Liste [ReliabilityTargets.TARGETS]
+     * (battery_saver, app_battery, battery_optimization, notifications, full_screen, exact_alarm).
+     * Unbekannte Ziele werden ignoriert.
+     */
+    @JavascriptInterface
+    @Keep
+    fun openSystemSettings(target: String) {
+        if (target !in ReliabilityTargets.TARGETS) return
+        mainHandler.post { Reliability.open(activity, target) }
     }
 
     /** Nach einem Sammel-Abgleich: frühesten Wecker scharf stellen, spätere zurückhalten. */

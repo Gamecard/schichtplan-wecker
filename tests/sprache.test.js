@@ -140,7 +140,8 @@ const base = {
   ok(holIds.length === 35 && !missing.length, `alle ${used.size} benutzten Schlüssel in de.json und en.json vorhanden` + (missing.length ? ': ' + missing.join(', ') : ''));
 
   // ── 2) Englisch: nach dem Rendern aller Bereiche kein deutscher Text mehr
-  const nE = {}; const brE = makeBridge(nE, { system: 'en' });
+  // Zuverlässigkeits-Check mit Problemen, damit auch Warnungen/Knöpfe/Hinweise mitgeprüft werden
+  const nE = {}; const brE = makeBridge(nE, { system: 'en', rel: { notificationsEnabled: false, backgroundRestricted: true, ignoringBatteryOptimizations: false, powerSave: true } });
   const wE = open({ [LS]: JSON.stringify(base) }, brE); await sleep(50);
   const dE = wE.document, $E = id => dE.getElementById(id);
   ok(dE.documentElement.getAttribute('lang') === 'en', '<html lang="en"> bei englischer Systemsprache');

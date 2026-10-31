@@ -19,7 +19,7 @@
 
 ## Projektstruktur
 
-- **Kotlin**: `MainActivity.kt` (WebView + JS-Bridge), `AlarmScheduler.kt` (+ `AlarmStore`), `AlarmReceiver.kt`, `AlarmService.kt`, `AlarmActivity.kt`, `AlarmOptions.kt`, `BootReceiver.kt`, `ShiftWidget.kt`
+- **Kotlin**: `MainActivity.kt` (WebView + JS-Bridge), `AlarmScheduler.kt` (+ `AlarmStore`), `AlarmReceiver.kt`, `AlarmService.kt`, `AlarmActivity.kt`, `AlarmOptions.kt`, `BootReceiver.kt`, `ShiftWidget.kt`, `Reliability.kt` (Zuverlässigkeits-Check + feste Ziel-Liste der Systemseiten)
 - **Web** (`app/src/main/assets/`): `index.html` (Struktur), `app.css` (Gestaltung), `app.js` (Logik, eine IIFE – Funktionen sind NICHT global, Tests bedienen die Oberfläche)
 - **minSdk 36** (Android 16). Regel: nur Android-Versionen unterstützen, die noch ≥ 2 Jahre Sicherheitspatches bekommen (nachschlagen: endoflife.date/android, Android Security Bulletin). Stand 10/2026: gepatcht 14–17, ≥ 2 Jahre nur 16 und 17. Keine `Build.VERSION`-Abfragen für Versionen unter minSdk (Lint `ObsoleteSdkInt`)
 - **Paket**: `de.schichtwecker.app`
@@ -45,7 +45,7 @@
 
 - Antippen der Versionsnummer `#appVersion` wechselt klassisch ↔ Anime (`S.design = 'classic'|'anime'`, Attribut `data-design="anime"` auf `<html>`).
 - Anime-Design steht komplett in `app/src/main/assets/anime.css`, ALLE Regeln unter `html[data-design="anime"]` (Ausnahme: `@font-face`/`@keyframes`, die nur dort benutzt werden). Keine Dauer-Animationen (Akku), nur ein einmaliger Hüpfer des Maskottchens (Antippen/Einschalten), bei `prefers-reduced-motion` keiner.
-- Kawaii-Teil (seit 1.12): eigenes, frei erfundenes Maskottchen „Weckerchen“ (Wecker mit Gesicht) als `assets/anime/mascot-{happy,sleepy,excited,wink,oops}.svg`, Schicht-Symbole mit Gesicht `assets/anime/shift-{free,early,late,night}.svg`. Runde Schrift „M PLUS Rounded 1c“ (OFL, `assets/anime/fonts/` inkl. `OFL.txt`) als WOFF2-Teilmenge (Latein inkl. tr/pl, Kyrillisch, Satzzeichen; ohne U+2026, das Zeichen ist dort japanisch mittig) – neue Zeichen in Sprachdateien ggf. nachsubsetten
+- Kawaii-Teil (seit 1.12): eigenes, frei erfundenes Maskottchen „Weckerchen“ (Wecker mit Gesicht) als `assets/anime/mascot-{happy,sleepy,excited,wink,oops}.svg`, Schicht-Symbole mit Gesicht `assets/anime/shift-{free,early,late,night}.svg`. Runde Schrift „M PLUS Rounded 1c“ (OFL, `assets/anime/fonts/` inkl. `OFL.txt`) als WOFF2-Teilmenge (Latein inkl. tr/pl, Kyrillisch, Satzzeichen; ohne U+2026, das Zeichen ist dort japanisch mittig) – neue Zeichen in Sprachdateien/`app.js`/`index.html` ggf. nachsubsetten. Zeichen als Literal schreiben (nicht `\u2713`), sonst findet die Zeichenliste sie nicht. Subset je Schnitt: `pyftsubset MPLUSRounded1c-<Schnitt>.ttf --unicodes-file=unicodes.txt --flavor=woff2 --name-IDs='*' --no-hinting --layout-features=kern,liga` (unicodes = Zeichenliste ohne U+2026)
 - Auftritte: Kopf (`#hdrMascot`), „Nächster Wecker“ als Sprechblase (`renderNextAnime`: schläfrig ohne Wecker/vor Nachtschicht, aufgeregt < 12 h), Tipp im Bereich Wecker, leere „Alle Wecker“-Liste, Toast (nur CSS `::before`, Text bleibt reiner Text), Einrichtung (`#wizMascot`/`#wizMascotTxt`). Texte unter `anime.*` in allen Sprachdateien
 - Feste Anime-Elemente in index.html tragen `.an-only` (app.css: `display:none`, anime.css blendet ein); dynamische nur bei `isAnime()` erzeugen. Farbpunkte `.ld` tragen `data-shift="1–4"` (Anime: Symbol statt Punkt). Das klassische Design bleibt dadurch pixelgleich
 - Nativ: `Android.setDesign('classic'|'anime')` (beim Start und Umschalten) → `I18n.design()` in den gerätegeschützten `ui_prefs`; `AlarmActivity` zeigt dann `AnimeAlarmScreen` mit `R.drawable.mascot_excited` (VectorDrawable, aus `mascot-excited.svg` erzeugt)
@@ -211,6 +211,15 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 - Vibration mit `VibrationAttributes.USAGE_ALARM` (ab 13) bzw. `AudioAttributes.USAGE_ALARM` – sonst unterdrückt Android sie bei „Bitte nicht stören“/Lautlos. Im DND-Modus „Totale Stille“ blockiert Android Wecker absichtlich komplett
 - Fehlt die Vollbild- (14+) oder Exact-Alarm-Berechtigung (12/12L), zeigt die App oben einen roten Hinweis mit „Erlauben“ (`getAlarmPermissionIssue`/`openAlarmPermissionSettings`), Prüfung bei jeder Rückkehr in die App
 
+### Zuverlässigkeits-Check (seit 1.16)
+- Anlass: Im EXTREMEN Energiesparmodus (Pixel u. a.) pausiert Android alle Apps außer den „wichtigen Apps“ – kein Klingeln, keine Benachrichtigung. Das kann die App weder erkennen noch umgehen; nur der Nutzer kann Schichtwecker dort eintragen → fester Hinweis. Der normale Energiesparmodus stört `setAlarmClock()` NICHT (Wecker sind ausgenommen)
+- Kotlin: `Reliability.kt` = EINE Quelle für alle Prüfungen (auch `getAlarmPermissionIssue` und den Vollbild-Dialog beim Start). `ReliabilityTargets` = feste Ziel-Liste ohne Android-Klassen (JVM-Test `ReliabilityTargetsTest`)
+- Brücke `getReliabilityStatus()` → JSON `{powerSave, ignoringBatteryOptimizations, backgroundRestricted, standbyBucket (Zahl), standbyBucketName (exempted/active/working_set/frequent/rare/restricted/never/unknown), canScheduleExactAlarms, appNotificationsEnabled, alarmChannelEnabled (Kanal `schichtplan_alarm_v4` nicht IMPORTANCE_NONE; fehlt er noch = true), notificationsEnabled (= beide), fullScreenIntentAllowed}`. Nicht lesbare Punkte fehlen im JSON (Oberfläche blendet sie aus)
+- Brücke `openSystemSettings(ziel)`, NUR diese Ziele (sonst ignoriert): `battery_saver` (ACTION_BATTERY_SAVER_SETTINGS → POWER_USAGE_SUMMARY), `app_battery` (Seite „Akkunutzung der App“ `android.settings.VIEW_ADVANCED_POWER_USAGE_DETAIL`, im SDK versteckt), `battery_optimization` (ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS), `notifications` (App-Benachrichtigungen bzw. Kanal-Seite, wenn nur der Wecker-Kanal aus ist), `full_screen`, `exact_alarm`. Je Ziel Kandidaten der Reihe nach, letzter Rückfall immer App-Details. ❌ KEIN `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` (Play-Richtlinie)
+- Neu abfragen: `MainActivity.onResume` ruft `window.onAppResumed()`, zusätzlich `visibilitychange`, Öffnen des Bereichs Wecker, Sprach-/Designwechsel (`refreshReliability()` = eine Abfrage für roten Hinweis + Karte)
+- Oberfläche (`REL_ITEMS` in app.js): Stufen `crit` (Benachrichtigungen aus, exakte Wecker fehlen, Akkunutzung „Eingeschränkt“) → roter Hinweis `#permWarn` im Plan + Hinweis `#relBadge` oben im Bereich Wecker; `warn` (Vollbild fehlt, Standby-Gruppe 45 = restricted) und `tip` (Akku-Optimierung an – Normalfall, zählt NICHT als Problem). Karte `#relCard` im Bereich Wecker (vor „Prüfen“): alles gut = eine positive Zeile, sonst Liste ✓/⚠ mit „Einstellungen öffnen“ (`data-rel-target`); Energiesparmodus an = Infozeile; darunter fest der Block „Extremer Energiesparmodus“ (`#relExtremeBtn` → `battery_saver`). Einrichtungs-Abschluss: `.wiz-extreme` + `#wizExtremeBtn`. Ohne Brücke: keine Prüfpunkte, keine Knöpfe, Hinweistext bleibt
+- `#permWarn`: `exact`/`fullscreen` kommen weiter aus `getAlarmPermissionIssue` (Knopf „Erlauben“ → `openAlarmPermissionSettings`), die neuen kritischen Punkte aus dem Check (Knopf „Einstellungen öffnen“ → `openSystemSettings`). Texte `rel.*`, `wiz.extreme`; Tests `tests/zuverlaessigkeit.test.js` (Mock `withReliability` in `tests/lang-bridge.js`, steckt in jeder `withLang`-Brücke)
+
 ### Zurück-Geste
 - `MainActivity.backCallback` fragt `window.handleBack()`: schließt Dialog → Einrichtung (einen Schritt zurück, auf Schritt 1 schließen, auf dem Abschluss „Zum Plan“) → Tages-Sheet → „Alle Wecker“ → anderer Bereich zurück zum Plan; erst wenn nichts offen ist, verlässt die App
 
@@ -269,7 +278,7 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 
 ## Tests
 
-- Web-Logik: `cd tests && npm install && npm test` (`run-all.js` führt alle `tests/*.test.js` aus; jsdom, nachgebaute Android-Bridge). `einrichtung.test.js`: geführte Einrichtung; `wecker.test.js`: Schalter „automatisch wecken“, Migration, Meldungen, Zeitauswahl, Einzelwecker; `webapp.test.js`: Urlaub, Weckzeit, Löschen, Feiertage, Profil-Export/-Import inkl. manipulierter Dateien, Waisen-Übernahme, Persistenz, Bereiche, Reset
+- Web-Logik: `cd tests && npm install && npm test` (`run-all.js` führt alle `tests/*.test.js` aus; jsdom, nachgebaute Android-Bridge). `einrichtung.test.js`: geführte Einrichtung; `zuverlaessigkeit.test.js`: Zuverlässigkeits-Check (Karte, Hinweise, Ziele, ohne Brücke, alle Sprachen); `wecker.test.js`: Schalter „automatisch wecken“, Migration, Meldungen, Zeitauswahl, Einzelwecker; `webapp.test.js`: Urlaub, Weckzeit, Löschen, Feiertage, Profil-Export/-Import inkl. manipulierter Dateien, Waisen-Übernahme, Persistenz, Bereiche, Reset
 - Vor jedem Release zusätzlich auf Gerät/Emulator: frische Installation, Dark Mode an/aus, Test-Alarm bei gesperrtem Bildschirm, Neustart MIT PIN ohne Entsperren
 - `./gradlew lintDebug` muss ohne Fehler durchlaufen
 - CI: `.github/workflows/build.yml` (Tests, Lint, Debug-APK bei jedem Push; signiertes GitHub-Release bei Tag `v<versionName>`)
@@ -280,3 +289,9 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 ./gradlew assembleDebug    # Debug APK bauen
 ./gradlew assembleRelease  # Release APK bauen (signing nötig)
 ```
+## Energiespar-Tests (Emulator, 31.10.2026, Version 1.15)
+
+- Test-Alarm (setAlarmClock) klingelt pünktlich bei: normal, normaler Energiesparmodus (`settings put global low_power 1`), Akkunutzung „Eingeschränkt“ (`cmd appops set <pkg> RUN_ANY_IN_BACKGROUND ignore`). Tiefer Doze ließ sich im Emulator nicht erzwingen (bleibt INACTIVE); setAlarmClock ist laut Doku ausgenommen.
+- **Pausierte App** (`pm suspend <pkg>` = Pixel „Extremer Energiesparmodus“): AlarmReceiver bekommt den Alarm, aber AlarmActivity wird blockiert, Benachrichtigung ausgeblendet, Ton stumm → Wecker praktisch tot. Nur lösbar durch den Nutzer („Wichtige Apps“) → Hinweis im Zuverlässigkeits-Check und in der Einrichtung.
+- Beobachtung: Android 16 loggt bei jedem Wecker-Start `AudioHardening background playback would be muted for de.schichtwecker.app … level: full` (nur Log, Ton lief, `mutedState:none`). Bei künftigen Android-Versionen prüfen, ob das durchgesetzt wird (ggf. Audio-Fokus/Startreihenfolge im AlarmService anpassen).
+- Testablauf: Test-Alarm in der App auslösen, Zustand per adb setzen, Bildschirm aus, nach ~30 s prüfen, ob `AlarmActivity` angezeigt wurde (logcat „Displayed …AlarmActivity“).

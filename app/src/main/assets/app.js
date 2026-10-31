@@ -1128,16 +1128,107 @@ window.onerror=function(msg,src,line,col,err){
   function openLicenses(){ renderLicenses(); $('licOverlay').classList.add('open'); $('licOverlay').scrollTop=0; }
   function closeLicenses(){ $('licOverlay').classList.remove('open'); }
 
-  /* Warnung bei fehlender Wecker-Berechtigung (z. B. Dialog mit „Später“ weggeklickt) */
-  function renderPermWarn(){
+  /* ── ZUVERLÄSSIGKEIT ───────────────────────
+     Systemeinstellungen, die Wecker verhindern oder verzögern (Android.getReliabilityStatus).
+     Stufen: crit = Wecker klingelt evtl. gar nicht (roter Hinweis über dem Kalender + Hinweis
+     oben im Bereich Wecker), warn = eingeschränkt, tip = Empfehlung (zählt nicht als Problem).
+     Den EXTREMEN Energiesparmodus kann die App nicht erkennen → fester Hinweis in der Karte.
+     Neu abgefragt beim Start, bei Rückkehr in die App (onAppResumed/visibilitychange),
+     beim Öffnen des Bereichs Wecker und nach Sprachwechsel. */
+  var REL_ITEMS=[
+    {id:'notifications',ok:'rel.notifications_ok',bad:'rel.notifications_bad',level:'crit',target:'notifications',
+      test:function(s){ return typeof s.notificationsEnabled==='boolean'?s.notificationsEnabled:null; }},
+    {id:'exact',ok:'rel.exact_ok',bad:'rel.exact_bad',level:'crit',target:'exact_alarm',
+      test:function(s){ return typeof s.canScheduleExactAlarms==='boolean'?s.canScheduleExactAlarms:null; }},
+    {id:'background',ok:'rel.background_ok',bad:'rel.background_bad',level:'crit',target:'app_battery',
+      test:function(s){ return typeof s.backgroundRestricted==='boolean'?!s.backgroundRestricted:null; }},
+    {id:'fullscreen',ok:'rel.fullscreen_ok',bad:'rel.fullscreen_bad',level:'warn',target:'full_screen',
+      test:function(s){ return typeof s.fullScreenIntentAllowed==='boolean'?s.fullScreenIntentAllowed:null; }},
+    /* Standby-Gruppe „eingeschränkt“ (45): nur zeigen, wenn nicht schon „Eingeschränkt“ gemeldet ist */
+    {id:'bucket',ok:null,bad:'rel.bucket_bad',level:'warn',target:'app_battery',
+      test:function(s){ return s.standbyBucket===45&&s.backgroundRestricted!==true?false:null; }},
+    {id:'battery_opt',ok:'rel.battery_opt_ok',bad:'rel.battery_opt_bad',level:'tip',target:'battery_optimization',
+      test:function(s){ return typeof s.ignoringBatteryOptimizations==='boolean'?s.ignoringBatteryOptimizations:null; }}
+  ];
+  /* Status aus der Brücke; null ohne Brücke oder bei Fehler (Browser/Test) */
+  function readReliability(){
+    if(!hasBridge('getReliabilityStatus')) return null;
+    try{
+      var o=JSON.parse(window.Android.getReliabilityStatus());
+      return o&&typeof o==='object'&&!Array.isArray(o)?o:null;
+    }catch(e){ return null; }
+  }
+  /* Prüfpunkte: [{id, good, level, text, target}] – unbekannte Punkte (null) fallen weg */
+  function relChecks(st){
+    var out=[]; if(!st) return out;
+    REL_ITEMS.forEach(function(it){
+      var g=null; try{ g=it.test(st); }catch(e){}
+      if(g===null||(g&&!it.ok)) return;
+      out.push({id:it.id,good:g,level:it.level,text:t(g?it.ok:it.bad),target:it.target});
+    });
+    return out;
+  }
+  function relProblems(checks){ return checks.filter(function(c){ return !c.good&&c.level!=='tip'; }); }
+  function openSystemSettings(target){
+    if(!hasBridge('openSystemSettings')){ toast(t('common.no_bridge'),true); return; }
+    try{ window.Android.openSystemSettings(String(target)); }catch(e){}
+  }
+  function renderReliability(st){
+    var box=$('relStatus'), badge=$('relBadge'); if(!box) return;
+    if(st===undefined) st=readReliability();
+    var xb=$('relExtremeBtn'); if(xb) xb.hidden=!hasBridge('openSystemSettings');
+    var checks=relChecks(st);
+    if(!st||!checks.length){ box.hidden=true; box.innerHTML=''; if(badge) badge.hidden=true; return; }
+    var probs=relProblems(checks), hasTip=checks.some(function(c){ return !c.good; });
+    var h=probs.length
+      ?'<div class="relsum bad">'+(isAnime()?mascotHtml('oops'):'<span class="relico" aria-hidden="true">⚠</span>')
+        +'<span>'+esc(t('rel.problems',{n:probs.length}))+'</span></div>'
+      :'<div class="relsum ok">'+(isAnime()?mascotHtml('happy'):'<span class="relico" aria-hidden="true">✓</span>')
+        +'<span>'+esc(t('rel.all_ok'))+'</span></div>';
+    if(probs.length||hasTip){
+      h+='<div class="rellist">'+checks.map(function(c){
+        return '<div class="relrow '+(c.good?'ok':c.level)+'" data-rel="'+c.id+'">'
+          +'<span class="relico" aria-hidden="true">'+(c.good?'✓':'⚠')+'</span>'
+          +'<span class="reltxt">'+esc(c.text)+'</span>'
+          +(c.good||!hasBridge('openSystemSettings')?'':'<button type="button" class="sm" data-rel-target="'+esc(c.target)+'">'+esc(t('rel.open'))+'</button>')
+          +'</div>';
+      }).join('')+'</div>';
+    }
+    if(st.powerSave===true) h+='<div class="relinfo">\uD83D\uDD0B '+esc(t('rel.power_save'))+'</div>';
+    box.innerHTML=h; box.hidden=false;
+    if(badge) badge.hidden=!probs.some(function(c){ return c.level==='crit'; });
+  }
+  $('relCard').addEventListener('click',function(e){
+    var b=e.target.closest('[data-rel-target]'); if(b) openSystemSettings(b.getAttribute('data-rel-target'));
+  });
+  $('relBadge').onclick=function(){ var c=$('relCard'); if(c&&c.scrollIntoView) c.scrollIntoView({behavior:'smooth',block:'start'}); };
+
+  /* Warnung über dem Kalender bei fehlender Wecker-Berechtigung (z. B. Dialog mit „Später“
+     weggeklickt) bzw. bei kritischen Punkten des Zuverlässigkeits-Checks */
+  function renderPermWarn(st){
     var el=$('permWarn'); if(!el) return;
     var issue=''; try{ if(hasBridge('getAlarmPermissionIssue')) issue=window.Android.getAlarmPermissionIssue(); }catch(e){}
-    if(!issue){ el.style.display='none'; return; }
-    var txt=t(issue==='exact'?'perm.exact':'perm.fullscreen');
-    el.innerHTML='<span>⚠️ '+esc(txt)+'</span><button class="sm primary" id="permFixBtn">'+esc(t('perm.allow'))+'</button>';
-    $('permFixBtn').onclick=function(){ window.Android.openAlarmPermissionSettings(issue); };
+    var txt='', fix=null, label=t('perm.allow');
+    if(issue==='exact'){ txt=t('perm.exact'); }
+    else {
+      if(st===undefined) st=readReliability();
+      var crit=relProblems(relChecks(st)).filter(function(c){ return c.level==='crit'; })[0];
+      if(crit){ txt=crit.text; label=t('rel.open'); fix=function(){ openSystemSettings(crit.target); }; }
+      else if(issue==='fullscreen') txt=t('perm.fullscreen');
+    }
+    if(!txt){ el.style.display='none'; el.innerHTML=''; return; }
+    if(!fix) fix=function(){ window.Android.openAlarmPermissionSettings(issue); };
+    el.innerHTML='<span>⚠️ '+esc(txt)+'</span><button class="sm primary" id="permFixBtn">'+esc(label)+'</button>';
+    $('permFixBtn').onclick=fix;
     el.style.display='';
   }
+  /* alles, was vom Systemzustand abhängt, mit EINER Abfrage neu zeichnen */
+  function refreshReliability(){
+    var st=readReliability();
+    renderPermWarn(st); renderReliability(st);
+  }
+  /* Aufruf aus MainActivity.onResume (z. B. zurück aus den Systemeinstellungen) */
+  window.onAppResumed=function(){ refreshReliability(); };
 
   /* „Nächster Wecker“ über dem Kalender */
   function renderNextAlarm(){
@@ -1364,6 +1455,7 @@ window.onerror=function(msg,src,line,col,err){
       b.classList.toggle('active',b.dataset.tab===name);
     });
     window.scrollTo(0,0);
+    if(name==='wecker') renderReliability();   // Energiesparmodus kann sich inzwischen geändert haben
   }
 
   /* ── SCHNITTSTELLE für Bereiche und Einrichtung ──
@@ -1809,6 +1901,8 @@ window.onerror=function(msg,src,line,col,err){
       +row('wiz.sum_holidays',esc(t(COUNTRY_KEYS[countryOf(S.country)]))+' · '+esc(regionLabel(countryOf(S.country),S.bundesland)))
       +'</div>'
       +'<div class="wiz-tip">'+tHtml('wiz.tip')+'</div>'
+      +'<div class="wiz-tip wiz-extreme"><div>'+tHtml('wiz.extreme')+'</div>'
+      +(hasBridge('openSystemSettings')?'<button type="button" class="sm" id="wizExtremeBtn" data-rel-target="battery_saver">'+esc(t('rel.extreme_btn'))+'</button>':'')+'</div>'
       +'<div class="small muted" style="margin-top:12px;">'+esc(t('wiz.later'))+'</div>';
   }
   function renderWiz(){
@@ -1886,6 +1980,8 @@ window.onerror=function(msg,src,line,col,err){
   $('wizPrev').onclick=wizBack;
   $('wizSkip').onclick=closeWiz;
   $('wizBody').addEventListener('click',function(e){
+    var rb=e.target.closest('[data-rel-target]');
+    if(rb){ openSystemSettings(rb.getAttribute('data-rel-target')); return; }
     var tb=e.target.closest('[data-tpl]');
     if(tb){ wizApplyTpl(tb.dataset.tpl); renderWiz(); return; }
     var wk=e.target.closest('[data-wweeks]');
@@ -2002,7 +2098,7 @@ window.onerror=function(msg,src,line,col,err){
   $('importProfileBtn').onclick=importProfileFile;
   /* App geht in den Hintergrund: ausstehenden Abgleich sofort ausführen */
   document.addEventListener('visibilitychange',function(){
-    if(!document.hidden) renderPermWarn();   // zurück aus den Systemeinstellungen
+    if(!document.hidden) refreshReliability();   // zurück aus den Systemeinstellungen
     if(document.hidden&&_resyncTid){ clearTimeout(_resyncTid); _resyncTid=null; resyncAlarms(); }
   });
   $('skipHolShift').addEventListener('change',function(e){
@@ -2104,7 +2200,7 @@ window.onerror=function(msg,src,line,col,err){
   $('appVersion').onclick=function(){
     S.design=S.design==='anime'?'classic':'anime';
     applyDesign(); save();
-    renderNextAlarm(); if(isAlarmsOpen()) renderAllAlarms();
+    renderNextAlarm(); renderReliability(); if(isAlarmsOpen()) renderAllAlarms();
     toast(t(S.design==='anime'?'design.anime_on':'design.classic_on'));
     if(isAnime()){ mascotHop($('hdrMascot')); mascotHop(document.querySelector('#nextAlarm .an-masc')); }
   };
@@ -2179,7 +2275,7 @@ window.onerror=function(msg,src,line,col,err){
   /* komplette Oberfläche in der aktuellen Sprache neu aufbauen (ohne Neustart) */
   function rerenderAll(){
     applyI18n(); renderHdrIcon(); renderOptionLabels(); renderLangSelect();
-    initDateSelects(); refreshAllUi(); renderPatHint(); showAppVersion(); renderPermWarn();
+    initDateSelects(); refreshAllUi(); renderPatHint(); showAppVersion(); refreshReliability();
     if(sheetDs&&$('overlay').classList.contains('open')) openSheet(sheetDs,getShift(sheetDs));
     if(isWizOpen()) renderWiz();
   }
@@ -2227,7 +2323,7 @@ window.onerror=function(msg,src,line,col,err){
   $('weeksVal').textContent=S.weeksCount;
   renderRegionUi();
   $('skipHolShift').checked=S.skipHolidaysShift;
-  syncWithNative(); resyncAlarms({quiet:true}); showAppVersion(); updateAlarmOptionsUi(); renderPermWarn();
+  syncWithNative(); resyncAlarms({quiet:true}); showAppVersion(); updateAlarmOptionsUi(); refreshReliability();
   renderAlarmSettings(); renderFreeAlarmSettings(); renderPat(); renderPatHint(); renderEx(); renderCal(); updateRingtoneUI();
   /* Wizard beim allerersten Start anzeigen */
   var wizSeen=S.wizardDone; try{ wizSeen=wizSeen||!!localStorage.getItem(WIZ_KEY); }catch(e){}

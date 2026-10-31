@@ -573,6 +573,44 @@ html[lang="ru"] .dtbadge { letter-spacing:0; }
   font-size:var(--t-body-md); display:flex; align-items:center; gap:10px; flex-wrap:wrap;
 }
 .permwarn span { flex:1; min-width:12rem; }
+/* ── Zuverlässigkeits-Check (Bereich Wecker) ──
+   ✓ = --accent (grün), ⚠ warn = --frueh (gelb/orange), ⚠ crit = --md-error */
+.relbadge {
+  display:flex; align-items:center; gap:8px; width:100%; margin:0 0 12px; padding:8px 14px;
+  border-radius:var(--shape-md); border:1px solid var(--md-error); background:transparent;
+  color:var(--fg); font-size:var(--t-body-md); font-weight:500; text-align:left;
+}
+.relbadge[hidden] { display:none; }
+.relbadge .relico { color:var(--md-error); }
+.relico { flex:0 0 auto; width:1.2em; text-align:center; font-weight:700; line-height:1.4; }
+.relsum { display:flex; align-items:flex-start; gap:8px; font-weight:500; font-size:var(--t-body-md); margin:0 0 8px; }
+.relsum.ok .relico { color:var(--accent); }
+.relsum.bad .relico { color:var(--md-error); }
+.rellist { border:1px solid var(--border); border-radius:var(--shape-md); background:var(--md-surface-container-lowest, var(--card)); margin:0 0 12px; }
+.relrow {
+  display:flex; align-items:center; flex-wrap:wrap; gap:6px 10px; padding:10px 12px;
+  border-bottom:1px solid var(--border); font-size:var(--t-body-md);
+}
+.relrow:last-child { border-bottom:none; }
+.relrow .reltxt { flex:1; min-width:10rem; }
+.relrow.ok .relico { color:var(--accent); }
+.relrow.ok .reltxt { color:var(--muted); }
+.relrow.warn .relico, .relrow.tip .relico { color:var(--frueh); }
+.relrow.crit .relico { color:var(--md-error); }
+.relrow button { margin-left:auto; }
+.relinfo {
+  margin:0 0 12px; padding:10px 14px; border-radius:var(--shape-md); font-size:var(--t-body-md);
+  background:var(--md-primary-container); color:var(--md-on-primary-container);
+}
+.relextreme {
+  padding:12px 14px; border-radius:var(--shape-md);
+  background:var(--md-surface-container-high); border:1px solid var(--border);
+}
+.relx-title { font-weight:600; font-size:var(--t-body-md); margin-bottom:4px; }
+.relextreme button { margin-top:10px; }
+.relextreme button[hidden] { display:none; }
+.wiz-extreme { margin-top:12px; }
+.wiz-extreme button { margin-top:10px; }
 /* Startseite: nächste Wecker kompakt */
 .alist { display:flex; flex-direction:column; }
 .arow {

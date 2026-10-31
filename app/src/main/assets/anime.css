@@ -688,6 +688,25 @@ html[data-design="anime"] .nextalarm {
 }
 html[data-design="anime"] .nextalarm b { font-weight:700; }
 html[data-design="anime"] .permwarn { border-radius:var(--shape-md); }
+/* Zuverlässigkeits-Check: Bubble-Ränder, Maskottchen in der Zusammenfassung (nur Anime erzeugt) */
+html[data-design="anime"] .relbadge {
+  border:1.5px dashed var(--md-error); border-radius:var(--shape-lg);
+  background:var(--md-surface-container-lowest);
+}
+html[data-design="anime"] .rellist {
+  border:1.5px solid var(--anime-rand); border-radius:var(--shape-md);
+  background:var(--md-surface-container-lowest);
+}
+html[data-design="anime"] .relrow { border-bottom-color:var(--anime-rand); }
+html[data-design="anime"] .relsum { align-items:center; gap:10px; font-weight:700; }
+html[data-design="anime"] .relsum .an-masc { width:38px; height:36px; }
+html[data-design="anime"] .relinfo {
+  background:var(--anime-verlauf-zart); color:var(--md-on-secondary-container);
+}
+html[data-design="anime"] .relextreme {
+  border:1.5px dashed var(--anime-rand); border-radius:var(--shape-md);
+}
+html[data-design="anime"] .relx-title { font-weight:800; color:var(--md-primary); }
 
 /* Wecker-Listen */
 html[data-design="anime"] .arow,

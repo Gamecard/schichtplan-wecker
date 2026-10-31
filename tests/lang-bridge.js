@@ -1,11 +1,42 @@
 // Sprach-Teil der nachgebauten Android-Bridge (wie MainActivity): liefert die Sprachdateien
 // von der Platte, merkt die Spracheinstellung und simuliert den Import einer eigenen Übersetzung.
 // Standard: Einstellung „auto“, Systemsprache Deutsch → die bestehenden Tests laufen auf Deutsch.
+// Dazu der Zuverlässigkeits-Check (withReliability): standardmäßig alles in Ordnung.
 const fs = require('fs');
 const path = require('path');
 
+// Zuverlässigkeits-Check wie MainActivity.getReliabilityStatus/openSystemSettings.
+// bridge.rel = Rohwerte (überschreibbar); permIssue ('exact'/'fullscreen') wirkt wie nativ auf
+// dieselben Punkte, damit roter Hinweis und Karte zusammenpassen. Geöffnete Ziele → bridge.openedTargets.
+const REL_OK = {
+  powerSave: false, ignoringBatteryOptimizations: true, backgroundRestricted: false,
+  standbyBucket: 5, standbyBucketName: 'exempted', canScheduleExactAlarms: true,
+  appNotificationsEnabled: true, alarmChannelEnabled: true, notificationsEnabled: true, fullScreenIntentAllowed: true
+};
+const REL_TARGETS = ['battery_saver', 'app_battery', 'battery_optimization', 'notifications', 'full_screen', 'exact_alarm'];
+function withReliability(bridge, rel = {}) {
+  if (typeof bridge.getReliabilityStatus !== 'function') {
+    bridge.rel = Object.assign({}, REL_OK, bridge.rel || {}, rel);
+    bridge.relCalls = 0;
+    bridge.getReliabilityStatus = function () {
+      this.relCalls++;
+      const s = Object.assign({}, this.rel);
+      if (this.permIssue === 'exact') s.canScheduleExactAlarms = false;
+      if (this.permIssue === 'fullscreen') s.fullScreenIntentAllowed = false;
+      return JSON.stringify(s);
+    };
+  }
+  if (typeof bridge.openSystemSettings !== 'function') {
+    bridge.openedTargets = [];
+    // wie Kotlin: nur Ziele aus der festen Liste, Unbekanntes wird ignoriert
+    bridge.openSystemSettings = function (t) { if (REL_TARGETS.includes(t)) this.openedTargets.push(t); else this.rejectedTargets = (this.rejectedTargets || 0) + 1; };
+  }
+  return bridge;
+}
+
 function withLang(bridge, assets, opts = {}) {
   const dir = path.join(assets, 'lang');
+  withReliability(bridge, opts.rel);
   return Object.assign(bridge, {
     langSetting: opts.setting || 'auto',
     sysLang: opts.system || 'de',
@@ -42,4 +73,4 @@ function withLang(bridge, assets, opts = {}) {
     }
   });
 }
-module.exports = { withLang };
+module.exports = { withLang, withReliability, REL_OK, REL_TARGETS };

@@ -168,6 +168,9 @@ window.onerror=function(msg,src,line,col,err){
   function createDefaultState(){
     return {
       startDate:'', weeksCount:6,
+      /* Rhythmus wiederholen (Standard): nach der letzten Woche wieder Woche 1.
+         false = Plan gilt einmal ab der Startwoche, danach Tage ohne Eintrag (wie vor dem Start) */
+      patternRepeat:true,
       /* Feiertage: Land 'DE'|'AT'|'CH' + Region (Bundesland bzw. Kanton, Kürzel s. REGIONS).
          Feldname „bundesland“ bleibt aus Kompatibilität (Altdaten/Profile ohne Land = DE) */
       country:'DE', bundesland:'NW',
@@ -569,6 +572,7 @@ window.onerror=function(msg,src,line,col,err){
     var tgt=parseYmd(ds);
     var diffDays=Math.round((tgt.getTime()-sm.getTime())/864e5);
     if(diffDays<0) return {type:0,name:'',cls:''};
+    if(S.patternRepeat===false&&diffDays>=S.weeksCount*7) return {type:0,name:'',cls:''};   // einmaliger Plan zu Ende
     var idx=diffDays%(S.weeksCount*7);
     var tp=S.pattern[idx]!=null?S.pattern[idx]:0;
     return {type:tp,name:shiftLabel(tp),dname:SNAMES[tp]||'',cls:SCLS[tp]||''};
@@ -907,6 +911,7 @@ window.onerror=function(msg,src,line,col,err){
   }
 
   /* ── MUSTER ─────────────────────────────── */
+  var MAX_WEEKS=10;   // höchstens 10 Wochen im Rhythmus (Standard bleibt 6)
   function initPat(){
     var req=S.weeksCount*7;
     if(S.pattern.length!==req){
@@ -922,8 +927,83 @@ window.onerror=function(msg,src,line,col,err){
       b.classList.toggle('active',Number(b.dataset.pick)===patBrush);
     });
     $('patHint').textContent=patBrush
-      ?'✏️ '+t('pattern.brush_hint',{shift:shiftLabel(patBrush)})
-      :t('pattern.tip',{shifts:[1,2,3,4].map(shiftLabel).join('/')});
+      ?'✏️ '+t('pattern.brush_hint',{shift:shiftLabel(patBrush)})+' '+t('pattern.brush_swipe',{shift:shiftLabel(patBrush)})
+      :t('pattern.tip',{shifts:[1,2,3,4].map(shiftLabel).join('/')})+' '+t('pattern.drag_tip');
+  }
+  /* Schalter „Rhythmus wiederholen“ + Erklärung (bei einmaligem Plan mit Enddatum) */
+  function renderPatRepeat(){
+    var on=S.patternRepeat!==false; $('patRepeat').checked=on;
+    var txt;
+    if(on) txt=t('pattern.repeat_on',{n:S.weeksCount});
+    else{
+      var sd=parseYmd(S.startDate);
+      if(S.startDate&&!isNaN(sd)){
+        var end=mondayOf(sd); end.setDate(end.getDate()+S.weeksCount*7-1);
+        txt=t('pattern.repeat_off',{n:S.weeksCount,date:fmtDate(toYmd(end))});
+      } else txt=t('pattern.repeat_off_nodate',{n:S.weeksCount});
+    }
+    $('patRepeatHint').textContent=txt;
+  }
+  /* Ziehen im Rhythmus-Raster (zusätzlich zum Antippen, das unverändert bleibt):
+     - Tag gedrückt halten (PAT_HOLD_MS), dann über weitere Tage ziehen → sie bekommen die Schicht des ersten Tags
+     - Schicht in der Legende gewählt → einfach über die Tage wischen, sie bekommen die gewählte Schicht
+     Wer vor Ablauf der Haltezeit wischt (ohne Legende), scrollt die Seite wie bisher.
+     o = {cell: Selektor, idx(el), get(i), set(i,t), brush() → Schicht|null, done()} */
+  var PAT_HOLD_MS=350, PAT_MOVE_TOL=8;
+  function patCellPaint(el,tp,i){
+    el.className='pday '+(SCLS[tp]||'');
+    el.textContent=tp===0?dayShort(i%7):shiftLabel(tp);
+  }
+  function attachPatDrag(box,o){
+    var st=null, noClickUntil=0;
+    function cellAt(x,y){
+      var el=document.elementFromPoint?document.elementFromPoint(x,y):null;
+      el=el&&el.closest?el.closest(o.cell):null;
+      return el&&box.contains(el)?el:null;
+    }
+    function paint(el){
+      var i=o.idx(el); if(st.seen[i]) return; st.seen[i]=1;
+      if(o.get(i)!==st.val){ o.set(i,st.val); st.changed=true; }
+      patCellPaint(el,st.val,i);
+    }
+    function begin(){
+      st.active=true; box.classList.add('pat-drag');
+      try{ if(navigator.vibrate) navigator.vibrate(12); }catch(e){}
+      paint(st.el);
+    }
+    function finish(){
+      if(!st) return;
+      clearTimeout(st.timer); var s=st; st=null; box.classList.remove('pat-drag');
+      if(s.active){ noClickUntil=Date.now()+600; if(s.changed) o.done(); }
+    }
+    box.addEventListener('pointerdown',function(e){
+      if(e.pointerType==='mouse'&&e.button!==0) return;
+      var el=e.target.closest?e.target.closest(o.cell):null; if(!el||!box.contains(el)) return;
+      var b=o.brush(), i=o.idx(el);
+      st={el:el,x:e.clientX,y:e.clientY,id:e.pointerId,active:false,changed:false,seen:{},
+          brush:b!=null,val:b!=null?b:o.get(i)};
+      if(!st.brush) st.timer=setTimeout(function(){ if(st&&!st.active) begin(); },PAT_HOLD_MS);
+    });
+    box.addEventListener('pointermove',function(e){
+      if(!st||e.pointerId!==st.id) return;
+      if(!st.active){
+        if(Math.abs(e.clientX-st.x)<=PAT_MOVE_TOL&&Math.abs(e.clientY-st.y)<=PAT_MOVE_TOL) return;
+        if(!st.brush){ clearTimeout(st.timer); st=null; return; }   // vor der Haltezeit gewischt → Seite scrollt
+        var c0=cellAt(e.clientX,e.clientY);
+        if(c0&&c0!==st.el){ begin(); paint(c0); }
+        return;
+      }
+      var c=cellAt(e.clientX,e.clientY); if(c) paint(c);
+    });
+    box.addEventListener('pointerup',finish);
+    box.addEventListener('pointercancel',finish);
+    // Während des Ziehens (bzw. mit gewählter Legende) darf die Seite nicht mitscrollen
+    box.addEventListener('touchmove',function(e){ if(st&&(st.active||st.brush)&&e.cancelable) e.preventDefault(); },{passive:false});
+    box.addEventListener('contextmenu',function(e){ if(st) e.preventDefault(); });
+    // Nach dem Ziehen kein zusätzliches „Antippen“ auslösen
+    box.addEventListener('click',function(e){
+      if(Date.now()<noClickUntil&&e.target.closest&&e.target.closest(o.cell)){ e.stopPropagation(); e.preventDefault(); noClickUntil=0; }
+    },true);
   }
   function renderPat(){
     var c=$('patGrid'); c.innerHTML='';
@@ -947,6 +1027,7 @@ window.onerror=function(msg,src,line,col,err){
       }
       row.appendChild(days); c.appendChild(row);
     }
+    renderPatRepeat();
   }
   function cycleShift(idx){
     if(patBrush) S.pattern[idx]=S.pattern[idx]===patBrush?0:patBrush;
@@ -1490,8 +1571,11 @@ window.onerror=function(msg,src,line,col,err){
     if(idx<0||idx>=S.pattern.length||!(t>=0&&t<=4)) return;
     S.pattern[idx]=t; renderPat(); renderCal(); save(); scheduleResync();
   }
+  function setPatternRepeat(on){
+    S.patternRepeat=!!on; renderPat(); renderCal(); save(); scheduleResync();
+  }
   function setWeeksCount(n){
-    S.weeksCount=Math.max(1,Math.min(6,n)); $('weeksVal').textContent=S.weeksCount;
+    S.weeksCount=Math.max(1,Math.min(MAX_WEEKS,n)); $('weeksVal').textContent=S.weeksCount;
     initPat(); renderPat(); renderCal(); save(); scheduleResync();
   }
 
@@ -1518,7 +1602,8 @@ window.onerror=function(msg,src,line,col,err){
   /* Übernimmt geprüfte Werte aus s nach S (gespeicherter Stand oder Profil-Datei) */
   function applyState(s){
     if(typeof s.startDate==='string'&&(s.startDate===''||/^\d{4}-\d{2}-\d{2}$/.test(s.startDate))) S.startDate=s.startDate;
-    if(typeof s.weeksCount==='number')  S.weeksCount=Math.max(1,Math.min(6,s.weeksCount));
+    if(typeof s.weeksCount==='number')  S.weeksCount=Math.max(1,Math.min(MAX_WEEKS,Math.round(s.weeksCount)||1));
+    if(typeof s.patternRepeat==='boolean') S.patternRepeat=s.patternRepeat;
     // Land fehlt (Altdaten, alte Profile) → Deutschland; Region muss zum Land passen
     var land=countryOf(s.country);
     if(regionOk(land,s.bundesland)){ S.country=land; S.bundesland=s.bundesland; }
@@ -1613,7 +1698,7 @@ window.onerror=function(msg,src,line,col,err){
   var PROFILE_FORMAT=1;
   function buildProfile(){
     var keys=['startDate','weeksCount','country','bundesland','pattern','exceptions','alarmTimes','alarmEnabled',
-              'freeAlarm','autoSchedule','skipHolidaysShift','suppressed','overrides','preAlarmMin','startMode','design'];
+              'freeAlarm','autoSchedule','skipHolidaysShift','suppressed','overrides','preAlarmMin','startMode','design','patternRepeat'];
     var data={};
     keys.forEach(function(k){ data[k]=S[k]; });
     data.manualAlarms=(S.activeAlarms||[]).filter(function(a){return !a.auto&&isFuture(a.ds,a.time);})
@@ -1829,7 +1914,7 @@ window.onerror=function(msg,src,line,col,err){
     W.step++; renderWiz();
   }
   function wizResize(n){
-    n=Math.max(1,Math.min(6,n)); W.weeks=n;
+    n=Math.max(1,Math.min(MAX_WEEKS,n)); W.weeks=n;
     var p=new Array(n*7).fill(0);
     for(var i=0;i<Math.min(W.pattern.length,p.length);i++) p[i]=W.pattern[i];
     W.pattern=p;
@@ -1941,7 +2026,7 @@ window.onerror=function(msg,src,line,col,err){
         +'<button type="button" class="icon" data-wweeks="1" aria-label="'+esc(t('pattern.more_weeks'))+'">+</button></div>'
         +'<div id="wizPat"></div>'
         +'<div class="small muted" style="margin-top:4px;">'
-        +esc(t('wiz.cycle_hint',{cycle:[t('wiz.cycle_empty'),shiftLabel(1),shiftLabel(2),shiftLabel(3),shiftLabel(4)].join(' → ')}))+'</div>';
+        +esc(t('wiz.cycle_hint',{cycle:[t('wiz.cycle_empty'),shiftLabel(1),shiftLabel(2),shiftLabel(3),shiftLabel(4)].join(' → ')})+' '+t('pattern.drag_tip'))+'</div>';
       b.innerHTML=h; renderWizPat();
     } else if(st===2){
       $('wizTitle').textContent=t('wiz.s3_title');
@@ -2060,7 +2145,7 @@ window.onerror=function(msg,src,line,col,err){
     $('weeksVal').textContent=S.weeksCount; initPat();renderPat();renderCal();save();scheduleResync();
   };
   $('incWeeks').onclick=function(){
-    if(S.weeksCount>=6)return; S.weeksCount++;
+    if(S.weeksCount>=MAX_WEEKS)return; S.weeksCount++;
     $('weeksVal').textContent=S.weeksCount; initPat();renderPat();renderCal();save();scheduleResync();
   };
   $('resetAll').onclick=function(){
@@ -2112,6 +2197,26 @@ window.onerror=function(msg,src,line,col,err){
   });
   $('patGrid').addEventListener('click',function(e){
     var b=e.target.closest('.pday'); if(b) cycleShift(Number(b.dataset.idx));
+  });
+  $('patRepeat').addEventListener('change',function(e){ setPatternRepeat(e.target.checked); });
+  attachPatDrag($('patGrid'),{
+    cell:'.pday[data-idx]',
+    idx:function(el){ return Number(el.dataset.idx); },
+    get:function(i){ return S.pattern[i]||0; },
+    set:function(i,tp){ S.pattern[i]=tp; },
+    brush:function(){ return patBrush; },
+    done:function(){ renderPat(); renderCal(); save(); scheduleResync(); }
+  });
+  attachPatDrag($('wizBody'),{
+    cell:'.pday[data-wi]',
+    idx:function(el){ return Number(el.dataset.wi); },
+    get:function(i){ return W?W.pattern[i]||0:0; },
+    set:function(i,tp){ if(W) W.pattern[i]=tp; },
+    brush:function(){ return null; },
+    done:function(){
+      if(!W) return; W.tpl=null; renderWizPat();
+      var a=document.querySelector('.wiz-tpl.active'); if(a) a.classList.remove('active');
+    }
   });
   $('clearPat').onclick=function(){S.pattern=new Array(S.weeksCount*7).fill(0);renderPat();renderCal();save();scheduleResync();};
   $('addEx').onclick=function(){

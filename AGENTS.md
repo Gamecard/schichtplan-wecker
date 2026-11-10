@@ -170,7 +170,7 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 - KEIN Einstellungs-Overlay mehr. Neue Funktionen gehören in den passenden Bereich, nicht in eine neue lose Karte
 - Zurück-Geste: Dialog → Einrichtung (Schritt zurück) → Tages-Sheet → „Alle Wecker“ → anderer Bereich → Plan → App verlassen
 - Urlaub/Krank/Schulung für einen Tag direkt im Tages-Sheet; dort auch „Ausnahme entfernen“
-- Schnittstelle für Oberfläche/Einrichtung: `setShiftAuto`, `setShiftTime`, `setFreeAuto`, `setFreeTime`, `setPatternDay`, `setWeeksCount`, `applyStartDate`
+- Schnittstelle für Oberfläche/Einrichtung: `setShiftAuto`, `setShiftTime`, `setFreeAuto`, `setFreeTime`, `setPatternDay`, `setWeeksCount`, `applyStartDate`, `setPatternRepeat`
 
 ### Startseite: Wecker-Übersicht
 - Unter dem Kalender nur die nächsten 3 Wecker (`A_PREVIEW`) + Zusammenfassung „n Wecker bis …“; Tippen öffnet den Tag. KEINE Löschknöpfe auf der Startseite
@@ -191,6 +191,9 @@ Die App nutzt Material Design 3 mit tonalen Paletten, abgeleitet vom Seed `#4758
 ### Wochenrhythmus-Eingabe
 - Über dem Muster steht eine Kopfzeile Mo–So (`.pdh`), weil belegte Tage den Schichtnamen statt des Wochentags zeigen
 - Schnellauswahl: Legenden-Einträge Frei/Früh/Spät/Nacht sind Buttons (`#patLegend .pick`, `patBrush`). Gewählt → Tag antippen setzt die Schicht, gleicher Tag nochmal → leer. Ohne Auswahl wechselt ein Tipp reihum (leer → Frei → Früh → Spät → Nacht). „Ausnahme“/„Feiertag“ sind NICHT wählbar (nur Erklärung)
+- Ziehen (seit 1.18, ZUSÄTZLICH – Antippen bleibt unverändert): `attachPatDrag(box, o)` für `#patGrid` (`data-idx`) und die Einrichtung (`#wizBody`, `data-wi`). Ohne Legende: Tag `PAT_HOLD_MS` (350 ms) gedrückt halten → kurze Vibration → über Tage ziehen, sie bekommen die Schicht des ersten Tags (auch „leer“). Wer vorher wischt (> `PAT_MOVE_TOL` 8 px), scrollt die Seite wie bisher. Mit gewählter Legende: sofort über Tage wischen setzt die Pinsel-Schicht (kein Umschalten auf leer wie beim Antippen); dabei scrollt die Seite nicht. Treffer per `elementFromPoint`, Zellen werden während des Ziehens nur umgefärbt (`patCellPaint`), gespeichert/abgeglichen wird einmal beim Loslassen. Der Klick nach dem Loslassen wird geschluckt (Capture-Listener), `touchmove` non-passive mit `preventDefault` nur während des Ziehens/mit Legende. Im Emulator geprüft (input motionevent: halten+senkrecht ziehen, schnelles Wischen scrollt, Legende+Wischen, Antippen)
+- Wochen: 1 bis `MAX_WEEKS` (10), Standard bleibt 6. Gilt auch für die Einrichtung und beim Laden/Profil-Import (größere Werte → 10)
+- „Rhythmus wiederholen“ (`S.patternRepeat`, Standard `true` = bisheriges Verhalten; Schalter `#patRepeat`, Erklärung `#patRepeatHint`, Setter `setPatternRepeat(on)`): `false` = Plan gilt einmal ab der Startwoche; ab Tag `weeksCount*7` liefert `getShift` Typ 0 wie vor dem Start (Wecker für „Tage ohne Eintrag“ gelten dort also wie vor dem Start). Im Profil enthalten (Format bleibt 1). Tests: `tests/rhythmus.test.js`
 
 ### Startwoche
 - Standard: Auswahl per ISO-Kalenderwoche (`kwNum`/`kwYear`) → `S.startDate` = Montag der KW (`mondayOfIsoWeek`). Alternativ `S.startMode='date'`: Datumsauswahl, Label zeigt „Woche 1 = KW n“. Woche 1 beginnt immer am Montag der Woche von `startDate` (`mondayOf` in `getShift`)

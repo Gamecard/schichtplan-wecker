@@ -200,6 +200,11 @@
         <span id="weeksVal" style="font-weight:800;font-size:1.1rem;min-width:1.8ch;text-align:center;">6</span>
         <button class="icon" id="incWeeks" aria-label="Mehr Wochen" data-i18n-attr="aria-label:pattern.more_weeks">+</button>
       </div>
+      <div style="display:flex;gap:.6rem;align-items:center;">
+        <label class="sw" title="Rhythmus wiederholen" data-i18n-attr="title:pattern.repeat"><input type="checkbox" id="patRepeat" checked aria-label="Rhythmus wiederholen" data-i18n-attr="aria-label:pattern.repeat"><span class="sl"></span></label>
+        <span class="small" data-i18n="pattern.repeat">Rhythmus wiederholen</span>
+      </div>
+      <div class="small muted" id="patRepeatHint" style="margin:.3rem 0 .7rem;"></div>
       <div id="patGrid"></div>
       <div class="legend" id="patLegend">
         <button type="button" class="li pick" data-pick="1"><div class="ld" data-shift="1" style="background:var(--accent)"></div><span data-i18n="shift.1">Frei</span></button>

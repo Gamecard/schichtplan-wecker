@@ -436,6 +436,10 @@ label {
   transition:all var(--motion-duration-short) var(--motion-easing-standard);
 }
 .pday:active { transform:scale(.92); }
+/* Ziehen über die Tage (Antippen bleibt): kein Markieren/Kontextmenü beim Gedrückthalten */
+.pday { -webkit-user-select:none; -webkit-touch-callout:none; }
+.pat-drag .pday { transition:none; }
+.pat-drag .pday:active { transform:none; }
 .pday.free  { background:var(--free-bg); border-color:var(--accent); }
 .pday.frueh { background:var(--frueh-bg); border-color:var(--frueh); }
 .pday.spaet { background:var(--spaet-bg); border-color:var(--spaet); }

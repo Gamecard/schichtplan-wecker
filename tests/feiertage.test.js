@@ -3,6 +3,7 @@
 // Migration alter Daten (ohne Land = Deutschland), Wecker-Neuplanung beim Landwechsel,
 // Profil, Einrichtung und Übersetzungen.
 // Ausführen: cd tests && npm install && npm test
+const fakeClock = require('./fake-clock');
 const { JSDOM } = require('jsdom');
 const fs = require('fs');
 const path = require('path');
@@ -48,7 +49,7 @@ function makeBridge(native, lang) {
 function open(storage, bridge, wizardSeen = true) {
   return new JSDOM(html, {
     runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://localhost/',
-    beforeParse(w) {
+    beforeParse(w) { fakeClock(w);
       for (const k in storage) w.localStorage.setItem(k, storage[k]);
       if (wizardSeen) w.localStorage.setItem('schichtplan-wizard-done', '1');
       w.Android = bridge; w.scrollTo = () => {};

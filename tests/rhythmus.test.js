@@ -1,5 +1,6 @@
 // Rhythmus: bis 10 Wochen, Schalter „Rhythmus wiederholen“, Ziehen/Wischen über die Tage.
 // Ausführen: cd tests && npm test
+const fakeClock = require('./fake-clock');
 const { JSDOM } = require('jsdom');
 const fs = require('fs');
 const path = require('path');
@@ -38,7 +39,7 @@ function makeBridge(store) {
 function open(storage, bridge, wizardDone = true) {
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://localhost/',
-    beforeParse(w) {
+    beforeParse(w) { fakeClock(w);
       for (const k in storage) w.localStorage.setItem(k, storage[k]);
       if (wizardDone) w.localStorage.setItem('schichtplan-wizard-done', '1');
       w.Android = bridge; w.scrollTo = () => {};

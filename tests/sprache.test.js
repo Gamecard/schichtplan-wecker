@@ -1,6 +1,7 @@
 // Tests der Mehrsprachigkeit (lang/*.json, t(), Sprachwechsel, eigene Übersetzung) und des
 // versteckten Design-Umschalters (Versionsnummer antippen).
 // Ausführen: cd tests && npm install && npm test
+const fakeClock = require('./fake-clock');
 const { JSDOM } = require('jsdom');
 const fs = require('fs');
 const path = require('path');
@@ -51,7 +52,7 @@ function makeBridge(native, lang) {
 function open(storage, bridge, wizardSeen = true) {
   return new JSDOM(html, {
     runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://localhost/',
-    beforeParse(w) {
+    beforeParse(w) { fakeClock(w);
       for (const k in storage) w.localStorage.setItem(k, storage[k]);
       if (wizardSeen) w.localStorage.setItem('schichtplan-wizard-done', '1');
       if (bridge) w.Android = bridge;
@@ -283,7 +284,7 @@ const base = {
 
   // ── 5) Ohne Bridge (Browser): Sprachdatei per XHR, Systemsprache aus navigator.language
   const wB = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://localhost/',
-    beforeParse(w) {
+    beforeParse(w) { fakeClock(w);
       w.localStorage.setItem('schichtplan-wizard-done', '1'); w.scrollTo = () => {};
       Object.defineProperty(w.navigator, 'language', { value: 'de-AT', configurable: true });
       w.XMLHttpRequest = function () { let u = ''; return { open(m, url) { u = url; }, send() {
@@ -324,7 +325,7 @@ const base = {
   const htmlA = html.replace('</head>', () => '<style>' + ANIME_CSS + '</style></head>');   // wie in der App: anime.css nach app.css
   const openA = (storage, bridge) => new JSDOM(htmlA, {
     runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://localhost/',
-    beforeParse(w) { for (const k in storage) w.localStorage.setItem(k, storage[k]); w.localStorage.setItem('schichtplan-wizard-done', '1'); w.Android = bridge; w.scrollTo = () => {}; }
+    beforeParse(w) { fakeClock(w); for (const k in storage) w.localStorage.setItem(k, storage[k]); w.localStorage.setItem('schichtplan-wizard-done', '1'); w.Android = bridge; w.scrollTo = () => {}; }
   }).window;
   const nA = {}; const brA = makeBridge(nA); const designCalls = [];
   brA.setDesign = d => { designCalls.push(d); return true; };

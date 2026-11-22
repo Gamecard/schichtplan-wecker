@@ -2,6 +2,7 @@
 // roter Hinweis über dem Kalender, Hinweis oben im Bereich Wecker, Einrichtungs-Abschluss).
 // Brücke: Android.getReliabilityStatus() (JSON) + Android.openSystemSettings(ziel).
 // Ausführen: cd tests && npm install && npm test
+const fakeClock = require('./fake-clock');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const fs = require('fs');
 const path = require('path');
@@ -49,7 +50,7 @@ function open(storage, bridge, wizardSeen = true) {
   vc.on('jsdomError', e => errors.push(String(e && (e.detail || e.message) || e)));
   const w = new JSDOM(html, {
     runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://localhost/', virtualConsole: vc,
-    beforeParse(win) {
+    beforeParse(win) { fakeClock(win);
       for (const k in storage) win.localStorage.setItem(k, storage[k]);
       if (wizardSeen) win.localStorage.setItem('schichtplan-wizard-done', '1');
       if (bridge) win.Android = bridge;

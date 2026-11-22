@@ -1,5 +1,6 @@
 // Ablauftests der geführten Einrichtung (Startwoche, Rhythmus, Weckzeiten, Feiertage, Abschluss).
 // Ausführen: cd tests && npm install && npm test
+const fakeClock = require('./fake-clock');
 const { JSDOM } = require('jsdom');
 const fs = require('fs');
 const path = require('path');
@@ -47,7 +48,7 @@ function makeBridge(native) {
 function open(storage, bridge, wizardSeen = true) {
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://localhost/',
-    beforeParse(w) {
+    beforeParse(w) { fakeClock(w);
       for (const k in storage) w.localStorage.setItem(k, storage[k]);
       if (wizardSeen) w.localStorage.setItem(WIZ, '1');
       w.Android = bridge; w.scrollTo = () => {};

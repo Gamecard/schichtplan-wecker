@@ -1,5 +1,6 @@
 // Ablauftests für index.html mit nachgebauter Android-Bridge.
 // Ausführen: cd tests && npm install && npm test
+const fakeClock = require('./fake-clock');
 const { JSDOM } = require('jsdom');
 const fs = require('fs');
 const path = require('path');
@@ -48,7 +49,7 @@ function makeBridge(native) {
 function open(storage, bridge) {
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://localhost/',
-    beforeParse(w) {
+    beforeParse(w) { fakeClock(w);
       for (const k in storage) w.localStorage.setItem(k, storage[k]);
       w.localStorage.setItem('schichtplan-wizard-done', '1');
       w.Android = bridge; w.scrollTo = () => {};
@@ -379,7 +380,7 @@ function openDay(w, ds) {
   const n13 = {}; const br13 = makeBridge(n13); let st13 = '';
   br13.saveState = j => { st13 = j; return true; }; br13.loadState = () => st13;
   const w13 = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://localhost/',
-    beforeParse(w) { w.Android = br13; w.scrollTo = () => {}; } }).window; await sleep(50);
+    beforeParse(w) { fakeClock(w); w.Android = br13; w.scrollTo = () => {}; } }).window; await sleep(50);
   ok(w13.document.getElementById('wizBg').classList.contains('open'), 'Erststart: Einrichtung erscheint');
   w13.document.getElementById('wizSkip').click();
   w13.document.getElementById('themeBtn').click();   // system → light
@@ -387,7 +388,7 @@ function openDay(w, ds) {
   w13.close();
   // localStorage „verloren“ (neues Fenster ohne localStorage), nur nativer Stand vorhanden
   const w14 = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://localhost/',
-    beforeParse(w) { w.Android = br13; w.scrollTo = () => {}; } }).window; await sleep(50);
+    beforeParse(w) { fakeClock(w); w.Android = br13; w.scrollTo = () => {}; } }).window; await sleep(50);
   ok(!w14.document.getElementById('wizBg').classList.contains('open'), 'Einrichtung erscheint nicht erneut');
   ok(w14.document.documentElement.getAttribute('data-theme') === 'light', 'Design bleibt erhalten');
   w14.close();

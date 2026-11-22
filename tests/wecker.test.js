@@ -1,6 +1,7 @@
 // Ablauftests für den Bereich „Wecker“: ein Schalter je Schicht, Migration alter Zustände,
 // Meldungen, einheitliche Zeitauswahl und Einzelwecker im Tages-Sheet.
 // Ausführen: cd tests && npm install && npm test
+const fakeClock = require('./fake-clock');
 const { JSDOM } = require('jsdom');
 const fs = require('fs');
 const path = require('path');
@@ -49,7 +50,7 @@ function makeBridge(native) {
 function open(storage, bridge) {
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://localhost/',
-    beforeParse(w) {
+    beforeParse(w) { fakeClock(w);
       for (const k in storage) w.localStorage.setItem(k, storage[k]);
       w.localStorage.setItem('schichtplan-wizard-done', '1');
       w.Android = bridge; w.scrollTo = () => {};

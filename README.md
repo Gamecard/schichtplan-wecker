@@ -6,7 +6,7 @@ Eine Android-App zur Verwaltung von Schichtplänen mit Wecker-Funktion.
 
 - **Geführte Einrichtung** – Beim ersten Start in vier Schritten fertig: Startwoche, Rhythmus (mit Vorlagen wie Früh/Spät im Wochenwechsel), Weckzeiten, Bundesland – danach sind alle Wecker gestellt; jederzeit erneut über „Einrichtung starten“
 - **Schichtkalender** – Monatsansicht mit Kalenderwochen, Feiertagen und Schichtfarben (Frei, Früh, Spät, Nacht)
-- **Wochenrhythmus** – Flexibles Schichtmuster mit 1–6 Wochen Rhythmus; Woche 1 wird als Kalenderwoche gewählt (alternativ per Datum, dann wird die KW angezeigt); schnelle Eingabe: Schicht in der Legende antippen, dann Tage mit einem Klick belegen
+- **Wochenrhythmus** – Flexibles Schichtmuster mit 1–10 Wochen Rhythmus; Woche 1 wird als Kalenderwoche gewählt (alternativ per Datum, dann wird die KW angezeigt); schnelle Eingabe: Schicht in der Legende antippen, dann Tage antippen oder über mehrere Tage wischen; einen Tag gedrückt halten und ziehen überträgt seine Schicht auf weitere Tage; Schalter „Rhythmus wiederholen“ – ausgeschaltet gilt der Plan nur einmal
 - **Wecker pro Schicht** – Uhrzeit je Schichtart und EIN Schalter „automatisch wecken“: stellt die Wecker für alle passenden Tage der nächsten 12 Monate und hält sie aktuell (Muster, Ausnahmen, Tausch, Weckzeit, Feiertage)
 - **Einzelwecker** – für genau einen Tag direkt aus dem Kalender stellbar; bleibt, bis man ihn löscht
 - **Wecker für unbelegte Tage** – Wecker für Tage ohne Eintrag im Rhythmus mit wählbaren Wochentagen (gleicher Schalter)
